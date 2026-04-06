@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AH Performance — Programme Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ember: #E07A3A; --ember-light: #E8955E; --ember-dim: #B8612E;
+  --sage: #8BB07E; --sage-light: #9FC294; --sage-dim: #6E8E63;
+  --ocean: #4A9DC8; --ocean-light: #6BB0D4; --ocean-dim: #3A7EA0;
+  --base: #0B1117; --deep-slate: #13232E; --card: #182A36; --raised: #1D3140;
+  --linen: #F4F0EB; --card-light: #EDE8E2;
+  --text-primary: #F4F0EB; --text-secondary: #8A9BAA; --text-muted: #5A6B7A;
+  --border: rgba(255,255,255,0.08); --border-active: rgba(224,122,58,0.4);
+  --radius: 12px; --radius-sm: 8px;
+  --font-heading: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --danger: #E05A5A;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font-body); background: var(--base); color: var(--text-primary); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Header */
+.header { background: var(--deep-slate); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+.header-left { display: flex; align-items: center; gap: 16px; }
+.logo { font-family: var(--font-heading); font-weight: 700; font-size: 20px; color: var(--ember); }
+.logo span { color: var(--text-secondary); font-weight: 400; font-size: 13px; margin-left: 8px; }
+.header-actions { display: flex; gap: 10px; }
+.btn { padding: 8px 16px; border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); transition: all 0.2s; }
+.btn-primary { background: var(--ember); color: white; border-color: var(--ember); }
+.btn-primary:hover { background: var(--ember-light); }
+.btn-secondary { background: var(--raised); color: var(--text-secondary); }
+.btn-secondary:hover { color: var(--ember); border-color: var(--ember); }
+.btn-danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+.btn-danger:hover { background: var(--danger); color: white; }
+.btn-small { padding: 4px 10px; font-size: 11px; }
+
+/* Programme Meta */
+.programme-meta { background: var(--deep-slate); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; gap: 16px; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
+.meta-input { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; color: var(--text-primary); font-family: var(--font-body); font-size: 13px; outline: none; }
+.meta-input:focus { border-color: var(--ember); }
+.meta-input.wide { flex: 1; min-width: 200px; }
+.meta-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-right: -8px; }
+
+/* Main Layout */
+.main { display: flex; flex: 1; overflow: hidden; }
+
+/* Left Panel - Exercise Library */
+.library-panel { width: 340px; min-width: 280px; background: var(--deep-slate); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+.library-header { padding: 16px; border-bottom: 1px solid var(--border); }
+.library-header h3 { font-family: var(--font-heading); font-size: 14px; font-weight: 600; margin-bottom: 10px; color: var(--text-secondary); }
+.library-search { width: 100%; padding: 8px 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 13px; outline: none; margin-bottom: 8px; }
+.library-search:focus { border-color: var(--ember); }
+.library-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.library-filters select { padding: 5px 8px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; color: var(--text-secondary); font-size: 11px; outline: none; cursor: pointer; }
+.library-list { flex: 1; overflow-y: auto; padding: 8px; }
+.lib-item { padding: 10px 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; cursor: grab; transition: all 0.2s; user-select: none; }
+.lib-item:hover { border-color: var(--ember); transform: translateX(2px); }
+.lib-item:active { cursor: grabbing; opacity: 0.7; }
+.lib-item-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+.lib-item-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 8px; }
+.lib-badge { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+.lib-badge-push { background: rgba(224,122,58,0.15); color: var(--ember-light); }
+.lib-badge-pull { background: rgba(224,122,58,0.1); color: #D4915A; }
+.lib-badge-hinge { background: rgba(139,176,126,0.15); color: var(--sage-light); }
+.lib-badge-squat { background: rgba(139,176,126,0.2); color: #A5C99A; }
+.lib-badge-lunge { background: rgba(139,176,126,0.1); color: #7DA872; }
+.lib-badge-carry { background: rgba(74,157,200,0.15); color: var(--ocean-light); }
+.lib-badge-rotation { background: rgba(160,120,200,0.15); color: #B89ADB; }
+.lib-badge-cardio { background: rgba(224,160,58,0.15); color: #E0A03A; }
+.lib-badge-flexibility { background: rgba(100,160,200,0.12); color: #7DBCE0; }
+.lib-badge-warm-up { background: rgba(100,180,180,0.12); color: #7DC8C0; }
+.lib-badge-core { background: rgba(160,170,180,0.15); color: #A0AAB4; }
+.lib-count { padding: 8px 12px; font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border); text-align: center; flex-shrink: 0; }
+
+/* Right Panel - Programme */
+.programme-panel { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.day-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+.day-tab { padding: 8px 16px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; color: var(--text-secondary); }
+.day-tab.active { background: var(--ember); color: white; border-color: var(--ember); }
+.day-tab:hover:not(.active) { border-color: var(--ember); color: var(--ember); }
+.add-day-btn { padding: 8px 12px; background: transparent; border: 1px dashed var(--text-muted); border-radius: var(--radius-sm); color: var(--text-muted); font-size: 18px; cursor: pointer; transition: all 0.2s; line-height: 1; }
+.add-day-btn:hover { border-color: var(--ember); color: var(--ember); }
+
+/* Session tabs */
+.session-tabs { display: flex; gap: 6px; padding: 8px 16px; align-items: center; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.15); }
+.session-tab { padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text-secondary); background: transparent; border: 1px solid transparent; transition: all 0.2s; }
+.session-tab:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+.session-tab.active { background: var(--ocean); color: white; border-color: var(--ocean); }
+.add-session-btn { padding: 4px 10px; background: transparent; border: 1px dashed var(--text-muted); border-radius: 6px; color: var(--text-muted); font-size: 11px; cursor: pointer; transition: all 0.2s; font-family: var(--font-body); }
+.add-session-btn:hover { border-color: var(--ocean); color: var(--ocean); }
+
+.day-content { display: none; }
+.day-content.active { display: block; }
+.day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.day-title-input { background: transparent; border: none; font-family: var(--font-heading); font-size: 22px; font-weight: 600; color: var(--text-primary); outline: none; flex: 1; }
+.day-title-input::placeholder { color: var(--text-muted); }
+
+/* Exercise Slots */
+.exercise-list { min-height: 100px; }
+.exercise-slot { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; transition: all 0.2s; position: relative; }
+.exercise-slot:hover { border-color: rgba(255,255,255,0.15); }
+.exercise-slot.superset-member { border-left: 3px solid var(--ember); margin-left: 16px; }
+.exercise-slot.superset-start { border-left: 3px solid var(--ember); border-top-left-radius: var(--radius); margin-left: 16px; }
+.slot-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.slot-exercise-name { font-family: var(--font-heading); font-size: 15px; font-weight: 600; flex: 1; }
+.slot-actions { display: flex; gap: 6px; }
+.slot-remove { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; }
+.slot-remove:hover { color: var(--danger); background: rgba(224,90,90,0.1); }
+.per-side-btn { background: var(--deep-slate); border: 1px solid var(--border); color: var(--text-secondary); padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; font-family: var(--font-body); transition: all 0.2s; }
+.per-side-btn.active { background: var(--ocean); color: #fff; border-color: var(--ocean); }
+.per-side-btn:hover { border-color: var(--ocean-light); }
+.slot-fields { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.slot-field { display: flex; flex-direction: column; gap: 3px; }
+.slot-field label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.slot-field input, .slot-field select { padding: 6px 10px; background: var(--raised); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 13px; font-family: var(--font-body); outline: none; width: auto; min-width: 70px; }
+.slot-field input:focus, .slot-field select:focus { border-color: var(--ember); }
+.slot-field input.note-input { min-width: 280px; }
+.slot-badge { margin-right: 8px; }
+
+/* Superset wrapper */
+.superset-group { background: var(--deep-slate); border: 1px solid var(--border-active); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; }
+.superset-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.superset-label { font-family: var(--font-heading); font-size: 12px; font-weight: 600; color: var(--ember); text-transform: uppercase; letter-spacing: 1px; }
+.superset-fields { display: flex; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.superset-group .exercise-slot { margin-bottom: 8px; margin-left: 0; border-left: none; }
+.superset-group .exercise-slot:last-of-type { margin-bottom: 0; }
+
+/* Drop zone */
+.drop-zone { border: 2px dashed var(--text-muted); border-radius: var(--radius); padding: 30px; text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 10px; transition: all 0.2s; }
+.drop-zone.drag-over { border-color: var(--ember); color: var(--ember); background: rgba(224,122,58,0.05); }
+
+/* Action buttons row */
+.day-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; width: 500px; max-width: 90vw; max-height: 80vh; overflow-y: auto; }
+.modal h3 { font-family: var(--font-heading); font-size: 18px; margin-bottom: 16px; }
+.modal-field { margin-bottom: 12px; }
+.modal-field label { display: block; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.modal-field input, .modal-field textarea, .modal-field select { width: 100%; padding: 8px 12px; background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-family: var(--font-body); font-size: 13px; outline: none; }
+.modal-field textarea { resize: vertical; min-height: 60px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+/* Template list */
+.template-item { padding: 12px; background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+.template-item:hover { border-color: var(--ember); }
+.template-item h4 { font-size: 14px; margin-bottom: 4px; }
+.template-item p { font-size: 12px; color: var(--text-muted); }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--raised); border: 1px solid var(--sage); border-radius: var(--radius-sm); padding: 12px 20px; color: var(--sage); font-size: 13px; z-index: 2000; opacity: 0; transform: translateY(10px); transition: all 0.3s; }
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">AH<span style="font-weight:400;color:var(--text-primary)"> Performance</span><span> Programme Builder</span></div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-secondary" onclick="showTemplates()">Load Template</button>
+    <button class="btn btn-secondary" onclick="saveAsTemplate()">Save as Template</button>
+    <button class="btn btn-primary" onclick="exportProgramme()">Export Programme</button>
+    <button class="btn btn-primary" id="assignBtn" onclick="assignToClient()" style="background:#8BB07E;border-color:#8BB07E;display:none;">Assign to Client</button>
+  </div>
+</div>
+
+<div class="programme-meta">
+  <span class="meta-label">Client</span>
+  <input class="meta-input wide" id="clientName" placeholder="Client name..." />
+  <select class="meta-input wide" id="clientSelect" style="display:none;" onfocus="if(window.parent!==window)window.parent.postMessage({type:'ah-request-clients'},'*')">
+    <option value="">Select client...</option>
+  </select>
+  <span class="meta-label">Programme</span>
+  <input class="meta-input wide" id="programmeName" placeholder="Programme name (e.g. Upper/Lower Split — Week 1)" />
+  <span class="meta-label">Week</span>
+  <input class="meta-input" id="weekNumber" type="number" value="1" min="1" style="width:60px" />
+  <span class="meta-label">Start Date</span>
+  <input class="meta-input" id="startDate" type="date" />
+</div>
+
+<div class="main">
+  <!-- Library Panel -->
+  <div class="library-panel">
+    <div class="library-header">
+      <h3>Exercise Library</h3>
+      <input class="library-search" id="libSearch" placeholder="Search exercises..." oninput="filterLibrary()" />
+      <div class="library-filters">
+        <select id="libPattern" onchange="filterLibrary()">
+          <option value="">All Patterns</option>
+          <option>Push</option><option>Pull</option><option>Hinge</option><option>Squat</option>
+          <option>Lunge</option><option>Carry</option><option>Rotation</option><option>Cardio</option>
+          <option>Flexibility</option><option>Warm-up</option><option>Core</option>
+        </select>
+        <select id="libDifficulty" onchange="filterLibrary()">
+          <option value="">All Levels</option>
+          <option>Beginner</option><option>Intermediate</option><option>Advanced</option>
+        </select>
+      </div>
+    </div>
+    <div class="library-list" id="libraryList"></div>
+    <div class="lib-count" id="libCount">0 exercises</div>
+  </div>
+
+  <!-- Programme Panel -->
+  <div class="programme-panel" id="programmePanel">
+    <div class="day-tabs" id="dayTabs"></div>
+    <div id="dayContents"></div>
+  </div>
+</div>
+
+<!-- Superset Modal -->
+<div class="modal-overlay" id="supersetModal">
+  <div class="modal">
+    <h3>Superset / Circuit Settings</h3>
+    <div class="modal-field">
+      <label>Group Type</label>
+      <select id="ssType"><option>Superset</option><option>Tri-Set</option><option>Circuit</option><option>Giant Set</option></select>
+    </div>
+    <div class="modal-field">
+      <label>Rounds / Sets</label>
+      <input type="number" id="ssRounds" value="3" min="1" />
+    </div>
+    <div class="modal-field">
+      <label>Rest Between Exercises (seconds)</label>
+      <input type="number" id="ssRestEx" value="0" min="0" step="5" />
+    </div>
+    <div class="modal-field">
+      <label>Rest Between Rounds (seconds)</label>
+      <input type="number" id="ssRestRound" value="90" min="0" step="5" />
+    </div>
+    <div class="modal-field">
+      <label>Notes</label>
+      <textarea id="ssNotes" placeholder="e.g. No rest between exercises, full rest between rounds..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeSupersetModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="applySupersetSettings()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- Template Modal -->
+<div class="modal-overlay" id="templateModal">
+  <div class="modal">
+    <h3 id="templateModalTitle">Templates</h3>
+    <div id="templateModalContent"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeTemplateModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-overlay" id="exportModal">
+  <div class="modal">
+    <h3>Programme Export</h3>
+    <textarea id="exportContent" style="width:100%;min-height:400px;background:var(--raised);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:monospace;font-size:12px;" readonly></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeExportModal()">Close</button>
+      <button class="btn btn-primary" onclick="copyExport()">Copy to Clipboard</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const exercises = [{"id": "EX001", "name": "Barbell Bench Press", "movementPattern": "Push", "primaryMuscles": "Chest, Anterior Deltoids", "secondaryMuscles": "Triceps", "equipment": "Barbell, Bench", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Compound pressing movement. Lie flat on bench, grip bar slightly wider than shoulders, lower to mid-chest, press to lockout.", "coachingCues": ["Retract shoulder blades and arch upper back", "Drive feet into floor for leg drive", "Bar path: slight diagonal from mid-chest to over shoulders"], "commonMistakes": ["Flaring elbows 90\u00b0", "Bouncing bar off chest", "Lifting hips off bench"], "progression": "Weighted Dips", "regression": "Dumbbell Bench Press", "sportTags": [], "warmupSuitable": false}, {"id": "EX002", "name": "Overhead Press", "movementPattern": "Push", "primaryMuscles": "Anterior Deltoids, Lateral Deltoids", "secondaryMuscles": "Triceps, Upper Chest, Core", "equipment": "Barbell", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Standing strict press. Bar starts at front rack, pressed overhead to full lockout with head pushed through at top.", "coachingCues": ["Squeeze glutes and brace core throughout", "Press bar in a slight arc around your face", "Lock elbows and push head through at the top"], "commonMistakes": ["Excessive lower back arch", "Using leg drive (push press)", "Not locking out overhead"], "progression": "Push Press", "regression": "Dumbbell Shoulder Press (seated)", "sportTags": [], "warmupSuitable": false}, {"id": "EX003", "name": "Push-up", "movementPattern": "Push", "primaryMuscles": "Chest, Anterior Deltoids", "secondaryMuscles": "Triceps, Core", "equipment": "Bodyweight", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Hands slightly wider than shoulders, body in a straight line from head to heels. Lower chest to floor, press back up.", "coachingCues": ["Keep core tight \u2014 no sagging hips", "Elbows at roughly 45\u00b0 angle", "Full range: chest touches floor, arms lock out"], "commonMistakes": ["Sagging hips", "Flaring elbows wide", "Partial range of motion"], "progression": "Deficit Push-up / Weighted Push-up", "regression": "Incline Push-up / Knee Push-up", "sportTags": [], "warmupSuitable": true}, {"id": "EX004", "name": "Dumbbell Incline Press", "movementPattern": "Push", "primaryMuscles": "Upper Chest, Anterior Deltoids", "secondaryMuscles": "Triceps", "equipment": "Dumbbells, Incline Bench", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Bench set to 30-45\u00b0. Press dumbbells from chest level to full lockout, palms facing forward.", "coachingCues": ["Retract shoulder blades into the bench", "Control the negative \u2014 2-3 second eccentric", "Dumbbells finish directly over shoulders"], "commonMistakes": ["Bench angle too steep (becomes shoulder press)", "Dumbbells drifting forward", "Wrists rolling back"], "progression": "Barbell Incline Press", "regression": "Machine Incline Press", "sportTags": [], "warmupSuitable": false}, {"id": "EX005", "name": "Dips", "movementPattern": "Push", "primaryMuscles": "Chest, Triceps", "secondaryMuscles": "Anterior Deltoids", "equipment": "Parallel Bars / Dip Station", "difficulty": "Intermediate", "metricType": "Bodyweight Reps", "description": "Grip parallel bars, lower body until upper arms are parallel to floor, press back to lockout. Lean forward slightly for chest emphasis.", "coachingCues": ["Lean torso forward ~30\u00b0 for chest engagement", "Keep elbows tracking back, not flaring", "Control the descent \u2014 don't drop into the bottom"], "commonMistakes": ["Dropping too fast", "Shrugging shoulders to ears", "Partial range of motion"], "progression": "Weighted Dips", "regression": "Bench Dips / Band-Assisted Dips", "sportTags": [], "warmupSuitable": false}, {"id": "EX006", "name": "Pull-up", "movementPattern": "Pull", "primaryMuscles": "Lats, Biceps", "secondaryMuscles": "Rear Deltoids, Rhomboids, Core", "equipment": "Pull-up Bar", "difficulty": "Intermediate", "metricType": "Bodyweight Reps", "description": "Overhand grip, slightly wider than shoulders. Pull chin over the bar, lower with control to full arm extension.", "coachingCues": ["Initiate by driving elbows down and back", "Squeeze shoulder blades together at the top", "Full dead hang at the bottom \u2014 no half reps"], "commonMistakes": ["Kipping or swinging", "Not reaching full extension", "Chin poking forward instead of going over bar"], "progression": "Weighted Pull-up", "regression": "Band-Assisted Pull-up / Lat Pulldown", "sportTags": [], "warmupSuitable": false}, {"id": "EX007", "name": "Barbell Bent-Over Row", "movementPattern": "Pull", "primaryMuscles": "Lats, Rhomboids, Mid Traps", "secondaryMuscles": "Biceps, Rear Deltoids, Erector Spinae", "equipment": "Barbell", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Hinge at hips ~45\u00b0, grip bar shoulder-width. Pull bar to lower ribcage, squeeze back, lower with control.", "coachingCues": ["Keep back flat \u2014 hinge from hips, not spine", "Pull to the lower ribs, not the belly button", "Pause for 1 second at the top of each rep"], "commonMistakes": ["Rounding lower back", "Using momentum to swing bar up", "Standing too upright"], "progression": "Pendlay Row", "regression": "Dumbbell Row (single arm)", "sportTags": [], "warmupSuitable": false}, {"id": "EX008", "name": "Face Pull", "movementPattern": "Pull", "primaryMuscles": "Rear Deltoids, Rhomboids, Rotator Cuff", "secondaryMuscles": "Mid Traps", "equipment": "Cable Machine / Resistance Band", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Cable set at face height. Pull rope to either side of face, externally rotating shoulders at end position.", "coachingCues": ["Pull apart, not just towards you", "Finish with thumbs pointing behind you", "Keep elbows high, at or above shoulder level"], "commonMistakes": ["Pulling too low (becomes a row)", "Using too much weight", "No external rotation at end"], "progression": "Band Pull-Apart with hold", "regression": "Band Pull-Apart", "sportTags": [], "warmupSuitable": true}, {"id": "EX009", "name": "Lat Pulldown", "movementPattern": "Pull", "primaryMuscles": "Lats, Biceps", "secondaryMuscles": "Rhomboids, Rear Deltoids", "equipment": "Cable Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Wide overhand grip on lat bar. Pull bar to upper chest, lean back slightly, control the return.", "coachingCues": ["Drive elbows down into your sides", "Slight lean back \u2014 chest up, not rounding forward", "Full stretch at the top, don't shorten range"], "commonMistakes": ["Pulling behind the neck", "Leaning too far back", "Jerking the weight"], "progression": "Pull-up", "regression": "Single-Arm Lat Pulldown", "sportTags": [], "warmupSuitable": false}, {"id": "EX010", "name": "Dumbbell Row", "movementPattern": "Pull", "primaryMuscles": "Lats, Rhomboids", "secondaryMuscles": "Biceps, Rear Deltoids", "equipment": "Dumbbell, Bench", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "One hand and knee on bench for support. Row dumbbell to hip, squeezing the lat at the top.", "coachingCues": ["Row to your hip, not your armpit", "Keep torso parallel to the floor \u2014 no twisting", "Full stretch at the bottom, squeeze at the top"], "commonMistakes": ["Rotating torso to lift weight", "Rowing to the shoulder", "Rushing reps"], "progression": "Chest-Supported Row", "regression": "Cable Row", "sportTags": [], "warmupSuitable": false}, {"id": "EX011", "name": "Conventional Deadlift", "movementPattern": "Hinge", "primaryMuscles": "Glutes, Hamstrings, Erector Spinae", "secondaryMuscles": "Quads, Traps, Forearms, Core", "equipment": "Barbell", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Bar over mid-foot, hip-width stance. Hinge at hips, grip bar just outside knees, drive through floor keeping bar close to body.", "coachingCues": ["Push the floor away rather than pulling the bar up", "Bar drags up your shins and thighs \u2014 keep it close", "Lock out by squeezing glutes, not hyperextending back"], "commonMistakes": ["Rounding the lower back", "Hips shooting up first", "Bar drifting away from body"], "progression": "Deficit Deadlift", "regression": "Trap Bar Deadlift", "sportTags": [], "warmupSuitable": false}, {"id": "EX012", "name": "Romanian Deadlift (RDL)", "movementPattern": "Hinge", "primaryMuscles": "Hamstrings, Glutes", "secondaryMuscles": "Erector Spinae, Core", "equipment": "Barbell / Dumbbells", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Hip-hinge movement. Bar travels close to legs, hips push back, slight knee bend maintained throughout. Lower until hamstring stretch, then drive hips forward.", "coachingCues": ["Drive hips back like closing a car door with your bum", "Bar stays within 1cm of your legs", "Feel the stretch in your hamstrings \u2014 that's your depth cue"], "commonMistakes": ["Rounding the lower back", "Bending knees too much (becomes a squat)", "Looking up (strains neck)"], "progression": "Single-Leg RDL", "regression": "Kettlebell RDL", "sportTags": [], "warmupSuitable": false}, {"id": "EX013", "name": "Kettlebell Swing", "movementPattern": "Hinge", "primaryMuscles": "Glutes, Hamstrings", "secondaryMuscles": "Core, Shoulders, Erector Spinae", "equipment": "Kettlebell", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Explosive hip hinge. Hike kettlebell between legs, snap hips forward to propel bell to chest height. Arms are guides, not lifters.", "coachingCues": ["It's a hip snap, not a squat \u2014 hinge, don't sit", "Bell should float at the top \u2014 no pulling with arms", "Squeeze glutes hard at the top like you're cracking a walnut"], "commonMistakes": ["Squatting instead of hinging", "Using arms to lift", "Not bracing core at top"], "progression": "Single-Arm KB Swing", "regression": "Banded Hip Hinge / Hip Thrust", "sportTags": ["HYROX"], "warmupSuitable": true}, {"id": "EX014", "name": "Hip Thrust", "movementPattern": "Hinge", "primaryMuscles": "Glutes", "secondaryMuscles": "Hamstrings, Core", "equipment": "Barbell / Bodyweight, Bench", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Upper back on bench, feet flat on floor. Drive hips up until thighs are parallel to floor, squeeze glutes at the top.", "coachingCues": ["Chin tucked \u2014 look at the wall in front, not the ceiling", "Drive through your heels", "Full squeeze at the top for 1 second"], "commonMistakes": ["Hyperextending lower back at top", "Feet too far from or too close to glutes", "Pushing through toes"], "progression": "Single-Leg Hip Thrust", "regression": "Glute Bridge (floor)", "sportTags": [], "warmupSuitable": false}, {"id": "EX015", "name": "Good Morning", "movementPattern": "Hinge", "primaryMuscles": "Hamstrings, Erector Spinae", "secondaryMuscles": "Glutes, Core", "equipment": "Barbell", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Bar on upper back (high bar position). Hinge at hips with slight knee bend, lower torso towards parallel, drive hips forward to stand.", "coachingCues": ["Push hips back \u2014 same pattern as RDL but bar is on your back", "Keep a neutral spine throughout", "Only go as low as your hamstring flexibility allows"], "commonMistakes": ["Rounding the back", "Going too heavy too soon", "Excessive knee bend"], "progression": "Seated Good Morning", "regression": "RDL (easier to control load)", "sportTags": [], "warmupSuitable": false}, {"id": "EX016", "name": "Barbell Back Squat", "movementPattern": "Squat", "primaryMuscles": "Quads, Glutes", "secondaryMuscles": "Hamstrings, Core, Erector Spinae", "equipment": "Barbell, Squat Rack", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Bar on upper traps. Feet shoulder-width, toes slightly out. Squat to parallel or below, drive back up through mid-foot.", "coachingCues": ["Break at hips and knees simultaneously", "Knees track over toes \u2014 don't let them cave in", "Chest up, brace core like someone's about to punch your stomach"], "commonMistakes": ["Knees caving inward", "Rising onto toes", "Excessive forward lean (good morning squat)"], "progression": "Front Squat / Pause Squat", "regression": "Goblet Squat", "sportTags": [], "warmupSuitable": false}, {"id": "EX017", "name": "Goblet Squat", "movementPattern": "Squat", "primaryMuscles": "Quads, Glutes", "secondaryMuscles": "Core, Adductors", "equipment": "Dumbbell / Kettlebell", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Hold dumbbell or kettlebell at chest height. Feet shoulder-width, squat deep between your legs, elbows inside knees at bottom.", "coachingCues": ["Keep the weight tight to your chest", "Elbows push knees out at the bottom", "Sit between your legs, not behind them"], "commonMistakes": ["Weight drifting away from body", "Heels lifting", "Cutting depth short"], "progression": "Barbell Front Squat", "regression": "Bodyweight Squat / Box Squat", "sportTags": [], "warmupSuitable": true}, {"id": "EX018", "name": "Front Squat", "movementPattern": "Squat", "primaryMuscles": "Quads, Glutes", "secondaryMuscles": "Core, Upper Back", "equipment": "Barbell", "difficulty": "Advanced", "metricType": "Weight \u00d7 Reps", "description": "Bar in front rack position on shoulders. Elbows high, squat to full depth maintaining upright torso.", "coachingCues": ["Elbows as high as possible \u2014 if they drop, the bar rolls", "Take a big breath and brace before each rep", "Drive up through mid-foot, keeping torso vertical"], "commonMistakes": ["Elbows dropping", "Wrists bearing too much load", "Leaning forward excessively"], "progression": "Zercher Squat", "regression": "Goblet Squat", "sportTags": [], "warmupSuitable": false}, {"id": "EX019", "name": "Wall Sit", "movementPattern": "Squat", "primaryMuscles": "Quads, Glutes", "secondaryMuscles": "Core", "equipment": "Wall", "difficulty": "Beginner", "metricType": "Time Hold", "description": "Back flat against wall, slide down until thighs are parallel to floor. Knees at 90\u00b0, hold position.", "coachingCues": ["Press your entire back flat against the wall", "Knees directly above ankles, not ahead of toes", "Breathe steadily \u2014 don't hold your breath"], "commonMistakes": ["Knees forward past toes", "Sliding down too low", "Hands on thighs for support"], "progression": "Single-Leg Wall Sit", "regression": "Higher wall sit (less knee bend)", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX020", "name": "Bulgarian Split Squat", "movementPattern": "Squat", "primaryMuscles": "Quads, Glutes", "secondaryMuscles": "Hamstrings, Core, Adductors", "equipment": "Dumbbells / Bodyweight, Bench", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Rear foot elevated on bench behind you. Lower until front thigh is parallel, drive up through front heel.", "coachingCues": ["Front foot far enough forward that knee doesn't pass toes", "Torso stays upright \u2014 don't lean forward", "Control the descent for 2-3 seconds"], "commonMistakes": ["Front knee caving inward", "Torso leaning too far forward", "Rear foot too close to bench"], "progression": "Weighted Pistol Squat", "regression": "Bodyweight Split Squat (no elevation)", "sportTags": [], "warmupSuitable": false}, {"id": "EX021", "name": "Walking Lunge", "movementPattern": "Lunge", "primaryMuscles": "Quads, Glutes", "secondaryMuscles": "Hamstrings, Core, Calves", "equipment": "Dumbbells / Barbell / Bodyweight", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Step forward into a lunge, both knees at 90\u00b0, back knee hovers above floor. Drive through front heel to step into next lunge.", "coachingCues": ["Long stride \u2014 short steps overload the knee", "Back knee drops straight down, not forward", "Chest up, eyes forward, brace your core"], "commonMistakes": ["Front knee passing toes excessively", "Torso leaning forward", "Steps too short"], "progression": "Overhead Walking Lunge", "regression": "Stationary Lunge", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX022", "name": "Reverse Lunge", "movementPattern": "Lunge", "primaryMuscles": "Quads, Glutes", "secondaryMuscles": "Hamstrings, Core", "equipment": "Dumbbells / Bodyweight", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Step backwards into a lunge position. Back knee drops towards floor, drive through front foot to return to standing.", "coachingCues": ["Step back far enough to create two 90\u00b0 angles", "Drive up through the front heel", "Keep torso upright \u2014 no leaning"], "commonMistakes": ["Not stepping back far enough", "Pushing off back foot instead of front", "Wobbling side to side"], "progression": "Deficit Reverse Lunge", "regression": "Assisted Lunge (holding support)", "sportTags": [], "warmupSuitable": false}, {"id": "EX023", "name": "Step-up", "movementPattern": "Lunge", "primaryMuscles": "Quads, Glutes", "secondaryMuscles": "Hamstrings, Calves, Core", "equipment": "Box / Bench, Dumbbells", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Place one foot fully on the box. Drive through that foot to stand on top, then lower back down with control.", "coachingCues": ["Entire foot on the box \u2014 heel can't hang off", "Drive through the top foot only \u2014 no pushing off the floor foot", "Stand fully upright at the top"], "commonMistakes": ["Pushing off the trailing leg", "Leaning forward", "Box too high for current strength"], "progression": "Weighted Box Step-up (higher box)", "regression": "Lower box / Bodyweight", "sportTags": [], "warmupSuitable": false}, {"id": "EX024", "name": "Lateral Lunge", "movementPattern": "Lunge", "primaryMuscles": "Adductors, Quads, Glutes", "secondaryMuscles": "Hamstrings, Core", "equipment": "Dumbbells / Bodyweight", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Step wide to one side, push hips back and bend the stepping knee while the other leg stays straight. Drive back to start.", "coachingCues": ["Push your hips back as you step \u2014 it's a lateral hinge", "Bent knee tracks over your toes", "Keep both feet flat on the floor"], "commonMistakes": ["Knee caving inward", "Coming up on toes", "Not sitting hips back enough"], "progression": "Cossack Squat", "regression": "Supported Lateral Lunge", "sportTags": [], "warmupSuitable": true}, {"id": "EX025", "name": "Farmer's Walk", "movementPattern": "Carry", "primaryMuscles": "Forearms, Traps, Core", "secondaryMuscles": "Shoulders, Glutes, Calves", "equipment": "Dumbbells / Kettlebells / Farmer's Handles", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Pick up heavy weights in each hand. Walk with tall posture, shoulders back and down, controlled steps.", "coachingCues": ["Shoulders back and down \u2014 don't let them round forward", "Short, controlled steps \u2014 not a sprint", "Squeeze the handles as hard as you can"], "commonMistakes": ["Leaning to one side", "Shrugging shoulders", "Steps too long and unstable"], "progression": "Single-Arm Farmer's Walk", "regression": "Lighter weight / Shorter distance", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX026", "name": "Sled Push", "movementPattern": "Carry", "primaryMuscles": "Quads, Glutes, Calves", "secondaryMuscles": "Core, Shoulders, Chest", "equipment": "Sled / Prowler", "difficulty": "Intermediate", "metricType": "Distance / Time", "description": "Hands on sled handles at hip height. Drive forward with powerful leg pushes, keeping low body angle (~45\u00b0).", "coachingCues": ["Stay low \u2014 the more upright you are, the harder it is", "Drive with your legs, not your arms", "Short, powerful steps \u2014 don't overstride"], "commonMistakes": ["Standing too upright", "Locking arms and pushing with upper body", "Steps too long"], "progression": "Heavier sled / Steeper incline", "regression": "Lighter load / Wall push drill", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX027", "name": "Sled Pull", "movementPattern": "Carry", "primaryMuscles": "Hamstrings, Glutes, Lats", "secondaryMuscles": "Core, Biceps, Forearms", "equipment": "Sled, Rope", "difficulty": "Intermediate", "metricType": "Distance / Time", "description": "Face the sled, grip rope hand over hand. Sit back and pull rope towards you using alternating hand-over-hand action.", "coachingCues": ["Sit your weight back \u2014 use bodyweight as anchor", "Pull with your whole body, not just arms", "Keep a steady rhythm \u2014 don't rush"], "commonMistakes": ["Standing too upright", "Pulling only with arms", "Losing grip rhythm"], "progression": "Heavier load", "regression": "Lighter load / Seated rope pull", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX028", "name": "Sandbag Carry", "movementPattern": "Carry", "primaryMuscles": "Core, Glutes, Quads", "secondaryMuscles": "Shoulders, Biceps, Forearms", "equipment": "Sandbag", "difficulty": "Intermediate", "metricType": "Distance / Time", "description": "Bear hug the sandbag at chest height. Walk with controlled steps maintaining an upright torso.", "coachingCues": ["Squeeze the bag tight \u2014 it should feel like a bear hug", "Stay as upright as possible", "Breathe into your belly, not your chest"], "commonMistakes": ["Bag slipping down", "Leaning too far back to compensate", "Rushing steps"], "progression": "Heavier bag / Longer distance", "regression": "Lighter bag / Shorter distance", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX029", "name": "Russian Twist", "movementPattern": "Rotation", "primaryMuscles": "Obliques, Rectus Abdominis", "secondaryMuscles": "Hip Flexors", "equipment": "Bodyweight / Medicine Ball / Dumbbell", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Seated, lean back ~45\u00b0, feet off floor (or down for easier). Rotate torso side to side touching weight to floor each side.", "coachingCues": ["Rotate from your ribcage, not just your arms", "Keep chest lifted \u2014 don't round forward", "Each side-to-side counts as one rep"], "commonMistakes": ["Only moving arms without rotating torso", "Rounding the back", "Moving too fast with no control"], "progression": "Weighted / Feet elevated", "regression": "Feet on floor / No weight", "sportTags": [], "warmupSuitable": false}, {"id": "EX030", "name": "Pallof Press", "movementPattern": "Rotation", "primaryMuscles": "Core (anti-rotation)", "secondaryMuscles": "Obliques, Glutes", "equipment": "Cable Machine / Resistance Band", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Stand side-on to cable/band anchor at chest height. Press handle straight out from chest, resisting the rotation pull. Hold 2 seconds.", "coachingCues": ["Resist the pull \u2014 your core works by NOT rotating", "Press straight out, not down or up", "Squeeze glutes to stabilise your hips"], "commonMistakes": ["Letting the band rotate you", "Leaning away from anchor", "Not bracing core"], "progression": "Pallof Press with step", "regression": "Lighter band / Closer stance", "sportTags": [], "warmupSuitable": true}, {"id": "EX031", "name": "Cable Woodchop", "movementPattern": "Rotation", "primaryMuscles": "Obliques, Core", "secondaryMuscles": "Shoulders, Hips", "equipment": "Cable Machine", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Cable set high (or low for reverse). Rotate torso diagonally across body, pivoting through hips. Control the return.", "coachingCues": ["Power comes from the hips, not the arms", "Pivot on the back foot", "Arms stay extended \u2014 they're just levers"], "commonMistakes": ["Pulling with arms", "Feet planted with no hip rotation", "Rounding the spine"], "progression": "Increase weight / Add pause", "regression": "Band Woodchop", "sportTags": [], "warmupSuitable": false}, {"id": "EX032", "name": "Running (Outdoor)", "movementPattern": "Cardio", "primaryMuscles": "Quads, Hamstrings, Calves, Glutes", "secondaryMuscles": "Core, Hip Flexors", "equipment": "None / GPS Watch", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Steady-state or interval running outdoors. Can be paced for distance, time, or heart rate zone training.", "coachingCues": ["Land with midfoot under your hips, not ahead", "Short, quick cadence (~170-180 steps/min)", "Relaxed shoulders, arms at 90\u00b0, hands unclenched"], "commonMistakes": ["Overstriding (heel striking far ahead)", "Shoulders tensing up", "Starting too fast"], "progression": "Tempo / Interval runs", "regression": "Walk-run intervals", "sportTags": ["HYROX"], "warmupSuitable": true}, {"id": "EX033", "name": "Rowing (SkiErg / Rower)", "movementPattern": "Cardio", "primaryMuscles": "Lats, Quads, Glutes, Hamstrings", "secondaryMuscles": "Core, Biceps, Shoulders", "equipment": "Rowing Machine", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Drive phase: push with legs first, then lean back, then pull arms. Recovery: arms away, body forward, legs bend. Rhythm: legs-back-arms, arms-back-legs.", "coachingCues": ["It's 60% legs, 20% back, 20% arms", "Drive with legs BEFORE pulling with arms", "Damper setting 4-6 for most people \u2014 higher isn't always better"], "commonMistakes": ["Pulling with arms first", "Damper on 10", "Rushing the recovery phase"], "progression": "Intervals / Higher stroke rate", "regression": "Slower pace / Technique focus", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX034", "name": "SkiErg", "movementPattern": "Cardio", "primaryMuscles": "Lats, Triceps, Core", "secondaryMuscles": "Shoulders, Glutes", "equipment": "SkiErg Machine", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Stand tall, reach up and grab handles. Drive down with arms and hinge at hips simultaneously, pulling handles to thighs. Stand back up and repeat.", "coachingCues": ["It's a full-body movement \u2014 use your hips, not just arms", "Hinge forward as you pull down", "Find a rhythm: reach-hinge-pull, stand-reach-hinge-pull"], "commonMistakes": ["Only using arms", "Not hinging at hips", "Standing too far from machine"], "progression": "Faster pace / Single-arm", "regression": "Slower pace / Technique focus", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX035", "name": "Assault Bike / Echo Bike", "movementPattern": "Cardio", "primaryMuscles": "Quads, Hamstrings, Glutes", "secondaryMuscles": "Shoulders, Core, Biceps, Triceps", "equipment": "Air Bike", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Pedal and push/pull handles simultaneously. For max effort, stand and drive. For steady-state, maintain seated rhythm.", "coachingCues": ["Push AND pull with arms \u2014 both directions count", "For intervals: all-out for work, easy spin for recovery", "Keep your core engaged \u2014 don't flop side to side"], "commonMistakes": ["Only using legs", "Death-gripping the handles", "Pacing too hard at the start"], "progression": "Longer intervals / Higher resistance", "regression": "Easy pace / Legs only", "sportTags": [], "warmupSuitable": true}, {"id": "EX036", "name": "Burpee Broad Jump", "movementPattern": "Cardio", "primaryMuscles": "Full Body", "secondaryMuscles": "Chest, Quads, Glutes, Shoulders", "equipment": "Bodyweight", "difficulty": "Intermediate", "metricType": "Distance / Time", "description": "Perform a burpee (chest to floor), then jump forward for maximum distance on the way up. Reset and repeat.", "coachingCues": ["Chest must touch the floor on each rep", "Jump forward, not up \u2014 distance is the goal", "Land softly with bent knees"], "commonMistakes": ["Not getting chest to floor", "Jumping up instead of forward", "Landing stiff-legged"], "progression": "Consecutive (no reset)", "regression": "Standard Burpee (no broad jump)", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX037", "name": "Box Jump", "movementPattern": "Cardio", "primaryMuscles": "Quads, Glutes, Calves", "secondaryMuscles": "Hamstrings, Core", "equipment": "Plyometric Box", "difficulty": "Intermediate", "metricType": "Bodyweight Reps", "description": "Stand in front of box, swing arms and jump onto the box landing with both feet. Stand fully upright, then step down.", "coachingCues": ["Swing arms for momentum", "Land softly with bent knees \u2014 quiet feet", "STEP down, don't jump down (protects Achilles)"], "commonMistakes": ["Not opening hips at the top", "Jumping down (injury risk)", "Landing on edge of box"], "progression": "Higher box / Weighted vest", "regression": "Lower box / Box step-up", "sportTags": [], "warmupSuitable": false}, {"id": "EX038", "name": "90/90 Hip Stretch", "movementPattern": "Flexibility", "primaryMuscles": "Hip Flexors, Glutes, Adductors", "secondaryMuscles": "External/Internal Rotators", "equipment": "None", "difficulty": "Beginner", "metricType": "Time Hold", "description": "Front leg at 90\u00b0 in front, back leg at 90\u00b0 behind. Sit tall, lean gently over front shin for deeper stretch. Switch sides.", "coachingCues": ["Both knees at 90\u00b0 angles", "Sit up tall \u2014 don't round your back", "Breathe into the stretch, don't force it"], "commonMistakes": ["Rounding the spine", "Forcing range beyond current flexibility", "Holding breath"], "progression": "Transition flow between sides", "regression": "Seated pigeon stretch", "sportTags": [], "warmupSuitable": true}, {"id": "EX039", "name": "World's Greatest Stretch", "movementPattern": "Flexibility", "primaryMuscles": "Hip Flexors, Hamstrings, Thoracic Spine", "secondaryMuscles": "Glutes, Adductors, Lats", "equipment": "None", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Lunge forward, place both hands inside front foot. Rotate and open one arm to the ceiling. Return and repeat other side.", "coachingCues": ["Deep lunge to open the hip flexor", "Rotate from the mid-back, not the lower back", "Follow your hand with your eyes as it reaches up"], "commonMistakes": ["Not lunging deep enough", "Rotating from lower back", "Rushing through it"], "progression": "Add hamstring extension at end", "regression": "Half-kneeling version", "sportTags": [], "warmupSuitable": true}, {"id": "EX040", "name": "Thoracic Spine Rotation", "movementPattern": "Flexibility", "primaryMuscles": "Thoracic Spine, Obliques", "secondaryMuscles": "Lats, Chest", "equipment": "None / Foam Roller", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Side-lying or all-fours position. Open one arm to the ceiling, rotating through the mid-back. Follow hand with eyes.", "coachingCues": ["Anchor your hips \u2014 only the upper back rotates", "Breathe out as you open up", "Aim for your shoulder blade to touch the floor"], "commonMistakes": ["Rotating from the hips", "Moving too fast", "Not breathing into the stretch"], "progression": "Add resistance band", "regression": "Seated rotation", "sportTags": [], "warmupSuitable": true}, {"id": "EX041", "name": "Cat-Cow", "movementPattern": "Flexibility", "primaryMuscles": "Erector Spinae, Rectus Abdominis", "secondaryMuscles": "Hip Flexors, Neck", "equipment": "None", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "All fours, hands under shoulders, knees under hips. Alternate between arching back (cow) and rounding back (cat).", "coachingCues": ["Move one vertebra at a time \u2014 wave through the spine", "Breathe in on cow (arch), breathe out on cat (round)", "Push the floor away during the cat phase"], "commonMistakes": ["Moving too fast", "Only moving mid-back", "Not coordinating breath"], "progression": "Add holds at each position", "regression": "Seated cat-cow", "sportTags": [], "warmupSuitable": true}, {"id": "EX042", "name": "Foam Roller Thoracic Extension", "movementPattern": "Flexibility", "primaryMuscles": "Thoracic Spine", "secondaryMuscles": "Chest, Lats", "equipment": "Foam Roller", "difficulty": "Beginner", "metricType": "Time Hold", "description": "Lie with foam roller across mid-back, hands behind head. Gently extend over the roller, opening the chest.", "coachingCues": ["Only extend through the mid-back \u2014 protect the lower back", "Move the roller to 3-4 positions along the thoracic spine", "Breathe deeply in the extended position"], "commonMistakes": ["Extending through lower back", "Rolling too fast", "Cranking the neck"], "progression": "Add arm overhead reach", "regression": "Supported extension over rolled towel", "sportTags": [], "warmupSuitable": true}, {"id": "EX043", "name": "Banded Glute Walk", "movementPattern": "Warm-up", "primaryMuscles": "Glute Medius, Glute Minimus", "secondaryMuscles": "Hip Abductors, TFL", "equipment": "Resistance Band", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Band around ankles or just above knees. Quarter squat position, walk sideways maintaining tension on the band.", "coachingCues": ["Stay low \u2014 keep a quarter squat throughout", "Don't let your knees cave in", "Toes forward, push with the outside of the foot"], "commonMistakes": ["Standing too tall", "Knees caving in", "Band too loose"], "progression": "Heavier band", "regression": "Band above knees (easier)", "sportTags": [], "warmupSuitable": true}, {"id": "EX044", "name": "Dead Bug", "movementPattern": "Warm-up", "primaryMuscles": "Core (deep stabilisers), Rectus Abdominis", "secondaryMuscles": "Hip Flexors, Obliques", "equipment": "None", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Lie on back, arms reaching to ceiling, knees at 90\u00b0. Slowly extend opposite arm and leg while keeping lower back pressed to floor.", "coachingCues": ["Lower back MUST stay flat on the floor \u2014 this is non-negotiable", "Move slowly \u2014 3 seconds out, 3 seconds back", "Breathe out as you extend"], "commonMistakes": ["Lower back arching off the floor", "Moving too fast", "Not coordinating opposite limbs"], "progression": "Weighted Dead Bug / Band resistance", "regression": "Heel taps only (no arm movement)", "sportTags": [], "warmupSuitable": true}, {"id": "EX045", "name": "Inchworm", "movementPattern": "Warm-up", "primaryMuscles": "Hamstrings, Core, Shoulders", "secondaryMuscles": "Chest, Calves", "equipment": "None", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Stand tall, hinge forward and walk hands out to a push-up position. Walk feet back up to hands, stand up. Repeat.", "coachingCues": ["Keep legs as straight as flexibility allows", "Walk hands out to a full plank", "Walk feet in with small steps"], "commonMistakes": ["Bending knees too much", "Not reaching full plank", "Rushing through"], "progression": "Add push-up at the bottom", "regression": "Hands on elevated surface", "sportTags": [], "warmupSuitable": true}, {"id": "EX046", "name": "Band Pull-Apart", "movementPattern": "Warm-up", "primaryMuscles": "Rear Deltoids, Rhomboids", "secondaryMuscles": "Mid Traps, Rotator Cuff", "equipment": "Resistance Band", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Hold band at arm's length, shoulder-width grip. Pull band apart until it touches your chest, squeezing shoulder blades together.", "coachingCues": ["Arms stay straight throughout", "Squeeze shoulder blades together at the end", "Control the return \u2014 don't just let it snap back"], "commonMistakes": ["Bending elbows", "Shrugging shoulders", "Using too heavy a band"], "progression": "Pause at full stretch", "regression": "Lighter band / Wider grip", "sportTags": [], "warmupSuitable": true}, {"id": "EX047", "name": "Leg Swing (Front/Back)", "movementPattern": "Warm-up", "primaryMuscles": "Hip Flexors, Hamstrings", "secondaryMuscles": "Glutes, Core", "equipment": "None / Wall for support", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Hold a wall for balance. Swing one leg forward and back in a controlled arc, increasing range gradually.", "coachingCues": ["Keep the moving leg straight but not locked", "Gradually increase the arc over 10-15 swings", "Stand tall \u2014 don't lean forward or back"], "commonMistakes": ["Swinging wildly", "Leaning body", "Not progressing the range"], "progression": "Add lateral swings", "regression": "Smaller range of motion", "sportTags": [], "warmupSuitable": true}, {"id": "EX048", "name": "Plank", "movementPattern": "Core", "primaryMuscles": "Rectus Abdominis, Transverse Abdominis", "secondaryMuscles": "Obliques, Shoulders, Glutes", "equipment": "None", "difficulty": "Beginner", "metricType": "Time Hold", "description": "Forearms on floor, body in a straight line from head to heels. Hold this position, breathing steadily.", "coachingCues": ["Squeeze your glutes and quads \u2014 it's not just an ab exercise", "Don't let your hips sag or pike up", "Look at the floor just ahead of your fists"], "commonMistakes": ["Hips sagging", "Hips piking up", "Holding breath"], "progression": "Weighted Plank / Long-lever Plank", "regression": "Incline Plank / Knee Plank", "sportTags": [], "warmupSuitable": true}, {"id": "EX049", "name": "Hanging Knee Raise", "movementPattern": "Core", "primaryMuscles": "Rectus Abdominis, Hip Flexors", "secondaryMuscles": "Obliques", "equipment": "Pull-up Bar", "difficulty": "Intermediate", "metricType": "Bodyweight Reps", "description": "Hang from bar with straight arms. Raise knees towards chest by curling pelvis up, lower with control.", "coachingCues": ["Curl your pelvis \u2014 don't just lift your knees", "Pause at the top for 1 second", "Control the swing \u2014 if you're swaying, slow down"], "commonMistakes": ["Swinging/kipping", "Only lifting knees without pelvic tilt", "Dropping legs down"], "progression": "Hanging Leg Raise (straight legs)", "regression": "Lying Knee Raise", "sportTags": [], "warmupSuitable": false}, {"id": "EX050", "name": "Ab Wheel Rollout", "movementPattern": "Core", "primaryMuscles": "Rectus Abdominis, Core (anti-extension)", "secondaryMuscles": "Lats, Shoulders, Hip Flexors", "equipment": "Ab Wheel", "difficulty": "Intermediate", "metricType": "Bodyweight Reps", "description": "Kneeling, grip ab wheel. Roll forward extending body towards floor, maintaining a hollow body position. Pull back to start using core.", "coachingCues": ["Squeeze glutes and tuck pelvis \u2014 no lower back arch", "Only go as far as you can control", "It's a pull-back with your core, not your arms"], "commonMistakes": ["Lower back hyperextending", "Going too far and collapsing", "Using hip flexors to pull back"], "progression": "Standing Ab Rollout", "regression": "Partial range / Swiss ball rollout", "sportTags": [], "warmupSuitable": false}, {"id": "EX051", "name": "HYROX Sled Push (Race Standard)", "movementPattern": "Carry", "primaryMuscles": "Quads, Glutes, Calves", "secondaryMuscles": "Core, Shoulders", "equipment": "Sled / Prowler", "difficulty": "Advanced", "metricType": "Distance / Time", "description": "HYROX race standard: 50m push. Low body angle, drive with legs. Men: 152kg total, Women: 102kg total. Pace yourself \u2014 it's early in the race.", "coachingCues": ["Get LOW \u2014 45\u00b0 body angle minimum", "Short, choppy steps \u2014 don't overstride", "Push through the balls of your feet", "Race tip: find your rhythm, don't sprint"], "commonMistakes": ["Starting too fast", "Standing too upright", "Locking arms"], "progression": "Heavier load / Hill push", "regression": "Standard Sled Push (EX026)", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX052", "name": "HYROX Sled Pull (Race Standard)", "movementPattern": "Carry", "primaryMuscles": "Hamstrings, Glutes, Lats, Biceps", "secondaryMuscles": "Core, Forearms", "equipment": "Sled, Rope", "difficulty": "Advanced", "metricType": "Distance / Time", "description": "HYROX race standard: 50m pull. Face sled, hand-over-hand rope pull. Men: 103kg, Women: 78kg. Sit weight back and use whole body.", "coachingCues": ["Sit back \u2014 use your bodyweight as an anchor", "Hand-over-hand rhythm: reach, grip, sit, pull", "Don't stand up between pulls", "Race tip: find a rhythm and don't break it"], "commonMistakes": ["Standing upright (no leverage)", "Arm-only pulling", "Losing grip rhythm"], "progression": "Heavier load", "regression": "Standard Sled Pull (EX027)", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX053", "name": "HYROX Wall Balls", "movementPattern": "Squat", "primaryMuscles": "Quads, Glutes, Shoulders", "secondaryMuscles": "Core, Triceps, Calves", "equipment": "Medicine Ball, Wall Target", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "HYROX race standard: 75/100 reps. Squat to parallel holding med ball at chest, drive up and throw ball to 3m (men) / 2.7m (women) target.", "coachingCues": ["Squat DEEP \u2014 hips below knees, ball at chest", "One fluid motion: squat-drive-throw", "Catch the ball softly and flow into next squat", "Race tip: break into manageable sets (25s or 20s)"], "commonMistakes": ["Shallow squat", "Throwing with arms only (no leg drive)", "Not catching the ball properly"], "progression": "Heavier ball / Higher target", "regression": "Lighter ball / Bodyweight squat", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX054", "name": "HYROX Rowing (Race Standard)", "movementPattern": "Cardio", "primaryMuscles": "Lats, Quads, Glutes", "secondaryMuscles": "Core, Biceps, Hamstrings", "equipment": "Rowing Machine", "difficulty": "Intermediate", "metricType": "Distance / Time", "description": "HYROX race standard: 1000m row. Pace is crucial \u2014 aim for consistent split time. Start controlled, increase effort in final 250m.", "coachingCues": ["Target split: 1:50-2:10/500m depending on fitness", "Drive with legs FIRST, then lean, then pull", "Damper setting 5-6 for most athletes", "Race tip: don't empty the tank, you still have 6 stations after this"], "commonMistakes": ["Going all-out from the start", "Arms before legs", "Hunching over"], "progression": "Race-pace intervals", "regression": "Standard Rowing technique (EX033)", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX055", "name": "HYROX SkiErg (Race Standard)", "movementPattern": "Cardio", "primaryMuscles": "Lats, Triceps, Core", "secondaryMuscles": "Shoulders, Glutes", "equipment": "SkiErg Machine", "difficulty": "Intermediate", "metricType": "Distance / Time", "description": "HYROX race standard: 1000m ski. Full-body pull using hip hinge. Pace evenly \u2014 this station catches people out if they go too hard.", "coachingCues": ["Use your hips \u2014 hinge forward as you pull down", "Aim for consistent pace throughout", "Arms and hips work together", "Race tip: stay composed, it's a long race"], "commonMistakes": ["Arm-only pulling", "Starting too fast", "Not hinging at hips"], "progression": "Race-pace intervals", "regression": "Standard SkiErg technique (EX034)", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX056", "name": "HYROX Burpee Broad Jump (Race Standard)", "movementPattern": "Cardio", "primaryMuscles": "Full Body", "secondaryMuscles": "Chest, Quads, Glutes", "equipment": "Bodyweight", "difficulty": "Advanced", "metricType": "Distance / Time", "description": "HYROX race standard: 80m total distance. Chest to floor, jump forward for distance. This is the final station \u2014 dig deep.", "coachingCues": ["Chest MUST touch the floor each rep", "Jump forward, not up \u2014 every cm of distance counts", "Find a steady rhythm you can sustain", "Race tip: this is the last station \u2014 leave nothing in the tank"], "commonMistakes": ["Not getting chest to floor (no-rep)", "Jumping up instead of forward", "Burning out early"], "progression": "Consecutive sprints", "regression": "Standard Burpee Broad Jump (EX036)", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX057", "name": "HYROX Farmer's Carry (Race Standard)", "movementPattern": "Carry", "primaryMuscles": "Forearms, Traps, Core", "secondaryMuscles": "Shoulders, Glutes", "equipment": "Kettlebells", "difficulty": "Intermediate", "metricType": "Distance / Time", "description": "HYROX race standard: 200m carry. Men: 2\u00d724kg KBs, Women: 2\u00d716kg KBs. Steady pace, efficient grip, don't rush.", "coachingCues": ["Shoulders back and down \u2014 proud chest", "Short controlled steps", "Squeeze the handles hard \u2014 grip failure means stopping", "Race tip: if grip fails, put down for 5 seconds max, shake out, go again"], "commonMistakes": ["Shrugging shoulders", "Leaning forward", "Grip giving out from too tight a hold early on"], "progression": "Heavier KBs / Longer distance", "regression": "Standard Farmer's Walk (EX025)", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX058", "name": "HYROX Sandbag Lunges (Race Standard)", "movementPattern": "Lunge", "primaryMuscles": "Quads, Glutes, Hamstrings", "secondaryMuscles": "Core, Shoulders, Biceps", "equipment": "Sandbag", "difficulty": "Advanced", "metricType": "Distance / Time", "description": "HYROX race standard: 100m lunges. Men: 20kg bag, Women: 10kg bag. Bear hug the bag, alternating forward lunges. Both knees must bend to 90\u00b0.", "coachingCues": ["Bear hug the bag high on your chest", "Long strides \u2014 shorter strides = more total reps", "Back knee must touch or nearly touch the ground", "Race tip: find a rhythm and breathe on every step"], "commonMistakes": ["Bag slipping down", "Short strides", "Not hitting depth (no-rep risk)"], "progression": "Heavier bag", "regression": "Bodyweight lunges / Lighter bag", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX059", "name": "Thruster", "movementPattern": "Push", "primaryMuscles": "Quads, Glutes, Shoulders", "secondaryMuscles": "Triceps, Core", "equipment": "Barbell / Dumbbells", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Front squat into overhead press in one fluid movement. Squat to depth, drive up and press overhead using leg power.", "coachingCues": ["One fluid motion \u2014 squat, drive, press", "Use the momentum from the squat to help the press", "Lock out fully overhead before the next rep"], "commonMistakes": ["Pressing before fully standing", "Shallow squat", "Not locking out overhead"], "progression": "Heavier / Cluster sets", "regression": "Dumbbell Thruster / Lighter load", "sportTags": ["HYROX"], "warmupSuitable": false}, {"id": "EX060", "name": "Muscle-Up", "movementPattern": "Pull", "primaryMuscles": "Lats, Chest, Triceps", "secondaryMuscles": "Biceps, Core, Shoulders", "equipment": "Pull-up Bar / Rings", "difficulty": "Advanced", "metricType": "Bodyweight Reps", "description": "Explosive pull-up transitioning over the bar into a dip. Requires significant pulling power and technique.", "coachingCues": ["Pull high \u2014 belly button to bar level", "Aggressive turnover at the top \u2014 fast transition", "Press out to full lockout above the bar"], "commonMistakes": ["Not pulling high enough", "Slow transition", "Chicken-winging one arm"], "progression": "Strict Muscle-Up / Weighted", "regression": "Band-Assisted / High Pull-ups", "sportTags": [], "warmupSuitable": false}, {"id": "EX061", "name": "Toes-to-Bar", "movementPattern": "Core", "primaryMuscles": "Rectus Abdominis, Hip Flexors", "secondaryMuscles": "Lats, Obliques", "equipment": "Pull-up Bar", "difficulty": "Advanced", "metricType": "Bodyweight Reps", "description": "Hang from bar, swing legs up to touch toes to the bar. Requires core strength, lat engagement, and kipping rhythm.", "coachingCues": ["Use a controlled kip \u2014 not wild swinging", "Compress your body to bring toes up", "Active shoulders throughout \u2014 don't just hang dead"], "commonMistakes": ["Wild swinging", "Only getting knees to chest", "Losing grip from swinging"], "progression": "Strict Toes-to-Bar", "regression": "Hanging Knee Raise (EX049)", "sportTags": [], "warmupSuitable": false}, {"id": "EX062", "name": "Turkish Get-Up", "movementPattern": "Core", "primaryMuscles": "Core, Shoulders, Glutes", "secondaryMuscles": "Quads, Hamstrings, Triceps", "equipment": "Kettlebell / Dumbbell", "difficulty": "Advanced", "metricType": "Weight \u00d7 Reps", "description": "Lying to standing while keeping a weight locked out overhead. Multi-step movement through floor positions to standing and back.", "coachingCues": ["Eyes on the weight at ALL times", "Each position is a checkpoint \u2014 pause and stabilise", "Reverse exactly the way you went up"], "commonMistakes": ["Rushing through positions", "Taking eyes off the weight", "Bending the pressing arm"], "progression": "Heavier KB / Bottoms-up", "regression": "Bodyweight only / Shoe on fist", "sportTags": [], "warmupSuitable": false}, {"id": "EX063", "name": "Battle Ropes", "movementPattern": "Cardio", "primaryMuscles": "Shoulders, Core, Forearms", "secondaryMuscles": "Biceps, Lats", "equipment": "Battle Ropes", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Hold one rope end in each hand. Create waves using alternating or simultaneous arm movements. Stay in an athletic stance.", "coachingCues": ["Power comes from the hips and core, not just the arms", "Keep a slight squat \u2014 athletic position", "Make the waves travel all the way to the anchor"], "commonMistakes": ["Only using arms", "Standing upright", "Waves dying before reaching anchor"], "progression": "Single-arm / Heavier rope", "regression": "Smaller waves / Shorter intervals", "sportTags": [], "warmupSuitable": false}, {"id": "EX064", "name": "Barbell Curl", "movementPattern": "Pull", "primaryMuscles": "Biceps", "secondaryMuscles": "Forearms, Brachialis", "equipment": "Barbell / EZ Bar", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Stand tall, curl bar from thighs to shoulders, keeping elbows pinned to sides. Lower with control.", "coachingCues": ["Elbows stay glued to your sides", "Control the negative \u2014 2-3 seconds down", "Full range: fully extended at bottom, squeezed at top"], "commonMistakes": ["Swinging body for momentum", "Elbows drifting forward", "Partial range"], "progression": "Strict Curl / Heavier", "regression": "Dumbbell Curl", "sportTags": [], "warmupSuitable": false}, {"id": "EX065", "name": "Tricep Dip (Bench)", "movementPattern": "Push", "primaryMuscles": "Triceps", "secondaryMuscles": "Anterior Deltoids, Chest", "equipment": "Bench / Chair", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Hands on bench behind you, feet on floor (or elevated). Lower body by bending elbows to ~90\u00b0, press back up.", "coachingCues": ["Keep your back close to the bench", "Elbows point straight back, not out", "Don't go deeper than 90\u00b0 at the elbow"], "commonMistakes": ["Going too deep (shoulder strain)", "Elbows flaring", "Using legs to assist"], "progression": "Feet elevated / Weighted", "regression": "Feet closer / Bend knees", "sportTags": [], "warmupSuitable": false}, {"id": "EX066", "name": "Calf Raise", "movementPattern": "Squat", "primaryMuscles": "Calves (Gastrocnemius, Soleus)", "secondaryMuscles": "Tibialis Anterior", "equipment": "Bodyweight / Dumbbells / Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Stand on edge of step or flat floor. Rise onto toes as high as possible, hold 1 second, lower slowly below the step for full stretch.", "coachingCues": ["Full range: deep stretch at bottom, full squeeze at top", "Pause at the top for 1 second", "Slow eccentric \u2014 3 seconds down"], "commonMistakes": ["Bouncing at the bottom", "Partial range", "Leaning forward"], "progression": "Single-Leg Calf Raise", "regression": "Seated Calf Raise", "sportTags": [], "warmupSuitable": false}, {"id": "EX067", "name": "Lateral Raise", "movementPattern": "Push", "primaryMuscles": "Lateral Deltoids", "secondaryMuscles": "Anterior Deltoids, Traps", "equipment": "Dumbbells", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Stand tall, raise dumbbells out to sides until arms are parallel to floor. Slight bend in elbows. Lower with control.", "coachingCues": ["Lead with your elbows, not your hands", "Slight forward lean targets the side delt better", "Don't go above shoulder height"], "commonMistakes": ["Using momentum", "Raising too high (traps take over)", "Straight arms (elbow strain)"], "progression": "Cable Lateral Raise", "regression": "Lighter weight / Partial range", "sportTags": [], "warmupSuitable": false}, {"id": "EX068", "name": "Plank to Push-up", "movementPattern": "Core", "primaryMuscles": "Core, Triceps, Chest", "secondaryMuscles": "Shoulders, Glutes", "equipment": "None", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Start in forearm plank. Press up to push-up position one arm at a time, then lower back to forearms. Alternate leading arm.", "coachingCues": ["Keep hips square \u2014 no twisting", "Alternate which arm leads each rep", "Core tight throughout, body in a straight line"], "commonMistakes": ["Hips rocking side to side", "Always leading with same arm", "Sagging hips"], "progression": "Weighted vest", "regression": "From knees", "sportTags": [], "warmupSuitable": true}, {"id": "EX069", "name": "Dumbbell Bench Press", "movementPattern": "Push", "primaryMuscles": "Chest, Anterior Deltoids", "secondaryMuscles": "Triceps", "equipment": "Dumbbells, Flat Bench", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Lie flat on bench, press dumbbells from chest level to full lockout. Greater range of motion than barbell and addresses imbalances.", "coachingCues": ["Lower dumbbells to the sides of your chest, not straight down", "Press in a slight arc \u2014 dumbbells come together at the top", "Squeeze chest at the top of each rep"], "commonMistakes": ["Dumbbells too heavy to control", "Flaring elbows 90\u00b0", "Not touching chest depth"], "progression": "Barbell Bench Press", "regression": "Machine Chest Press", "sportTags": [], "warmupSuitable": false}, {"id": "EX070", "name": "Dumbbell Fly", "movementPattern": "Push", "primaryMuscles": "Chest (stretch emphasis)", "secondaryMuscles": "Anterior Deltoids", "equipment": "Dumbbells, Flat Bench", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Lie flat, arms extended above chest with slight elbow bend. Open arms wide in an arc until deep chest stretch, squeeze back together.", "coachingCues": ["Soft bend in elbows throughout \u2014 don't straighten or bend more", "Think 'hugging a tree' on the way up", "Control the stretch \u2014 don't bounce at the bottom"], "commonMistakes": ["Straightening arms (becomes a press)", "Going too heavy", "Losing elbow angle at the bottom"], "progression": "Cable Fly", "regression": "Machine Pec Fly", "sportTags": [], "warmupSuitable": false}, {"id": "EX071", "name": "Incline Dumbbell Fly", "movementPattern": "Push", "primaryMuscles": "Upper Chest (stretch emphasis)", "secondaryMuscles": "Anterior Deltoids", "equipment": "Dumbbells, Incline Bench", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Bench at 30-45\u00b0. Arms extended above chest, slight elbow bend. Open wide to feel upper chest stretch, squeeze back to start.", "coachingCues": ["Keep the same elbow bend throughout", "Feel the stretch across the upper chest", "Lighter weight than presses \u2014 this is about the stretch"], "commonMistakes": ["Too heavy (compensating with pressing motion)", "Bench angle too steep", "Rushing the negative"], "progression": "Cable Fly (low to high)", "regression": "Flat Dumbbell Fly", "sportTags": [], "warmupSuitable": false}, {"id": "EX072", "name": "Cable Fly (Mid)", "movementPattern": "Push", "primaryMuscles": "Chest", "secondaryMuscles": "Anterior Deltoids", "equipment": "Cable Machine (dual)", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Cables set at shoulder height. Step forward, slight lean, bring hands together in front of chest in a hugging arc. Constant tension.", "coachingCues": ["Slight forward lean, one foot ahead for stability", "Hands meet in front of your chest, not your face", "Squeeze and hold for 1 second at the peak"], "commonMistakes": ["Using too much weight (turns into a press)", "Standing too upright", "No squeeze at the peak"], "progression": "Cable Fly with pause", "regression": "Machine Pec Fly", "sportTags": [], "warmupSuitable": false}, {"id": "EX073", "name": "Cable Fly (Low to High)", "movementPattern": "Push", "primaryMuscles": "Upper Chest", "secondaryMuscles": "Anterior Deltoids", "equipment": "Cable Machine (dual)", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Cables set at lowest position. Drive hands upward and together in a scooping arc, finishing at eye level. Targets the upper chest.", "coachingCues": ["Drive upward \u2014 think 'scooping' the weight", "Hands finish at eye/forehead level", "Squeeze upper chest at the top"], "commonMistakes": ["Pulling straight across (misses upper chest)", "Bending elbows too much", "Using momentum"], "progression": "Incline Dumbbell Fly", "regression": "Incline Push-up", "sportTags": [], "warmupSuitable": false}, {"id": "EX074", "name": "Cable Fly (High to Low)", "movementPattern": "Push", "primaryMuscles": "Lower Chest", "secondaryMuscles": "Anterior Deltoids", "equipment": "Cable Machine (dual)", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Cables set at highest position. Pull hands downward and together, finishing at hip/belly level. Targets the lower chest.", "coachingCues": ["Drive downward \u2014 hands meet at belly button level", "Lean slightly forward", "Control the return \u2014 don't let cables yank you back"], "commonMistakes": ["Not going low enough", "Standing too upright", "Rushing reps"], "progression": "Decline Dumbbell Fly", "regression": "Dips (chest emphasis)", "sportTags": [], "warmupSuitable": false}, {"id": "EX075", "name": "Machine Chest Press", "movementPattern": "Push", "primaryMuscles": "Chest, Anterior Deltoids", "secondaryMuscles": "Triceps", "equipment": "Chest Press Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Seated machine press. Handles at chest height, press forward to full extension, control the return.", "coachingCues": ["Seat height: handles align with mid-chest", "Press to full extension without locking elbows", "Control the negative \u2014 2 seconds back"], "commonMistakes": ["Seat too high or low", "Locking elbows aggressively", "Lifting bum off seat"], "progression": "Dumbbell Bench Press", "regression": "Lighter weight / Band press", "sportTags": [], "warmupSuitable": false}, {"id": "EX076", "name": "Machine Pec Fly", "movementPattern": "Push", "primaryMuscles": "Chest (isolation)", "secondaryMuscles": "Anterior Deltoids", "equipment": "Pec Fly Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Seated, arms on pads at chest height. Squeeze arms together in front of chest, control the return to feel the stretch.", "coachingCues": ["Drive with your chest, not your arms", "Squeeze and hold for 1 second at the front", "Control the stretch on the way back \u2014 don't let it snap open"], "commonMistakes": ["Using too much weight", "No pause at contraction", "Shrugging shoulders"], "progression": "Cable Fly", "regression": "Lighter weight with slow tempo", "sportTags": [], "warmupSuitable": false}, {"id": "EX077", "name": "Decline Dumbbell Press", "movementPattern": "Push", "primaryMuscles": "Lower Chest, Anterior Deltoids", "secondaryMuscles": "Triceps", "equipment": "Dumbbells, Decline Bench", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Bench set to decline (-15 to -30\u00b0). Press dumbbells from lower chest to lockout. Emphasises the lower portion of the chest.", "coachingCues": ["Secure your legs on the pads before pressing", "Lower to the bottom of your chest/upper abs", "Same pressing arc as flat \u2014 dumbbells come together at the top"], "commonMistakes": ["Not securing legs (sliding)", "Going too steep on decline", "Flaring elbows"], "progression": "Weighted Dips (chest focus)", "regression": "Flat Dumbbell Press", "sportTags": [], "warmupSuitable": false}, {"id": "EX078", "name": "Cable Row (Seated)", "movementPattern": "Pull", "primaryMuscles": "Lats, Rhomboids, Mid Traps", "secondaryMuscles": "Biceps, Rear Deltoids", "equipment": "Cable Machine, V-Bar / Straight Bar", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Seated, feet on platform. Pull handle to lower ribcage, squeezing shoulder blades, return with control maintaining upright torso.", "coachingCues": ["Pull to your belly button, not your chest", "Squeeze shoulder blades together like you're holding a pencil between them", "Stay upright \u2014 don't lean back past 10\u00b0 to cheat"], "commonMistakes": ["Leaning back excessively", "Pulling with arms instead of back", "Rounding forward on return"], "progression": "Single-Arm Cable Row", "regression": "Machine Row", "sportTags": [], "warmupSuitable": false}, {"id": "EX079", "name": "Single-Arm Cable Row", "movementPattern": "Pull", "primaryMuscles": "Lats, Rhomboids", "secondaryMuscles": "Biceps, Rear Deltoids, Core", "equipment": "Cable Machine", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Standing or half-kneeling, pull cable to hip with one arm. Allows greater range of motion and trains anti-rotation.", "coachingCues": ["Pull to your hip, not your armpit", "Resist the rotation \u2014 your torso stays square", "Full stretch at the extension, squeeze at the hip"], "commonMistakes": ["Rotating torso to cheat", "Pulling too high", "Rushing reps"], "progression": "Meadows Row", "regression": "Seated Cable Row (both arms)", "sportTags": [], "warmupSuitable": false}, {"id": "EX080", "name": "Machine Row (Seated)", "movementPattern": "Pull", "primaryMuscles": "Lats, Rhomboids, Mid Traps", "secondaryMuscles": "Biceps", "equipment": "Row Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Seated, chest against pad. Pull handles back squeezing shoulder blades, return with control.", "coachingCues": ["Chest stays on the pad throughout", "Drive elbows straight back", "Squeeze for 1 second at the back of each rep"], "commonMistakes": ["Pulling chest off the pad", "Using momentum", "Not reaching full contraction"], "progression": "Barbell Bent-Over Row", "regression": "Lighter weight / Slower tempo", "sportTags": [], "warmupSuitable": false}, {"id": "EX081", "name": "Chest-Supported Dumbbell Row", "movementPattern": "Pull", "primaryMuscles": "Lats, Rhomboids, Mid Traps", "secondaryMuscles": "Biceps, Rear Deltoids", "equipment": "Dumbbells, Incline Bench", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Lie face-down on incline bench (30-45\u00b0). Row both dumbbells to hips simultaneously. Chest support removes cheating.", "coachingCues": ["Chest flat on the bench \u2014 it does the stabilising for you", "Row to your hips, not your armpits", "Squeeze at the top, full stretch at the bottom"], "commonMistakes": ["Lifting chest off bench", "Rowing too high", "Not controlling the negative"], "progression": "Barbell Bent-Over Row", "regression": "Machine Row", "sportTags": [], "warmupSuitable": false}, {"id": "EX082", "name": "Straight-Arm Pulldown", "movementPattern": "Pull", "primaryMuscles": "Lats (isolation)", "secondaryMuscles": "Teres Major, Core", "equipment": "Cable Machine, Straight Bar", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Standing, arms extended at shoulder height gripping bar. Pull bar down to thighs in an arc keeping arms straight. Isolates the lats.", "coachingCues": ["Arms stay straight throughout \u2014 soft elbow bend only", "Drive the bar down with your lats, not your arms", "Lean forward slightly for better lat engagement"], "commonMistakes": ["Bending elbows (turns into a pulldown)", "Standing too upright", "Using too much weight"], "progression": "Pullover (dumbbell)", "regression": "Lat Pulldown", "sportTags": [], "warmupSuitable": false}, {"id": "EX083", "name": "T-Bar Row", "movementPattern": "Pull", "primaryMuscles": "Lats, Rhomboids, Mid Traps", "secondaryMuscles": "Biceps, Erector Spinae", "equipment": "T-Bar / Landmine + V-Handle", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Straddle the bar, grip V-handle. Hinge at hips ~45\u00b0, pull to chest, squeeze back, lower with control.", "coachingCues": ["Flat back \u2014 same position as a bent-over row", "Pull to your lower chest/upper abs", "Squeeze shoulder blades at the top"], "commonMistakes": ["Rounding lower back", "Using momentum", "Standing too upright"], "progression": "Barbell Bent-Over Row (heavy)", "regression": "Chest-Supported Row", "sportTags": [], "warmupSuitable": false}, {"id": "EX084", "name": "Inverted Row", "movementPattern": "Pull", "primaryMuscles": "Lats, Rhomboids, Mid Traps", "secondaryMuscles": "Biceps, Core", "equipment": "Barbell in Rack / Smith Machine / TRX", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Hang beneath a bar at waist height, body straight. Pull chest to bar, lower with control. Bodyweight horizontal pulling.", "coachingCues": ["Body stays in a straight line \u2014 like an upside-down plank", "Pull your chest to the bar, not just your chin", "Squeeze shoulder blades at the top"], "commonMistakes": ["Hips sagging", "Not pulling high enough", "Bending at the hips"], "progression": "Feet-elevated Inverted Row", "regression": "Higher bar angle (more upright)", "sportTags": [], "warmupSuitable": true}, {"id": "EX085", "name": "Dumbbell Shoulder Press (Seated)", "movementPattern": "Push", "primaryMuscles": "Anterior Deltoids, Lateral Deltoids", "secondaryMuscles": "Triceps, Upper Traps", "equipment": "Dumbbells, Upright Bench", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Seated, back supported. Press dumbbells from shoulder height to overhead lockout. Greater range of motion than barbell.", "coachingCues": ["Start with dumbbells at ear level, palms forward", "Press up and slightly inward \u2014 dumbbells nearly touch at the top", "Control the descent to ear level"], "commonMistakes": ["Arching lower back", "Not locking out", "Dumbbells too far forward"], "progression": "Standing Barbell Overhead Press", "regression": "Machine Shoulder Press", "sportTags": [], "warmupSuitable": false}, {"id": "EX086", "name": "Arnold Press", "movementPattern": "Push", "primaryMuscles": "All three deltoid heads", "secondaryMuscles": "Triceps, Upper Traps", "equipment": "Dumbbells", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Start with dumbbells at chin height, palms facing you. Rotate palms outward as you press overhead. Reverse on the way down.", "coachingCues": ["Smooth rotation as you press \u2014 don't just flip and push", "Palms face you at the bottom, face forward at the top", "Full range: chin level to full lockout"], "commonMistakes": ["Rushing the rotation", "Incomplete range of motion", "Using too much weight"], "progression": "Barbell Overhead Press", "regression": "Dumbbell Shoulder Press (no rotation)", "sportTags": [], "warmupSuitable": false}, {"id": "EX087", "name": "Machine Shoulder Press", "movementPattern": "Push", "primaryMuscles": "Anterior Deltoids, Lateral Deltoids", "secondaryMuscles": "Triceps", "equipment": "Shoulder Press Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Seated, handles at shoulder height. Press to full overhead extension, lower with control.", "coachingCues": ["Seat height: handles start at shoulder level", "Press to full extension without locking elbows violently", "Don't let the stack crash down between reps"], "commonMistakes": ["Seat too low (strains shoulders)", "Locking elbows aggressively", "Using momentum"], "progression": "Dumbbell Shoulder Press", "regression": "Lighter weight / Partial range", "sportTags": [], "warmupSuitable": false}, {"id": "EX088", "name": "Cable Lateral Raise", "movementPattern": "Push", "primaryMuscles": "Lateral Deltoids", "secondaryMuscles": "Anterior Deltoids", "equipment": "Cable Machine (single)", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Stand side-on to cable, low pulley. Raise arm out to side until parallel with floor. Cable provides constant tension through full range.", "coachingCues": ["Slight lean away from the cable for better range", "Lead with your elbow, not your hand", "Pause at the top \u2014 the constant tension is the advantage over dumbbells"], "commonMistakes": ["Shrugging", "Going above shoulder height", "Using momentum"], "progression": "Lateral Raise with pause", "regression": "Dumbbell Lateral Raise (lighter)", "sportTags": [], "warmupSuitable": false}, {"id": "EX089", "name": "Front Raise", "movementPattern": "Push", "primaryMuscles": "Anterior Deltoids", "secondaryMuscles": "Upper Chest, Lateral Deltoids", "equipment": "Dumbbells / Barbell / Cable", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Stand tall, raise weight in front of you to shoulder height with straight arms. Lower with control.", "coachingCues": ["Arms stay straight with a soft elbow bend", "Only raise to shoulder height \u2014 no higher", "Control the descent \u2014 don't just drop it"], "commonMistakes": ["Swinging body", "Raising above shoulder height", "Using too much weight"], "progression": "Cable Front Raise", "regression": "Lighter weight", "sportTags": [], "warmupSuitable": false}, {"id": "EX090", "name": "Reverse Fly (Dumbbell)", "movementPattern": "Pull", "primaryMuscles": "Rear Deltoids, Rhomboids", "secondaryMuscles": "Mid Traps", "equipment": "Dumbbells, Incline Bench", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Bent over or lying face-down on incline bench. Raise dumbbells out to sides with slight elbow bend, squeezing rear delts.", "coachingCues": ["Think about pulling your elbows apart, not lifting the weight", "Squeeze the rear delts at the top for 1 second", "Light weight, high reps \u2014 these are small muscles"], "commonMistakes": ["Using too much weight", "Straightening arms fully", "Shrugging shoulders"], "progression": "Cable Reverse Fly", "regression": "Band Pull-Apart", "sportTags": [], "warmupSuitable": false}, {"id": "EX091", "name": "Cable Reverse Fly", "movementPattern": "Pull", "primaryMuscles": "Rear Deltoids, Rhomboids", "secondaryMuscles": "Mid Traps", "equipment": "Cable Machine (dual)", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Cables at shoulder height, cross-grip (right hand on left cable). Pull apart, squeezing rear delts. Constant cable tension.", "coachingCues": ["Arms stay at shoulder height throughout", "Pull with your rear delts, not your hands", "Control the return \u2014 don't let cables snap you back"], "commonMistakes": ["Dropping arms below shoulder height", "Bending elbows too much", "Rushing reps"], "progression": "Reverse Fly with pause", "regression": "Dumbbell Reverse Fly", "sportTags": [], "warmupSuitable": false}, {"id": "EX092", "name": "Upright Row", "movementPattern": "Pull", "primaryMuscles": "Lateral Deltoids, Upper Traps", "secondaryMuscles": "Biceps, Anterior Deltoids", "equipment": "Barbell / Dumbbells / Cable", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Grip barbell at hip width or wider. Pull straight up along your body to upper chest, elbows driving high and wide.", "coachingCues": ["Wide grip is safer for shoulders than narrow", "Elbows lead \u2014 they should always be higher than your hands", "Only pull to upper chest level, not chin"], "commonMistakes": ["Narrow grip (shoulder impingement risk)", "Pulling too high", "Using momentum"], "progression": "Cable Upright Row (smoother)", "regression": "Lateral Raise (if shoulder issues)", "sportTags": [], "warmupSuitable": false}, {"id": "EX093", "name": "Shrug (Barbell/Dumbbell)", "movementPattern": "Pull", "primaryMuscles": "Upper Traps", "secondaryMuscles": "Levator Scapulae", "equipment": "Barbell / Dumbbells", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Hold weight at sides (DBs) or front (BB). Shrug shoulders straight up towards ears, hold briefly, lower with control.", "coachingCues": ["Straight up and down \u2014 don't roll shoulders", "Hold the squeeze at the top for 1-2 seconds", "Heavy weight is fine but control is more important"], "commonMistakes": ["Rolling shoulders (unnecessary, potential injury)", "Not pausing at top", "Bending elbows"], "progression": "Behind-the-back Shrug", "regression": "Lighter weight with pause", "sportTags": [], "warmupSuitable": false}, {"id": "EX094", "name": "Lu Raise", "movementPattern": "Push", "primaryMuscles": "Lateral Deltoids, Anterior Deltoids", "secondaryMuscles": "Traps", "equipment": "Dumbbells", "difficulty": "Advanced", "metricType": "Weight \u00d7 Reps", "description": "Lateral raise to shoulder height, then rotate and press overhead in one fluid motion. Combines raise and press for shoulder development.", "coachingCues": ["Raise to shoulder height first", "Rotate and press overhead", "Reverse the exact same path on the way down"], "commonMistakes": ["Pressing without the lateral raise phase", "Using too much weight", "Rushing the movement"], "progression": "Heavier / Strict tempo", "regression": "Lateral Raise + Shoulder Press (separate)", "sportTags": [], "warmupSuitable": false}, {"id": "EX095", "name": "Dumbbell Bicep Curl", "movementPattern": "Pull", "primaryMuscles": "Biceps", "secondaryMuscles": "Forearms, Brachialis", "equipment": "Dumbbells", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Stand or seated. Curl dumbbells from thighs to shoulders, alternating or simultaneous. Palms rotate from neutral to supinated.", "coachingCues": ["Elbows pinned to your sides \u2014 don't let them drift forward", "Supinate (rotate palms up) as you curl for peak contraction", "Full extension at the bottom, full squeeze at the top"], "commonMistakes": ["Swinging body", "Elbows moving forward", "Partial range of motion"], "progression": "Incline Dumbbell Curl", "regression": "Resistance Band Curl", "sportTags": [], "warmupSuitable": false}, {"id": "EX096", "name": "Hammer Curl", "movementPattern": "Pull", "primaryMuscles": "Brachialis, Biceps, Brachioradialis", "secondaryMuscles": "Forearms", "equipment": "Dumbbells", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Neutral grip (palms facing each other) throughout. Curl dumbbells to shoulders. Targets the brachialis and forearm more than standard curls.", "coachingCues": ["Palms face each other throughout \u2014 no rotation", "Elbows stay pinned to sides", "These build arm thickness, not just the peak"], "commonMistakes": ["Rotating wrists", "Swinging body", "Elbows drifting forward"], "progression": "Cross-Body Hammer Curl", "regression": "Lighter weight / Seated", "sportTags": [], "warmupSuitable": false}, {"id": "EX097", "name": "Incline Dumbbell Curl", "movementPattern": "Pull", "primaryMuscles": "Biceps (long head, stretch emphasis)", "secondaryMuscles": "Brachialis", "equipment": "Dumbbells, Incline Bench", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Bench at 45-60\u00b0. Arms hang straight down, curl dumbbells up. The incline puts a deep stretch on the long head of the biceps.", "coachingCues": ["Let your arms hang fully before each rep \u2014 feel that stretch", "Don't swing \u2014 the bench eliminates cheating", "Lighter than standing curls \u2014 the stretch makes it harder"], "commonMistakes": ["Bench angle too upright (no stretch benefit)", "Elbows moving forward", "Using standing curl weight"], "progression": "Incline Curl with pause at stretch", "regression": "Standing Dumbbell Curl", "sportTags": [], "warmupSuitable": false}, {"id": "EX098", "name": "Preacher Curl", "movementPattern": "Pull", "primaryMuscles": "Biceps (short head)", "secondaryMuscles": "Brachialis, Forearms", "equipment": "EZ Bar / Dumbbells, Preacher Bench", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Arms resting on preacher pad, curl bar from full extension to shoulders. The pad isolates the biceps and prevents cheating.", "coachingCues": ["Armpits sit at the top of the pad", "Don't let the weight fall at full extension \u2014 control it", "Squeeze at the top, 3-second negative"], "commonMistakes": ["Extending too fast at the bottom (bicep tear risk)", "Lifting elbows off pad", "Partial range"], "progression": "Single-Arm Preacher Curl", "regression": "Machine Preacher Curl", "sportTags": [], "warmupSuitable": false}, {"id": "EX099", "name": "Cable Bicep Curl", "movementPattern": "Pull", "primaryMuscles": "Biceps", "secondaryMuscles": "Forearms", "equipment": "Cable Machine, Straight/EZ Bar", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Low pulley, straight or EZ bar attachment. Curl from thighs to shoulders. Cable provides constant tension through the full range.", "coachingCues": ["Stand close to the stack \u2014 don't lean back", "Elbows pinned to sides", "Constant tension throughout \u2014 no rest at the bottom"], "commonMistakes": ["Leaning back", "Elbows moving", "Standing too far from the machine"], "progression": "Cable Curl with rope (neutral grip)", "regression": "Resistance Band Curl", "sportTags": [], "warmupSuitable": false}, {"id": "EX100", "name": "Concentration Curl", "movementPattern": "Pull", "primaryMuscles": "Biceps (peak contraction)", "secondaryMuscles": "Brachialis", "equipment": "Dumbbell", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Seated, elbow braced against inner thigh. Curl dumbbell to shoulder, squeezing bicep hard at the top. Pure isolation.", "coachingCues": ["Elbow is braced but not pushing against the thigh to cheat", "Rotate wrist slightly outward at the top for peak contraction", "Slow and controlled \u2014 this is about the squeeze"], "commonMistakes": ["Using thigh to push elbow and cheat", "Rushing reps", "Partial range"], "progression": "Cross-body Concentration Curl", "regression": "Cable Curl (similar isolation)", "sportTags": [], "warmupSuitable": false}, {"id": "EX101", "name": "Cable Rope Hammer Curl", "movementPattern": "Pull", "primaryMuscles": "Brachialis, Biceps, Forearms", "secondaryMuscles": "Brachioradialis", "equipment": "Cable Machine, Rope", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Low pulley with rope. Curl with neutral grip (like hammer curls but with constant cable tension). Split rope at top for extra contraction.", "coachingCues": ["Neutral grip throughout \u2014 thumbs pointing up", "Split the rope apart at the top for full contraction", "Don't lean back \u2014 stay upright"], "commonMistakes": ["Rotating wrists", "Leaning back", "Not splitting the rope at top"], "progression": "Hammer Curl (heavier)", "regression": "Dumbbell Hammer Curl", "sportTags": [], "warmupSuitable": false}, {"id": "EX102", "name": "EZ Bar Curl", "movementPattern": "Pull", "primaryMuscles": "Biceps", "secondaryMuscles": "Forearms, Brachialis", "equipment": "EZ Bar", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Angled grip on EZ bar reduces wrist strain compared to straight bar. Curl from thighs to shoulders with elbows pinned.", "coachingCues": ["Use the inner angled grip for bicep emphasis", "Elbows locked at your sides", "Full range: straight arms to full contraction"], "commonMistakes": ["Swinging body", "Wide grip (shifts to forearms)", "Partial reps"], "progression": "Strict EZ Bar Curl (against wall)", "regression": "Dumbbell Curl", "sportTags": [], "warmupSuitable": false}, {"id": "EX103", "name": "Overhead Dumbbell Tricep Extension", "movementPattern": "Push", "primaryMuscles": "Triceps (long head)", "secondaryMuscles": "Shoulders (stabilisers)", "equipment": "Dumbbell", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Seated or standing, hold one dumbbell overhead with both hands (or single arm). Lower behind head by bending elbows, extend back up.", "coachingCues": ["Elbows point straight up \u2014 don't let them flare", "Lower until you feel a deep stretch in the triceps", "Full lockout at the top"], "commonMistakes": ["Elbows flaring wide", "Arching lower back", "Not going deep enough for the stretch"], "progression": "Single-Arm Overhead Extension", "regression": "Cable Overhead Extension", "sportTags": [], "warmupSuitable": false}, {"id": "EX104", "name": "Cable Tricep Pushdown", "movementPattern": "Push", "primaryMuscles": "Triceps", "secondaryMuscles": "Forearms", "equipment": "Cable Machine, Straight/V-Bar", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "High pulley. Press bar/handle down from chest to thighs, keeping elbows pinned at sides. Squeeze triceps at full extension.", "coachingCues": ["Elbows glued to your sides \u2014 only forearms move", "Full extension at the bottom \u2014 squeeze and hold briefly", "Don't lean over the bar to cheat"], "commonMistakes": ["Elbows moving forward", "Leaning forward with body weight", "Partial range"], "progression": "Close-Grip Bench Press", "regression": "Lighter weight / Rope pushdown", "sportTags": [], "warmupSuitable": false}, {"id": "EX105", "name": "Cable Rope Tricep Pushdown", "movementPattern": "Push", "primaryMuscles": "Triceps", "secondaryMuscles": "Forearms", "equipment": "Cable Machine, Rope", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "High pulley with rope. Push down and split rope apart at the bottom for full tricep contraction. Neutral grip throughout.", "coachingCues": ["Split the rope apart at the bottom \u2014 this is the key", "Elbows stay pinned to your sides", "Squeeze for 1 second at full extension"], "commonMistakes": ["Not splitting the rope", "Elbows moving", "Using too much body lean"], "progression": "Single-Arm Rope Pushdown", "regression": "V-Bar Pushdown (easier to grip)", "sportTags": [], "warmupSuitable": false}, {"id": "EX106", "name": "Cable Overhead Tricep Extension", "movementPattern": "Push", "primaryMuscles": "Triceps (long head)", "secondaryMuscles": "Core (stabiliser)", "equipment": "Cable Machine, Rope", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Low pulley, rope overhead. Face away from machine, extend arms overhead. Cable keeps constant tension on the long head.", "coachingCues": ["Upper arms stay by your ears \u2014 elbows point forward", "Extend fully and squeeze", "Step forward for more tension at the stretch"], "commonMistakes": ["Elbows flaring", "Arching back", "Upper arms moving"], "progression": "Dumbbell Overhead Extension (heavier)", "regression": "Cable Pushdown", "sportTags": [], "warmupSuitable": false}, {"id": "EX107", "name": "Skull Crusher (Lying Tricep Extension)", "movementPattern": "Push", "primaryMuscles": "Triceps", "secondaryMuscles": "Shoulders (stabilisers)", "equipment": "EZ Bar / Barbell / Dumbbells, Flat Bench", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Lie flat, arms extended over chest. Lower bar to forehead by bending elbows only, extend back up. Classic tricep mass builder.", "coachingCues": ["Only your forearms move \u2014 upper arms are locked vertical", "Lower to your forehead or just behind it", "Don't let elbows flare wide"], "commonMistakes": ["Upper arms swinging forward (turns into a pullover)", "Elbows flaring", "Lowering to the wrong position"], "progression": "Close-Grip Bench Press", "regression": "Cable Overhead Extension", "sportTags": [], "warmupSuitable": false}, {"id": "EX108", "name": "Close-Grip Bench Press", "movementPattern": "Push", "primaryMuscles": "Triceps, Inner Chest", "secondaryMuscles": "Anterior Deltoids", "equipment": "Barbell, Flat Bench", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Standard bench press but with hands shoulder-width or slightly narrower. Emphasises triceps over chest.", "coachingCues": ["Hands shoulder-width apart \u2014 not touching (that's too narrow and strains wrists)", "Tuck elbows closer to your body than a regular bench", "Touch lower chest, not mid-chest"], "commonMistakes": ["Grip too narrow (wrist strain)", "Elbows flaring wide", "Bouncing off chest"], "progression": "Weighted Dips (tricep focus)", "regression": "Cable Pushdown", "sportTags": [], "warmupSuitable": false}, {"id": "EX109", "name": "Tricep Kickback", "movementPattern": "Push", "primaryMuscles": "Triceps", "secondaryMuscles": "Rear Deltoids (stabiliser)", "equipment": "Dumbbell / Cable", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Bent over, upper arm parallel to torso. Extend forearm back until arm is straight. Squeeze at full extension.", "coachingCues": ["Upper arm stays parallel to your body \u2014 it doesn't move", "Full lockout and squeeze for 1 second", "Light weight \u2014 this is about the contraction, not the load"], "commonMistakes": ["Swinging the weight", "Upper arm dropping", "Partial extension"], "progression": "Cable Kickback (constant tension)", "regression": "Lighter weight with pause", "sportTags": [], "warmupSuitable": false}, {"id": "EX110", "name": "Leg Press", "movementPattern": "Squat", "primaryMuscles": "Quads, Glutes", "secondaryMuscles": "Hamstrings, Calves", "equipment": "Leg Press Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Seated, feet shoulder-width on platform. Press platform away by extending legs, lower until knees reach ~90\u00b0.", "coachingCues": ["Feet shoulder-width, mid-platform for balanced development", "Don't lock knees at the top", "Lower until knees hit 90\u00b0 \u2014 no deeper (lower back rounds)"], "commonMistakes": ["Locking knees at top", "Going too deep (back rounds off pad)", "Feet too high or low on platform"], "progression": "Single-Leg Press", "regression": "Goblet Squat", "sportTags": [], "warmupSuitable": false}, {"id": "EX111", "name": "Leg Extension", "movementPattern": "Squat", "primaryMuscles": "Quads (isolation)", "secondaryMuscles": "Tibialis Anterior", "equipment": "Leg Extension Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Seated, pad on lower shins. Extend legs to full lockout, squeezing quads hard at the top. Lower with control.", "coachingCues": ["Squeeze quads hard at the top for 1-2 seconds", "Control the negative \u2014 3 seconds down", "Adjust pad position so it sits on your lower shin, not your foot"], "commonMistakes": ["Using momentum to swing", "Not reaching full extension", "Pad too high on shin"], "progression": "Single-Leg Extension", "regression": "Wall Sit", "sportTags": [], "warmupSuitable": false}, {"id": "EX112", "name": "Leg Curl (Lying/Seated)", "movementPattern": "Hinge", "primaryMuscles": "Hamstrings", "secondaryMuscles": "Calves", "equipment": "Leg Curl Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Lying or seated. Curl pad towards glutes by bending knees. Squeeze hamstrings at peak contraction, extend with control.", "coachingCues": ["Squeeze hard at the top \u2014 really contract the hamstrings", "Don't let your hips rise off the pad (lying) or lift off seat (seated)", "Slow eccentric: 3 seconds on the way back"], "commonMistakes": ["Lifting hips", "Using momentum", "Not reaching full contraction"], "progression": "Nordic Curl", "regression": "Swiss Ball Hamstring Curl", "sportTags": [], "warmupSuitable": false}, {"id": "EX113", "name": "Hack Squat", "movementPattern": "Squat", "primaryMuscles": "Quads, Glutes", "secondaryMuscles": "Hamstrings", "equipment": "Hack Squat Machine", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Back against pad, feet shoulder-width on platform. Squat down until thighs are parallel, press back up.", "coachingCues": ["Feet lower on platform = more quad emphasis", "Keep your back flat against the pad", "Control the descent \u2014 don't drop into the hole"], "commonMistakes": ["Feet too high (shifts to glutes)", "Knees caving", "Coming off the back pad"], "progression": "Barbell Back Squat", "regression": "Leg Press", "sportTags": [], "warmupSuitable": false}, {"id": "EX114", "name": "Sumo Deadlift", "movementPattern": "Hinge", "primaryMuscles": "Glutes, Adductors, Quads", "secondaryMuscles": "Hamstrings, Erector Spinae, Core", "equipment": "Barbell", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Wide stance, toes pointed out ~45\u00b0. Grip bar inside the legs. Drive through floor spreading the ground apart with your feet.", "coachingCues": ["Push knees OUT over toes", "Drive through the floor like you're spreading it apart", "Chest up, hips and shoulders rise together"], "commonMistakes": ["Knees caving in", "Hips shooting up first", "Not setting up wide enough"], "progression": "Deficit Sumo Deadlift", "regression": "Sumo Goblet Squat", "sportTags": [], "warmupSuitable": false}, {"id": "EX115", "name": "Nordic Curl", "movementPattern": "Hinge", "primaryMuscles": "Hamstrings (eccentric strength)", "secondaryMuscles": "Calves, Glutes", "equipment": "Partner / Pad / Nordic Bench", "difficulty": "Advanced", "metricType": "Bodyweight Reps", "description": "Kneeling, ankles secured. Lower yourself forward as slowly as possible using hamstrings to resist gravity. Push up from floor to return.", "coachingCues": ["The goal is a SLOW descent \u2014 fight gravity all the way", "Hips stay extended (don't bend at the hips)", "Use hands to catch yourself and push back up as needed"], "commonMistakes": ["Bending at the hips", "Falling uncontrolled", "Skipping the eccentric (the hard part)"], "progression": "Full Nordic (no hand assist)", "regression": "Band-assisted Nordic / Eccentric only", "sportTags": [], "warmupSuitable": false}, {"id": "EX116", "name": "Glute Kickback (Cable/Machine)", "movementPattern": "Hinge", "primaryMuscles": "Glutes", "secondaryMuscles": "Hamstrings", "equipment": "Cable Machine / Kickback Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Ankle strap on cable or machine pad. Drive leg straight back, squeezing glute at full extension. Control the return.", "coachingCues": ["Squeeze the glute at the top for 1-2 seconds", "Don't arch your lower back \u2014 pelvis stays neutral", "Movement comes from the hip, not the lower back"], "commonMistakes": ["Arching lower back", "Swinging leg with momentum", "Not squeezing at the top"], "progression": "Heavier / Banded", "regression": "Bodyweight Glute Bridge", "sportTags": [], "warmupSuitable": false}, {"id": "EX117", "name": "Leg Adduction Machine", "movementPattern": "Squat", "primaryMuscles": "Adductors (inner thigh)", "secondaryMuscles": "Hip Flexors", "equipment": "Adduction Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Seated, pads on inner thighs. Squeeze legs together against resistance, control the return.", "coachingCues": ["Squeeze and hold at the fully closed position for 1 second", "Control the opening \u2014 don't let it snap open", "Moderate weight, focus on the contraction"], "commonMistakes": ["Using momentum", "Not controlling the eccentric", "Going too heavy"], "progression": "Copenhagen Plank", "regression": "Lateral Lunge (bodyweight)", "sportTags": [], "warmupSuitable": false}, {"id": "EX118", "name": "Leg Abduction Machine", "movementPattern": "Squat", "primaryMuscles": "Glute Medius, Abductors (outer thigh)", "secondaryMuscles": "TFL", "equipment": "Abduction Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Seated, pads on outer thighs. Push legs apart against resistance, control the return.", "coachingCues": ["Push and hold at the fully open position for 1 second", "Control the closing \u2014 don't let legs snap together", "Great for warm-up before squats"], "commonMistakes": ["Using momentum", "Not controlling the eccentric", "Leaning body to one side"], "progression": "Banded Clamshell", "regression": "Banded Glute Walk", "sportTags": [], "warmupSuitable": true}, {"id": "EX119", "name": "Cable Pull-Through", "movementPattern": "Hinge", "primaryMuscles": "Glutes, Hamstrings", "secondaryMuscles": "Core, Erector Spinae", "equipment": "Cable Machine, Rope", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Face away from low pulley, rope between legs. Hinge at hips, then snap hips forward to standing. Same pattern as a kettlebell swing but with cable.", "coachingCues": ["It's a hip hinge \u2014 push your hips BACK", "Snap hips forward at the top \u2014 squeeze glutes", "Arms are just hooks \u2014 they don't pull"], "commonMistakes": ["Squatting instead of hinging", "Pulling with arms", "Not squeezing glutes at top"], "progression": "Kettlebell Swing (explosive)", "regression": "Banded Pull-Through", "sportTags": [], "warmupSuitable": true}, {"id": "EX120", "name": "Cable Crunch", "movementPattern": "Core", "primaryMuscles": "Rectus Abdominis", "secondaryMuscles": "Obliques", "equipment": "Cable Machine, Rope", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Kneeling under high pulley, rope behind head. Crunch down by curling your ribcage towards your pelvis. Resist on the way up.", "coachingCues": ["Curl your ribcage down \u2014 don't just bow forward at the hips", "Squeeze your abs at the bottom", "Resist the cable pulling you back up \u2014 slow eccentric"], "commonMistakes": ["Hinging at hips (not crunching)", "Pulling with arms", "Sitting back on heels"], "progression": "Weighted Decline Crunch", "regression": "Standard Crunch", "sportTags": [], "warmupSuitable": false}, {"id": "EX121", "name": "Cable External Rotation", "movementPattern": "Rotation", "primaryMuscles": "Rotator Cuff (infraspinatus, teres minor)", "secondaryMuscles": "Rear Deltoids", "equipment": "Cable Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Elbow at 90\u00b0 pinned to side. Rotate forearm outward against cable resistance. Essential for shoulder health and prehab.", "coachingCues": ["Elbow stays pinned to your side", "Only your forearm rotates \u2014 no shoulder movement", "Light weight, high reps (15-20) \u2014 this is prehab, not strength"], "commonMistakes": ["Moving the elbow away from body", "Using too much weight", "Rotating the whole shoulder"], "progression": "Band External Rotation", "regression": "No weight (range of motion only)", "sportTags": [], "warmupSuitable": true}, {"id": "EX122", "name": "Cable Lateral Walk", "movementPattern": "Warm-up", "primaryMuscles": "Glute Medius, Hip Abductors", "secondaryMuscles": "Core, Quads", "equipment": "Cable Machine, Ankle Strap", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Ankle strap on low pulley. Walk laterally away from the machine against cable resistance. Maintain athletic position.", "coachingCues": ["Stay in a quarter squat position", "Controlled lateral steps \u2014 don't just shuffle", "Keep tension on the cable throughout"], "commonMistakes": ["Standing too tall", "Rushing", "Losing tension between steps"], "progression": "Banded Lateral Walk (heavier band)", "regression": "Banded Glute Walk (no cable needed)", "sportTags": [], "warmupSuitable": true}, {"id": "EX123", "name": "Wrist Curl", "movementPattern": "Pull", "primaryMuscles": "Forearm Flexors", "secondaryMuscles": "Finger Flexors", "equipment": "Barbell / Dumbbells", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Forearms on thighs or bench, palms up. Curl wrists up, squeezing forearm flexors. Lower with control.", "coachingCues": ["Only your wrists move \u2014 forearms stay flat", "Let the bar roll to your fingertips at the bottom for extra range", "Squeeze at the top for 1 second"], "commonMistakes": ["Moving forearms", "Going too heavy", "Rushing reps"], "progression": "Behind-the-back Wrist Curl", "regression": "Lighter weight / Towel squeeze", "sportTags": [], "warmupSuitable": false}, {"id": "EX124", "name": "Reverse Wrist Curl", "movementPattern": "Pull", "primaryMuscles": "Forearm Extensors", "secondaryMuscles": "Brachioradialis", "equipment": "Barbell / Dumbbells", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Forearms on thighs or bench, palms down. Extend wrists up. Lighter than regular wrist curls \u2014 extensors are weaker.", "coachingCues": ["Palms face down throughout", "Much lighter weight than palm-up curls", "Full range \u2014 let wrists drop at bottom, squeeze at top"], "commonMistakes": ["Going too heavy", "Moving forearms", "Partial range"], "progression": "Reverse Barbell Curl", "regression": "Lighter weight", "sportTags": [], "warmupSuitable": false}, {"id": "EX125", "name": "Dead Hang", "movementPattern": "Pull", "primaryMuscles": "Forearms (grip), Lats (stretch)", "secondaryMuscles": "Shoulders, Core", "equipment": "Pull-up Bar", "difficulty": "Beginner", "metricType": "Time Hold", "description": "Hang from bar with straight arms, full body weight. Grip the bar and simply hold. Builds grip endurance and decompresses the spine.", "coachingCues": ["Shoulders active \u2014 don't just hang like a dead fish", "Squeeze the bar as hard as you can", "Breathe steadily \u2014 aim to build time each session"], "commonMistakes": ["Completely passive shoulders (shoulder strain)", "Holding breath", "Gripping with bent elbows"], "progression": "Single-Arm Dead Hang", "regression": "Flexed-arm Hang", "sportTags": [], "warmupSuitable": true}, {"id": "EX126", "name": "Side Plank", "movementPattern": "Core", "primaryMuscles": "Obliques, Glute Medius", "secondaryMuscles": "Core, Shoulders", "equipment": "None", "difficulty": "Beginner", "metricType": "Time Hold", "description": "Forearm on floor, body sideways in a straight line. Hold. Top foot stacked on bottom foot, hips lifted.", "coachingCues": ["Straight line from head to heels \u2014 no hip drop or pike", "Stack shoulders directly over elbow", "Squeeze top glute to stabilise hips"], "commonMistakes": ["Hips dropping", "Hips piking up", "Rolling forward or backward"], "progression": "Side Plank with hip dip / Rotation", "regression": "Knee Side Plank", "sportTags": [], "warmupSuitable": true}, {"id": "EX127", "name": "Mountain Climber", "movementPattern": "Core", "primaryMuscles": "Core, Hip Flexors", "secondaryMuscles": "Shoulders, Quads", "equipment": "None", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Push-up position. Drive knees alternately towards chest at speed. Keep hips level, core tight.", "coachingCues": ["Hips stay level with shoulders \u2014 no bouncing up and down", "Drive knee to chest, not just to hip", "Hands stay directly under shoulders"], "commonMistakes": ["Hips bouncing", "Hands creeping forward", "Not bringing knees far enough"], "progression": "Faster pace / Spider-Man Mountain Climbers", "regression": "Slower tempo / Elevated hands", "sportTags": [], "warmupSuitable": true}, {"id": "EX128", "name": "Bicycle Crunch", "movementPattern": "Core", "primaryMuscles": "Obliques, Rectus Abdominis", "secondaryMuscles": "Hip Flexors", "equipment": "None", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Lying on back, hands behind head. Bring opposite elbow to opposite knee while extending the other leg. Alternate in a cycling motion.", "coachingCues": ["ROTATE your torso \u2014 don't just move your elbow", "Extend the straight leg fully", "Slow and controlled beats fast and sloppy"], "commonMistakes": ["Pulling on the neck", "Only moving elbows without rotating", "Going too fast"], "progression": "Weighted / With hold at each side", "regression": "Standard Crunch", "sportTags": [], "warmupSuitable": false}, {"id": "EX129", "name": "Hollow Body Hold", "movementPattern": "Core", "primaryMuscles": "Rectus Abdominis, Core (anti-extension)", "secondaryMuscles": "Hip Flexors", "equipment": "None", "difficulty": "Intermediate", "metricType": "Time Hold", "description": "Lie on back, press lower back into floor. Lift shoulders and legs off ground, arms by ears. Hold this hollow position.", "coachingCues": ["LOWER BACK MUST stay pressed into the floor \u2014 if it lifts, raise your legs higher", "Arms by ears, legs straight", "Think about making yourself into a banana shape"], "commonMistakes": ["Lower back lifting off floor", "Bending knees to make it easier", "Holding breath"], "progression": "Hollow Body Rock", "regression": "Higher legs / Bent knees", "sportTags": [], "warmupSuitable": false}, {"id": "EX130", "name": "Farmer's Walk (Core emphasis)", "movementPattern": "Core", "primaryMuscles": "Core, Obliques (anti-lateral flexion)", "secondaryMuscles": "Traps, Forearms, Glutes", "equipment": "Single Dumbbell / Kettlebell", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Single-arm carry \u2014 hold one heavy weight at your side and walk. Your core works overtime to resist leaning to that side.", "coachingCues": ["Stay completely upright \u2014 the goal is to NOT lean", "Shoulders level, hips level", "This is anti-lateral flexion training \u2014 your obliques are fighting gravity"], "commonMistakes": ["Leaning towards the weight", "Shrugging", "Walking too fast"], "progression": "Overhead Single-Arm Carry", "regression": "Lighter weight / Shorter distance", "sportTags": [], "warmupSuitable": false}, {"id": "EX131", "name": "Jump Rope / Skipping", "movementPattern": "Cardio", "primaryMuscles": "Calves, Shoulders, Core", "secondaryMuscles": "Quads, Forearms", "equipment": "Jump Rope", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Classic conditioning tool. Skip on balls of feet with quick wrist turns. Excellent for warm-up, coordination, and cardio endurance.", "coachingCues": ["Turn with your wrists, not your arms", "Stay on the balls of your feet \u2014 minimal ground contact", "Jump just high enough to clear the rope \u2014 1-2cm"], "commonMistakes": ["Jumping too high", "Spinning arms from shoulders", "Landing on heels"], "progression": "Double-unders", "regression": "Imaginary rope (no rope)", "sportTags": [], "warmupSuitable": true}, {"id": "EX132", "name": "Sprint Intervals", "movementPattern": "Cardio", "primaryMuscles": "Quads, Hamstrings, Glutes, Calves", "secondaryMuscles": "Core, Hip Flexors", "equipment": "Track / Treadmill", "difficulty": "Intermediate", "metricType": "Distance / Time", "description": "Short maximal or near-maximal effort sprints with rest intervals. E.g. 10 \u00d7 100m with 60s rest, or 6 \u00d7 200m with 90s rest.", "coachingCues": ["Warm up thoroughly before sprinting \u2014 10+ minutes of progressive running", "Drive knees high and pump arms", "Sprint through the line, don't slow down before it"], "commonMistakes": ["Insufficient warm-up", "Starting from a dead stop", "Not enough rest between sprints"], "progression": "Hill Sprints", "regression": "Tempo Runs (80% effort)", "sportTags": [], "warmupSuitable": false}, {"id": "EX133", "name": "Stair Climbing", "movementPattern": "Cardio", "primaryMuscles": "Quads, Glutes, Calves", "secondaryMuscles": "Hamstrings, Core", "equipment": "Stairs / StairMaster", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Walk or run up stairs for cardiovascular conditioning. Can be steady-state or interval-based. Low impact on joints.", "coachingCues": ["Drive through your whole foot, not just toes", "Upright posture \u2014 don't lean on the handrails (StairMaster)", "Full steps, don't shuffle"], "commonMistakes": ["Leaning on handrails", "Shuffling with tiny steps", "Looking down (rounds posture)"], "progression": "Two-step / Running stairs", "regression": "Slower pace / Lower step height", "sportTags": [], "warmupSuitable": false}, {"id": "EX134", "name": "Treadmill Incline Walk", "movementPattern": "Cardio", "primaryMuscles": "Glutes, Hamstrings, Calves", "secondaryMuscles": "Quads, Core", "equipment": "Treadmill", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Treadmill set to 10-15% incline, walking pace (5-6km/h). Low impact, high calorie burn, excellent for active recovery and general fitness.", "coachingCues": ["Don't hold the handrails \u2014 swing your arms naturally", "Push through your heels for glute engagement", "Maintain upright posture \u2014 don't lean forward"], "commonMistakes": ["Holding handrails (defeats the purpose)", "Leaning forward", "Setting speed too high and gripping to hold on"], "progression": "Steeper incline / Weighted vest", "regression": "Lower incline / Outdoor hill walk", "sportTags": [], "warmupSuitable": true}, {"id": "EX135", "name": "Pigeon Stretch", "movementPattern": "Flexibility", "primaryMuscles": "Hip Flexors, Glutes, Piriformis", "secondaryMuscles": "Hamstrings", "equipment": "None", "difficulty": "Beginner", "metricType": "Time Hold", "description": "Front leg bent across body, back leg extended straight behind. Lower chest towards front shin for deeper stretch. Hold 30-60 seconds per side.", "coachingCues": ["Keep hips as square as possible", "Breathe deeply and sink into the stretch", "Front shin doesn't need to be parallel \u2014 go to your range"], "commonMistakes": ["Hips rotating open", "Forcing depth beyond current flexibility", "Rushing the hold"], "progression": "King Pigeon (reaching back for rear foot)", "regression": "Seated Figure-4 Stretch", "sportTags": [], "warmupSuitable": true}, {"id": "EX136", "name": "Couch Stretch", "movementPattern": "Flexibility", "primaryMuscles": "Hip Flexors, Quads", "secondaryMuscles": "Core", "equipment": "Wall / Couch", "difficulty": "Beginner", "metricType": "Time Hold", "description": "Rear knee on floor close to wall, back foot up the wall. Front foot forward in a lunge. Opens the hip flexor and stretches the quad. Hold 60-90 seconds per side.", "coachingCues": ["Squeeze your glute on the rear leg to deepen the stretch", "Stay upright \u2014 don't lean forward", "This should feel intense but not painful"], "commonMistakes": ["Leaning forward (avoids the stretch)", "Back knee too far from wall", "Not squeezing the glute"], "progression": "Stand further from wall", "regression": "Start further from wall / Less knee bend", "sportTags": [], "warmupSuitable": true}, {"id": "EX137", "name": "Banded Shoulder Dislocate", "movementPattern": "Flexibility", "primaryMuscles": "Shoulders, Chest, Lats", "secondaryMuscles": "Rotator Cuff", "equipment": "Resistance Band / Dowel", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Hold band/dowel wide. Pass it over your head and behind your back in a slow arc, then return. Progressively narrow grip as flexibility improves.", "coachingCues": ["Arms stay straight throughout \u2014 soft elbow bend only", "Move SLOWLY \u2014 this isn't a speed exercise", "Wider grip = easier. Narrow as you improve."], "commonMistakes": ["Bending elbows to get around", "Going too fast", "Starting too narrow"], "progression": "Narrower grip", "regression": "Wider grip / Lighter band", "sportTags": [], "warmupSuitable": true}, {"id": "EX138", "name": "Scorpion Stretch", "movementPattern": "Flexibility", "primaryMuscles": "Hip Flexors, Obliques, Chest, Thoracic Spine", "secondaryMuscles": "Glutes", "equipment": "None", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Lying face-down, arms out to sides. Lift one leg and reach it across to the opposite hand, rotating through the spine. Alternate sides.", "coachingCues": ["Keep both arms flat on the floor", "Rotate through your mid-back, not your lower back", "Only go as far as your flexibility allows"], "commonMistakes": ["Forcing range", "Lifting arms off the floor", "Rotating from lower back only"], "progression": "Greater range of motion with time", "regression": "Smaller range / Bent knee version", "sportTags": [], "warmupSuitable": true}, {"id": "EX139", "name": "Clamshell", "movementPattern": "Warm-up", "primaryMuscles": "Glute Medius", "secondaryMuscles": "Hip Abductors, TFL", "equipment": "Resistance Band (optional)", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Side-lying, knees bent 90\u00b0, feet together. Open top knee like a clamshell while keeping feet touching. Squeeze glute at the top.", "coachingCues": ["Feet stay together \u2014 only the knee opens", "Don't roll your hips back to cheat", "Squeeze and hold at the top for 1-2 seconds"], "commonMistakes": ["Rolling hips back", "Lifting top foot", "Not squeezing at top"], "progression": "Banded Clamshell / Heavier band", "regression": "No band", "sportTags": [], "warmupSuitable": true}, {"id": "EX140", "name": "Bird Dog", "movementPattern": "Warm-up", "primaryMuscles": "Core (anti-extension/rotation), Glutes", "secondaryMuscles": "Erector Spinae, Shoulders", "equipment": "None", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "All fours. Extend opposite arm and leg simultaneously while keeping core braced and hips level. Hold briefly, return, switch sides.", "coachingCues": ["Hips stay LEVEL \u2014 no rotation. Imagine a glass of water on your lower back", "Reach long \u2014 fingertips to toes", "Brace your core before each rep"], "commonMistakes": ["Hips rotating", "Arching lower back", "Moving too fast"], "progression": "Add resistance band / Hold for 5 seconds", "regression": "Arm only or leg only", "sportTags": [], "warmupSuitable": true}, {"id": "EX141", "name": "Fire Hydrant", "movementPattern": "Warm-up", "primaryMuscles": "Glute Medius, Hip Abductors", "secondaryMuscles": "Core", "equipment": "Resistance Band (optional)", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "All fours. Lift one knee out to the side (like a dog at a fire hydrant) keeping knee bent at 90\u00b0. Squeeze glute at the top.", "coachingCues": ["Hips stay level \u2014 don't shift your weight to the opposite side", "Lift with the glute, not by leaning your body", "Pause at the top for 1-2 seconds"], "commonMistakes": ["Leaning away", "Not reaching full range", "Rushing reps"], "progression": "Banded / With hold", "regression": "Smaller range of motion", "sportTags": [], "warmupSuitable": true}, {"id": "EX142", "name": "A-Skip / High Knees", "movementPattern": "Warm-up", "primaryMuscles": "Hip Flexors, Calves, Core", "secondaryMuscles": "Quads, Glutes", "equipment": "None", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Running drill. Drive knees high with each step, bouncing off the balls of feet. Develops running mechanics and activates hip flexors.", "coachingCues": ["Drive knee to hip height minimum", "Stay tall \u2014 don't lean forward", "Quick ground contact \u2014 bounce off the ball of your foot"], "commonMistakes": ["Leaning forward", "Knees not getting high enough", "Landing on heels"], "progression": "Faster pace / A-Skip for distance", "regression": "Slower march in place", "sportTags": ["Running"], "warmupSuitable": true}, {"id": "EX143", "name": "Ankle Circles / Mobility", "movementPattern": "Warm-up", "primaryMuscles": "Calves, Ankle Joint", "secondaryMuscles": "Tibialis Anterior", "equipment": "None", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Standing on one leg (hold support if needed). Circle the raised foot through full ankle range of motion. Both directions, both feet.", "coachingCues": ["Full circles \u2014 don't just wiggle", "circles each direction per ankle", "Great before running, squats, or any lower body work"], "commonMistakes": ["Not going through full range", "Rushing", "Skipping one direction"], "progression": "Add calf raises after", "regression": "Seated version", "sportTags": [], "warmupSuitable": true}, {"id": "EX144", "name": "Bear Crawl", "movementPattern": "Warm-up", "primaryMuscles": "Core, Shoulders, Quads", "secondaryMuscles": "Hip Flexors, Triceps", "equipment": "None", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "All fours, knees hovering 2 inches off floor. Crawl forward moving opposite hand and foot simultaneously. Core stays braced.", "coachingCues": ["Knees hover just off the floor \u2014 that's what makes it hard", "Opposite hand and foot move together", "Keep your back flat \u2014 no hips piking up"], "commonMistakes": ["Knees too high", "Same-side hand and foot moving", "Hips piking up"], "progression": "Backward Bear Crawl / Loaded Bear Crawl", "regression": "Hands and knees crawl (knees on floor)", "sportTags": [], "warmupSuitable": true}, {"id": "EX145", "name": "Barbell Clean", "movementPattern": "Pull", "primaryMuscles": "Quadriceps, Hamstrings, Glutes", "secondaryMuscles": "Traps, Forearms, Core", "equipment": "Barbell", "difficulty": "Advanced", "metricType": "Weight \u00d7 Reps", "description": "Explosive full-body pull from floor to front-rack position. The foundation of Olympic lifting.", "coachingCues": ["Start with bar over mid-foot, shoulders over bar", "Drive through legs explosively", "Shrug and pull under the bar", "Catch in front-rack with elbows high", "Stand to full extension"], "commonMistakes": ["Pulling with arms too early", "Not extending hips fully", "Catching with low elbows", "Landing on toes"], "progression": "Squat Clean", "regression": "Hang Clean", "sportTags": ["HYROX", "CrossFit", "Olympic Lifting"], "warmupSuitable": false}, {"id": "EX146", "name": "Barbell Clean & Jerk", "movementPattern": "Pull", "primaryMuscles": "Full Body", "secondaryMuscles": "Shoulders, Triceps, Core", "equipment": "Barbell", "difficulty": "Advanced", "metricType": "Weight \u00d7 Reps", "description": "Two-part Olympic lift: clean to front-rack, then drive overhead. The ultimate test of power and coordination.", "coachingCues": ["Perform a full clean to front-rack", "Dip knees slightly", "Drive bar overhead explosively", "Split or push jerk to lockout", "Recover feet to parallel, bar overhead"], "commonMistakes": ["Pressing out the jerk instead of driving", "Not dipping before the jerk", "Losing balance in split", "Incomplete lockout"], "progression": "Full Squat Clean & Jerk", "regression": "Power Clean + Push Press", "sportTags": ["Olympic Lifting", "CrossFit"], "warmupSuitable": false}, {"id": "EX147", "name": "Barbell Jerk (Split)", "movementPattern": "Push", "primaryMuscles": "Shoulders, Triceps, Quadriceps", "secondaryMuscles": "Core, Glutes", "equipment": "Barbell", "difficulty": "Advanced", "metricType": "Weight \u00d7 Reps", "description": "Explosive overhead drive from front-rack with a split stance catch. Develops overhead power and stability.", "coachingCues": ["Start with bar in front-rack position", "Dip by bending knees, torso upright", "Drive explosively through legs", "Split feet \u2014 front foot forward, back foot back", "Lock arms overhead, recover feet"], "commonMistakes": ["Pressing instead of driving", "Dipping forward not straight down", "Short split stance", "Not locking out elbows"], "progression": "Jerk from blocks", "regression": "Push Press", "sportTags": ["Olympic Lifting", "CrossFit"], "warmupSuitable": false}, {"id": "EX148", "name": "Barbell Push Press", "movementPattern": "Push", "primaryMuscles": "Shoulders, Triceps", "secondaryMuscles": "Core, Quadriceps, Glutes", "equipment": "Barbell", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Overhead press with leg drive assistance. Bridges the gap between strict press and jerk.", "coachingCues": ["Bar in front-rack, feet shoulder-width", "Dip knees slightly (quarter squat)", "Drive explosively through legs", "Press bar overhead using momentum", "Lock out arms, lower under control"], "commonMistakes": ["Leaning back excessively", "Dipping too deep", "Not using leg drive", "Pressing too early before extension"], "progression": "Barbell Jerk", "regression": "Strict Overhead Press", "sportTags": ["HYROX", "CrossFit", "Strongman"], "warmupSuitable": false}, {"id": "EX149", "name": "Barbell Snatch", "movementPattern": "Pull", "primaryMuscles": "Full Body", "secondaryMuscles": "Traps, Core, Shoulders", "equipment": "Barbell", "difficulty": "Advanced", "metricType": "Weight \u00d7 Reps", "description": "Single-movement Olympic lift from floor to overhead. The most technically demanding barbell lift.", "coachingCues": ["Wide grip on bar, shoulders over bar", "Drive through legs explosively", "Pull bar close, shrug high", "Drop under bar into overhead squat", "Stand to full extension, bar overhead"], "commonMistakes": ["Bar swinging away from body", "Not pulling under quickly enough", "Catching with bent arms", "Losing balance overhead"], "progression": "Full Squat Snatch", "regression": "Hang Power Snatch", "sportTags": ["Olympic Lifting", "CrossFit"], "warmupSuitable": false}, {"id": "EX150", "name": "Hang Power Clean", "movementPattern": "Pull", "primaryMuscles": "Hamstrings, Glutes, Traps", "secondaryMuscles": "Quadriceps, Forearms, Core", "equipment": "Barbell", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Clean variation starting from hang position (above knees). Develops the explosive second pull.", "coachingCues": ["Stand with bar at hip height, slight hinge", "Lower to just above knees", "Explosively extend hips and pull", "Catch in partial front squat position", "Stand to full extension"], "commonMistakes": ["Starting too upright", "Using arms instead of hips", "Catching too high/stiff", "Not keeping bar close"], "progression": "Full Hang Clean", "regression": "Dumbbell Hang Clean", "sportTags": ["HYROX", "CrossFit", "Olympic Lifting"], "warmupSuitable": false}, {"id": "EX151", "name": "Hang Power Snatch", "movementPattern": "Pull", "primaryMuscles": "Hamstrings, Glutes, Traps", "secondaryMuscles": "Shoulders, Core", "equipment": "Barbell", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Snatch from hang position with partial overhead catch. Great for developing snatch timing and hip extension.", "coachingCues": ["Wide grip, bar at hips, slight hinge", "Lower bar to just above knees", "Explosively extend hips", "Pull bar overhead, catch with partial squat", "Stand to full lockout overhead"], "commonMistakes": ["Not extending hips fully", "Bar looping away", "Catching with bent arms", "Losing overhead position"], "progression": "Full Hang Snatch", "regression": "Dumbbell Snatch", "sportTags": ["Olympic Lifting", "CrossFit"], "warmupSuitable": false}, {"id": "EX152", "name": "Dumbbell Snatch", "movementPattern": "Pull", "primaryMuscles": "Shoulders, Hamstrings, Glutes", "secondaryMuscles": "Core, Traps", "equipment": "Dumbbells", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Single-arm snatch with dumbbell from floor to overhead. Excellent for unilateral power development.", "coachingCues": ["Straddle dumbbell on floor, hinge at hips", "Grip DB with one hand", "Drive through legs, pull DB close to body", "Punch overhead as DB passes shoulder", "Lock out arm, stand tall"], "commonMistakes": ["Swinging DB away from body", "Using arm instead of hip drive", "Not locking out overhead", "Rounding lower back"], "progression": "Barbell Snatch", "regression": "DB Hang Snatch", "sportTags": ["HYROX", "CrossFit"], "warmupSuitable": false}, {"id": "EX153", "name": "Barbell Thruster", "movementPattern": "Push", "primaryMuscles": "Quadriceps, Shoulders, Glutes", "secondaryMuscles": "Triceps, Core, Hamstrings", "equipment": "Barbell", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Front squat into overhead press in one fluid movement. A staple of functional fitness for full-body conditioning.", "coachingCues": ["Bar in front-rack position", "Perform a full front squat", "Drive out of the squat explosively", "Use momentum to press bar overhead", "Lock out, then lower bar to front-rack for next rep"], "commonMistakes": ["Pausing between squat and press", "Not hitting full depth", "Pressing before standing", "Elbows dropping in front squat"], "progression": "Heavy Thrusters / Clusters", "regression": "Dumbbell Thruster", "sportTags": ["HYROX", "CrossFit"], "warmupSuitable": false}, {"id": "EX154", "name": "Dumbbell Thruster", "movementPattern": "Push", "primaryMuscles": "Quadriceps, Shoulders, Glutes", "secondaryMuscles": "Triceps, Core", "equipment": "Dumbbells", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Dumbbell variation of the thruster. More accessible entry point to the movement pattern.", "coachingCues": ["Hold DBs at shoulders, palms facing in", "Squat to full depth", "Drive up explosively", "Press DBs overhead using leg momentum", "Lower DBs to shoulders for next rep"], "commonMistakes": ["Not squatting deep enough", "Pressing without leg drive", "Uneven press", "Leaning forward"], "progression": "Barbell Thruster", "regression": "Goblet Squat + Press", "sportTags": ["HYROX", "CrossFit"], "warmupSuitable": false}, {"id": "EX155", "name": "Kettlebell Swing", "movementPattern": "Hinge", "primaryMuscles": "Glutes, Hamstrings", "secondaryMuscles": "Core, Shoulders, Forearms", "equipment": "Kettlebell", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Ballistic hip hinge driving a kettlebell to chest/overhead height. Fundamental for power endurance.", "coachingCues": ["Hinge at hips, grip KB with both hands", "Hike KB between legs", "Drive hips forward explosively", "Let KB float to chest height (Russian) or overhead (American)", "Control the backswing, repeat"], "commonMistakes": ["Squatting instead of hinging", "Using arms to lift", "Hyperextending lower back at top", "Not bracing core"], "progression": "American KB Swing (overhead)", "regression": "Banded Hip Hinge", "sportTags": ["HYROX", "CrossFit", "Kettlebell Sport"], "warmupSuitable": true}, {"id": "EX156", "name": "Kettlebell Turkish Get-Up", "movementPattern": "Core", "primaryMuscles": "Core, Shoulders, Glutes", "secondaryMuscles": "Quadriceps, Triceps, Hip Flexors", "equipment": "Kettlebell", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Floor-to-standing movement with a kettlebell locked out overhead. Builds total-body stability and coordination.", "coachingCues": ["Lie on back, press KB to lockout with one arm", "Roll to elbow, then hand", "Bridge hips, sweep leg through to kneeling", "Stand up keeping KB overhead throughout", "Reverse the sequence to return to floor"], "commonMistakes": ["Losing eye contact with KB", "Bending the working arm", "Rushing through steps", "Not stabilising at each position"], "progression": "Heavier KB or Barbell TGU", "regression": "Bodyweight Get-Up", "sportTags": ["Kettlebell Sport", "CrossFit"], "warmupSuitable": false}, {"id": "EX157", "name": "Medicine Ball Clean", "movementPattern": "Pull", "primaryMuscles": "Quadriceps, Glutes, Shoulders", "secondaryMuscles": "Core, Biceps", "equipment": "Medicine Ball", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Clean movement using a medicine ball. Teaches the clean pattern without barbell complexity.", "coachingCues": ["Stand with med ball between feet", "Hinge and grip the ball", "Drive through legs, shrug ball up", "Catch at chest height, elbows under ball", "Stand to full extension"], "commonMistakes": ["Not using leg drive", "Rounding back", "Catching too low", "Not extending hips"], "progression": "Barbell Hang Clean", "regression": "Goblet Squat", "sportTags": ["HYROX", "CrossFit"], "warmupSuitable": true}, {"id": "EX158", "name": "Wall Ball", "movementPattern": "Push", "primaryMuscles": "Quadriceps, Glutes, Shoulders", "secondaryMuscles": "Triceps, Core", "equipment": "Medicine Ball", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Squat to overhead wall throw. A HYROX and CrossFit staple combining lower and upper body power.", "coachingCues": ["Hold med ball at chest, face the wall", "Squat to full depth", "Drive up and throw ball to target height", "Catch ball on the rebound", "Immediately descend into next squat"], "commonMistakes": ["Not squatting deep enough", "Throwing with arms only", "Standing too far from wall", "Not catching smoothly"], "progression": "Heavy Wall Ball / Higher Target", "regression": "Air Squat + Overhead Press", "sportTags": ["HYROX", "CrossFit"], "warmupSuitable": false}, {"id": "EX159", "name": "Arm Circles", "movementPattern": "Warm-up", "primaryMuscles": "Shoulders, Rotator Cuff", "secondaryMuscles": "Traps", "equipment": "None", "difficulty": "Beginner", "metricType": "Bodyweight Reps", "description": "Forward and backward arm circles to mobilise the shoulder joint. Essential pre-workout movement.", "coachingCues": ["Stand tall, arms out to sides", "Make small circles, gradually increasing size", "Reverse direction halfway through", "Keep core engaged throughout"], "commonMistakes": ["Going too fast", "Not keeping arms straight", "Shrugging shoulders"], "progression": "Add light dumbbells", "regression": "Smaller range of motion", "sportTags": ["General", "HYROX"], "warmupSuitable": true}, {"id": "EX160", "name": "Hip Flexor Stretch", "movementPattern": "Flexibility", "primaryMuscles": "Hip Flexors, Quadriceps", "secondaryMuscles": "Glutes", "equipment": "None", "difficulty": "Beginner", "metricType": "Time Hold", "description": "Kneeling lunge position to stretch the hip flexors. Critical for anyone who sits for long periods.", "coachingCues": ["Kneel on one knee, front foot flat on floor", "Push hips forward gently", "Keep torso upright, core braced", "Hold and breathe, then switch sides"], "commonMistakes": ["Leaning forward instead of pushing hips", "Letting back arch excessively", "Rushing the hold"], "progression": "Add overhead reach for deeper stretch", "regression": "Standing hip flexor stretch", "sportTags": ["General", "Running", "HYROX"], "warmupSuitable": true}, {"id": "EX161", "name": "Light Jog", "movementPattern": "Warm-up", "primaryMuscles": "Quadriceps, Hamstrings, Calves", "secondaryMuscles": "Core, Hip Flexors", "equipment": "None", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Easy-pace jog to elevate heart rate and prepare the body for training. The simplest and most effective warm-up.", "coachingCues": ["Start at a very easy pace", "Focus on relaxed breathing", "Gradually increase pace if desired", "-10 minutes is sufficient for warm-up"], "commonMistakes": ["Starting too fast", "Not allowing enough time", "Skipping it entirely"], "progression": "Increase pace or add strides", "regression": "Brisk walk", "sportTags": ["General", "Running", "HYROX"], "warmupSuitable": true}, {"id": "EX162", "name": "Dynamic Stretching", "movementPattern": "Warm-up", "primaryMuscles": "Full Body", "secondaryMuscles": "", "equipment": "None", "difficulty": "Beginner", "metricType": "Time Hold", "description": "Active movement-based stretching including leg swings, arm circles, hip circles, and torso twists. Prepares muscles and joints for training.", "coachingCues": ["Perform leg swings (forward/back, side to side)", "Arm circles and cross-body swings", "Hip circles and torso rotations", "Walking knee hugs or quad pulls", "-10 minutes covering all major joints"], "commonMistakes": ["Holding static positions instead of moving", "Rushing through", "Skipping lower body"], "progression": "Add sport-specific movements", "regression": "Static stretching", "sportTags": ["General", "HYROX", "Running"], "warmupSuitable": true}, {"id": "EX163", "name": "Glute Stretch", "movementPattern": "Flexibility", "primaryMuscles": "Glutes, Piriformis", "secondaryMuscles": "Lower Back", "equipment": "None", "difficulty": "Beginner", "metricType": "Time Hold", "description": "Seated or lying figure-four stretch targeting the glutes and piriformis. Essential for hip health.", "coachingCues": ["Lie on back, cross one ankle over opposite knee", "Pull the uncrossed leg toward chest", "Feel the stretch in the crossed leg's glute", "Hold 30-60 seconds each side"], "commonMistakes": ["Not relaxing into the stretch", "Pulling too aggressively", "Not breathing"], "progression": "Pigeon pose", "regression": "Standing figure-four", "sportTags": ["General", "Running"], "warmupSuitable": true}, {"id": "EX164", "name": "Seated Hamstring Stretch", "movementPattern": "Flexibility", "primaryMuscles": "Hamstrings", "secondaryMuscles": "Lower Back, Calves", "equipment": "None", "difficulty": "Beginner", "metricType": "Time Hold", "description": "Seated forward fold stretching the hamstrings. Important for posterior chain flexibility.", "coachingCues": ["Sit with legs extended in front", "Hinge at hips, reach toward toes", "Keep back as straight as possible", "Hold and breathe, don't bounce"], "commonMistakes": ["Rounding the back excessively", "Bouncing", "Locking knees hyperextended"], "progression": "Standing single-leg hamstring stretch", "regression": "Bend knees slightly", "sportTags": ["General", "Running"], "warmupSuitable": true}, {"id": "EX165", "name": "Walking Lunge", "movementPattern": "Warm-up", "primaryMuscles": "Quadriceps, Glutes, Hamstrings", "secondaryMuscles": "Core, Hip Flexors", "equipment": "None", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Forward walking lunges as a dynamic warm-up. Activates the entire lower body while building coordination.", "coachingCues": ["Step forward into a lunge, knee over ankle", "Push through front foot to step forward", "Alternate legs with each step", "Keep torso upright throughout"], "commonMistakes": ["Knee caving inward", "Short stride length", "Leaning forward"], "progression": "Add weight (DB or KB)", "regression": "Stationary lunges", "sportTags": ["General", "HYROX", "Running"], "warmupSuitable": true}, {"id": "EX166", "name": "Bodyweight Walking Lunge", "movementPattern": "Warm-up", "primaryMuscles": "Quadriceps, Glutes, Hamstrings", "secondaryMuscles": "Core, Hip Flexors", "equipment": "None", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Unloaded walking lunge used as a warm-up or movement prep. Great for activating glutes before heavy lower body work.", "coachingCues": ["Step forward with control", "Lower back knee toward ground", "Drive through front heel to step forward", "Alternate legs for set distance"], "commonMistakes": ["Knee shooting over toes", "Not reaching full depth", "Upper body leaning"], "progression": "Kettlebell Walking Lunge", "regression": "Reverse lunge (stationary)", "sportTags": ["General", "HYROX"], "warmupSuitable": true}, {"id": "EX167", "name": "Kettlebell Walking Lunge", "movementPattern": "Lunge", "primaryMuscles": "Quadriceps, Glutes, Hamstrings", "secondaryMuscles": "Core, Forearms", "equipment": "Kettlebell", "difficulty": "Intermediate", "metricType": "Distance / Time", "description": "Walking lunge holding kettlebells at sides. Adds grip and core challenge to the movement.", "coachingCues": ["Hold KBs at sides or in rack position", "Step forward into lunge", "Drive through front heel to stand", "Alternate legs for set distance"], "commonMistakes": ["Letting KBs pull you forward", "Short strides", "Losing core tension"], "progression": "Barbell Walking Lunge", "regression": "Bodyweight Walking Lunge", "sportTags": ["HYROX", "CrossFit"], "warmupSuitable": false}, {"id": "EX168", "name": "High Pull Sled Drag", "movementPattern": "Pull", "primaryMuscles": "Upper Back, Traps, Rear Delts", "secondaryMuscles": "Biceps, Core, Glutes", "equipment": "Sled", "difficulty": "Intermediate", "metricType": "Distance / Time", "description": "Backward sled drag with high pull arm action. Builds upper back strength and conditioning simultaneously.", "coachingCues": ["Face the sled, grip handles or rope", "Walk backward, pulling sled toward you", "Pull with high elbows, hands to chin height", "Maintain upright posture throughout"], "commonMistakes": ["Leaning too far back", "Using only arms", "Not maintaining tension on rope"], "progression": "Heavier sled", "regression": "Light resistance band face pull", "sportTags": ["HYROX", "CrossFit", "Strongman"], "warmupSuitable": false}, {"id": "EX169", "name": "Assault Runner", "movementPattern": "Cardio", "primaryMuscles": "Quadriceps, Hamstrings, Calves", "secondaryMuscles": "Core, Hip Flexors", "equipment": "Assault Runner", "difficulty": "Beginner", "metricType": "Distance / Time", "description": "Curved manual treadmill that requires self-powered running. Higher energy demand than a standard treadmill.", "coachingCues": ["Start with a walking pace to find your footing", "Lean slightly forward and increase stride", "Drive with arms and legs together", "Use the handles only for balance if needed"], "commonMistakes": ["Overstriding", "Holding the handles during running", "Starting too fast"], "progression": "Sprint intervals", "regression": "Standard treadmill run", "sportTags": ["HYROX", "CrossFit"], "warmupSuitable": false}, {"id": "EX170", "name": "Low Bar Squat", "movementPattern": "Squat", "primaryMuscles": "Quadriceps, Glutes, Hamstrings", "secondaryMuscles": "Lower Back, Core", "equipment": "Barbell", "difficulty": "Intermediate", "metricType": "Weight \u00d7 Reps", "description": "Back squat with the bar positioned below the traps on the rear delts. Allows heavier loads and more hip involvement.", "coachingCues": ["Bar sits on rear delts, below the spine of the scapula", "Grip wider than high bar, elbows pulled back", "Hinge slightly more at hips on descent", "Drive hips forward to stand"], "commonMistakes": ["Bar sliding down", "Excessive forward lean", "Not bracing core", "Wrist pain from grip"], "progression": "Low Bar Squat with pause", "regression": "High Bar Squat", "sportTags": ["Powerlifting", "General"], "warmupSuitable": false}, {"id": "EX171", "name": "Machine Hip Adduction", "movementPattern": "Squat", "primaryMuscles": "Adductors, Inner Thigh", "secondaryMuscles": "Hip Flexors", "equipment": "Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Seated machine exercise targeting the inner thigh adductors. Builds stability and supports knee health.", "coachingCues": ["Sit with pads against inner thighs, legs apart", "Squeeze legs together in a controlled motion", "Pause briefly at the closed position", "Slowly return to start under control"], "commonMistakes": ["Using momentum", "Not controlling the eccentric", "Leaning forward"], "progression": "Cable adduction", "regression": "Banded adduction", "sportTags": ["General"], "warmupSuitable": false}, {"id": "EX172", "name": "Seated Hamstring Curl", "movementPattern": "Pull", "primaryMuscles": "Hamstrings", "secondaryMuscles": "Calves", "equipment": "Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Seated machine curl isolating the hamstrings. Good for targeted hamstring development with back support.", "coachingCues": ["Sit with back against pad, legs extended on roller", "Curl heels toward glutes", "Squeeze hamstrings at peak contraction", "Return slowly to start position"], "commonMistakes": ["Using too much weight and swinging", "Not reaching full range", "Lifting hips off seat"], "progression": "Single-leg seated curl", "regression": "Lying hamstring curl (lighter)", "sportTags": ["General"], "warmupSuitable": false}, {"id": "EX173", "name": "Lying Hamstring Curl", "movementPattern": "Pull", "primaryMuscles": "Hamstrings", "secondaryMuscles": "Calves, Glutes", "equipment": "Machine", "difficulty": "Beginner", "metricType": "Weight \u00d7 Reps", "description": "Prone machine curl for hamstring isolation. Allows full stretch at the bottom of the movement.", "coachingCues": ["Lie face down, ankle pad just above heels", "Curl heels toward glutes", "Squeeze at the top", "Lower under control \u2014 full extension at bottom"], "commonMistakes": ["Lifting hips off the pad", "Jerking the weight", "Incomplete range of motion"], "progression": "Single-leg lying curl", "regression": "Seated hamstring curl (lighter)", "sportTags": ["General"], "warmupSuitable": false}];
+
+let programme = { days: [] };
+let activeDay = 0;
+let activeSessionIdx = 0;
+let draggedExercise = null;
+let activeSupersetGroup = null;
+let templates = JSON.parse(localStorage.getItem('ah_templates') || '[]');
+
+function currentSession() {
+  const day = programme.days[activeDay];
+  if (!day) return null;
+  return day.sessions[activeSessionIdx];
+}
+
+// ── Library ──
+function getBadgeClass(p) { return 'lib-badge-' + p.toLowerCase().replace(/[\s\/]/g, '-'); }
+
+function filterLibrary() {
+  const search = document.getElementById('libSearch').value.toLowerCase();
+  const pattern = document.getElementById('libPattern').value;
+  const diff = document.getElementById('libDifficulty').value;
+  const filtered = exercises.filter(ex => {
+    if (search && !ex.name.toLowerCase().includes(search) && !ex.primaryMuscles.toLowerCase().includes(search) && !ex.equipment.toLowerCase().includes(search)) return false;
+    if (pattern && ex.movementPattern !== pattern) return false;
+    if (diff && ex.difficulty !== diff) return false;
+    return true;
+  });
+  const list = document.getElementById('libraryList');
+  list.innerHTML = filtered.map(ex => `
+    <div class="lib-item" draggable="true" ondragstart="dragStart(event, '${ex.id}')" ondblclick="addExerciseToDay('${ex.id}')">
+      <div class="lib-item-name"><span class="lib-badge ${getBadgeClass(ex.movementPattern)}">${ex.movementPattern}</span> ${ex.name}</div>
+      <div class="lib-item-meta"><span>${ex.equipment}</span><span>·</span><span>${ex.difficulty}</span><span>·</span><span>${ex.metricType}</span></div>
+    </div>
+  `).join('');
+  document.getElementById('libCount').textContent = `${filtered.length} of ${exercises.length} exercises`;
+}
+
+function dragStart(e, id) { draggedExercise = id; e.dataTransfer.setData('text/plain', id); }
+
+// ── Days ──
+const ALL_DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+function addDay(name) {
+  const dayIndex = programme.days.length;
+  programme.days.push({ name: name || `Day ${dayIndex + 1}`, sessions: [{ focus: '', exercises: [], supersets: [] }] });
+  renderDayTabs();
+  switchDay(dayIndex);
+}
+
+function showAddDayMenu(btn) {
+  let existing = document.getElementById('addDayMenu');
+  if (existing) { existing.remove(); return; }
+  const usedNames = programme.days.map(d => d.name);
+  const available = ALL_DAYS.filter(d => !usedNames.includes(d));
+  if (available.length === 0) { showToast('All days already added'); return; }
+  const menu = document.createElement('div');
+  menu.id = 'addDayMenu';
+  menu.style.cssText = 'position:absolute;z-index:100;background:var(--raised);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 0;box-shadow:0 8px 24px rgba(0,0,0,0.4);min-width:150px;';
+  const rect = btn.getBoundingClientRect();
+  menu.style.top = (rect.bottom + 4) + 'px';
+  menu.style.left = rect.left + 'px';
+  available.forEach(day => {
+    const opt = document.createElement('div');
+    opt.textContent = day;
+    opt.style.cssText = 'padding:8px 16px;cursor:pointer;font-size:13px;color:var(--text-primary);';
+    opt.onmouseenter = () => opt.style.background = 'var(--border)';
+    opt.onmouseleave = () => opt.style.background = 'none';
+    opt.onclick = () => { addDay(day); sortDays(); menu.remove(); };
+    menu.appendChild(opt);
+  });
+  document.body.appendChild(menu);
+  setTimeout(() => document.addEventListener('click', function closeMenu(ev) {
+    if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('click', closeMenu); }
+  }), 10);
+}
+
+function sortDays() {
+  const order = {};
+  ALL_DAYS.forEach((d, i) => order[d] = i);
+  programme.days.sort((a, b) => {
+    const ai = order[a.name] !== undefined ? order[a.name] : 99;
+    const bi = order[b.name] !== undefined ? order[b.name] : 99;
+    return ai - bi;
+  });
+  activeDay = Math.min(activeDay, programme.days.length - 1);
+  renderDayTabs();
+  renderDay();
+}
+
+function addSession() {
+  const day = programme.days[activeDay];
+  day.sessions.push({ focus: '', exercises: [], supersets: [] });
+  activeSessionIdx = day.sessions.length - 1;
+  renderDay();
+  showToast('Session ' + day.sessions.length + ' added');
+}
+
+function removeSession(idx) {
+  const day = programme.days[activeDay];
+  if (day.sessions.length <= 1) return;
+  day.sessions.splice(idx, 1);
+  if (activeSessionIdx >= day.sessions.length) activeSessionIdx = day.sessions.length - 1;
+  renderDay();
+}
+
+function switchSession(idx) {
+  activeSessionIdx = idx;
+  renderDay();
+}
+
+function removeDay(idx) {
+  if (programme.days.length <= 1) return;
+  programme.days.splice(idx, 1);
+  if (activeDay >= programme.days.length) activeDay = programme.days.length - 1;
+  renderDayTabs();
+  renderDay();
+}
+
+function switchDay(idx) {
+  activeDay = idx;
+  activeSessionIdx = 0;
+  renderDayTabs();
+  renderDay();
+}
+
+function renderDayTabs() {
+  const tabs = document.getElementById('dayTabs');
+  tabs.innerHTML = programme.days.map((d, i) => `
+    <div class="day-tab ${i === activeDay ? 'active' : ''}" onclick="switchDay(${i})">${d.name}${programme.days.length > 1 ? `<span onclick="event.stopPropagation();removeDay(${i})" style="margin-left:8px;opacity:0.5;cursor:pointer">×</span>` : ''}</div>
+  `).join('') + `<button class="add-day-btn" onclick="showAddDayMenu(this)" title="Add day">+</button>`;
+}
+
+// ── Render Programme Day ──
+function renderDay() {
+  const day = programme.days[activeDay];
+  if (!day) return;
+  if (activeSessionIdx >= day.sessions.length) activeSessionIdx = 0;
+  const sess = day.sessions[activeSessionIdx];
+  const panel = document.getElementById('programmePanel');
+
+  let html = '';
+
+  // Session tabs (only show if >1 session or to allow adding)
+  html += `<div class="session-tabs">`;
+  html += day.sessions.map((s, si) => `
+    <div class="session-tab ${si === activeSessionIdx ? 'active' : ''}" onclick="switchSession(${si})">
+      ${s.focus || 'Session ' + (si + 1)}${day.sessions.length > 1 ? `<span onclick="event.stopPropagation();removeSession(${si})" style="margin-left:6px;opacity:0.4;cursor:pointer;font-size:11px">×</span>` : ''}
+    </div>
+  `).join('');
+  html += `<button class="add-session-btn" onclick="addSession()" title="Add session to this day">+ Session</button>`;
+  html += `</div>`;
+
+  // Session focus input
+  html += `<div class="day-header">
+    <input class="day-title-input" value="${sess.focus}" onchange="currentSession().focus=this.value;renderDay()" placeholder="Session focus (e.g. Upper Body Push + Core, Long Run, Stretching...)" style="font-size:14px" />
+  </div>`;
+
+  html += `<div class="exercise-list" id="exerciseList">`;
+
+  // Group exercises by superset membership
+  let i = 0;
+  while (i < sess.exercises.length) {
+    const ex = sess.exercises[i];
+    const ssGroup = sess.supersets.find(ss => ss.exerciseIndices.includes(i));
+
+    if (ssGroup && ssGroup.exerciseIndices[0] === i) {
+      html += renderSupersetGroup(sess, ssGroup);
+      i = Math.max(...ssGroup.exerciseIndices) + 1;
+    } else if (!ssGroup) {
+      html += renderExerciseSlot(sess, i);
+      i++;
+    } else {
+      i++;
+    }
+  }
+
+  html += `</div>`;
+  html += `<div class="drop-zone" id="dropZone" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropExercise(event)">
+    Drag an exercise here or double-click in the library to add</div>`;
+
+  html += `<div class="day-actions">
+    <button class="btn btn-secondary btn-small" onclick="startSuperset()">Group as Superset</button>
+    <button class="btn btn-secondary btn-small" onclick="addWarmupBlock()">+ Warm-up Block</button>
+  </div>`;
+
+  // Replace content after tabs
+  const contents = document.getElementById('dayContents');
+  if (!contents) {
+    // First render - create container
+    const contDiv = document.createElement('div');
+    contDiv.id = 'dayContents';
+    contDiv.innerHTML = html;
+    panel.appendChild(contDiv);
+  } else {
+    contents.innerHTML = html;
+  }
+}
+
+function renderExerciseSlot(day, idx) {
+  const item = day.exercises[idx];
+  const ex = exercises.find(e => e.id === item.exerciseId);
+  if (!ex) return '';
+
+  const metricLabel = ex.metricType === 'Weight × Reps' ? 'Reps' : ex.metricType === 'Distance / Time' ? 'Distance/Time' : ex.metricType === 'Time Hold' ? 'Duration' : 'Reps';
+  const showWeight = ex.metricType === 'Weight × Reps';
+
+  const perSideToggle = isUnilateral(ex.name) ? `<div class="slot-field" style="display:flex;align-items:center;gap:6px">
+        <label style="white-space:nowrap">Per Side</label>
+        <button onclick="togglePerSide(${idx})" class="per-side-btn ${item.perSide ? 'active' : ''}" title="Toggle Left/Right per side">${item.perSide ? 'L / R' : 'Both'}</button>
+      </div>` : '';
+
+  return `<div class="exercise-slot" data-idx="${idx}">
+    <div class="slot-top">
+      <div class="slot-exercise-name">
+        <span class="slot-badge lib-badge ${getBadgeClass(ex.movementPattern)}">${ex.movementPattern}</span>
+        ${ex.name}${item.perSide ? ' <span style="color:var(--ocean);font-size:11px;font-weight:600;margin-left:6px">L / R</span>' : ''}
+      </div>
+      <div class="slot-actions">
+        <input type="checkbox" class="ss-check" data-idx="${idx}" title="Select for superset" style="cursor:pointer" />
+        <button class="slot-remove" onclick="moveExercise(${idx},-1)" title="Move up">▲</button>
+        <button class="slot-remove" onclick="moveExercise(${idx},1)" title="Move down">▼</button>
+        <button class="slot-remove" onclick="removeExercise(${idx})" title="Remove">×</button>
+      </div>
+    </div>
+    <div class="slot-fields">
+      <div class="slot-field">
+        <label>Sets</label>
+        <input type="number" value="${item.sets}" min="1" onchange="updateField(${idx},'sets',this.value)" style="width:55px" />
+      </div>
+      <div class="slot-field">
+        <label>${metricLabel}</label>
+        <input type="text" value="${item.reps}" onchange="updateField(${idx},'reps',this.value)" style="width:90px" placeholder="${ex.metricType === 'Distance / Time' ? '1km / 5:00' : ex.metricType === 'Time Hold' ? '45s' : '10'}" />
+      </div>
+      ${showWeight ? `<div class="slot-field">
+        <label>Weight</label>
+        <input type="text" value="${item.weight}" onchange="updateField(${idx},'weight',this.value)" style="width:80px" placeholder="70kg" />
+      </div>` : ''}
+      <div class="slot-field">
+        <label>Intensity</label>
+        <input type="text" value="${item.intensity}" onchange="updateField(${idx},'intensity',this.value)" style="width:90px" placeholder="RPE 7 / 80%" />
+      </div>
+      <div class="slot-field">
+        <label>Rest</label>
+        <input type="text" value="${item.rest}" onchange="updateField(${idx},'rest',this.value)" style="width:70px" placeholder="90s" />
+      </div>
+      ${perSideToggle}
+      <div class="slot-field">
+        <label>Coach Note</label>
+        <input type="text" class="note-input" value="${item.note || ''}" onchange="updateField(${idx},'note',this.value)" placeholder="Client-specific note..." />
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderSupersetGroup(day, ss) {
+  let html = `<div class="superset-group" data-ss-id="${ss.id}">
+    <div class="superset-header">
+      <span class="superset-label">${ss.type} — ${ss.rounds} rounds</span>
+      <div>
+        <button class="btn btn-small btn-secondary" onclick="editSuperset('${ss.id}')">Edit</button>
+        <button class="btn btn-small btn-danger" onclick="ungroupSuperset('${ss.id}')">Ungroup</button>
+      </div>
+    </div>`;
+  if (ss.notes) html += `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-style:italic">${ss.notes}</div>`;
+  ss.exerciseIndices.forEach(idx => { html += renderExerciseSlot(day, idx); });
+  html += `<div class="superset-fields">
+    <div class="slot-field"><label>Rest Between Exercises</label><span style="font-size:13px;color:var(--text-secondary)">${ss.restBetweenEx}s</span></div>
+    <div class="slot-field"><label>Rest Between Rounds</label><span style="font-size:13px;color:var(--text-secondary)">${ss.restBetweenRound}s</span></div>
+  </div></div>`;
+  return html;
+}
+
+// ── Exercise Operations ──
+const UNILATERAL_KEYWORDS = ['single leg','single arm','bulgarian','lunge','split squat','step up','pistol','side plank','one arm','one leg','unilateral','lateral raise','side raise','concentration curl','single-arm','single-leg'];
+
+function isUnilateral(exName) {
+  const lower = exName.toLowerCase();
+  return UNILATERAL_KEYWORDS.some(kw => lower.includes(kw));
+}
+
+function addExerciseToDay(exId) {
+  const sess = currentSession();
+  const ex = exercises.find(e => e.id === exId);
+  const unilateral = ex ? isUnilateral(ex.name) : false;
+  sess.exercises.push({ exerciseId: exId, sets: 3, reps: '', weight: '', intensity: '', rest: '90s', note: '', perSide: unilateral });
+  renderDay();
+  showToast('Exercise added');
+}
+
+function removeExercise(idx) {
+  const sess = currentSession();
+  sess.supersets.forEach(ss => {
+    ss.exerciseIndices = ss.exerciseIndices.filter(i => i !== idx).map(i => i > idx ? i - 1 : i);
+  });
+  sess.supersets = sess.supersets.filter(ss => ss.exerciseIndices.length > 1);
+  sess.exercises.splice(idx, 1);
+  renderDay();
+}
+
+function moveExercise(idx, dir) {
+  const sess = currentSession();
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= sess.exercises.length) return;
+  [sess.exercises[idx], sess.exercises[newIdx]] = [sess.exercises[newIdx], sess.exercises[idx]];
+  sess.supersets.forEach(ss => {
+    ss.exerciseIndices = ss.exerciseIndices.map(i => {
+      if (i === idx) return newIdx;
+      if (i === newIdx) return idx;
+      return i;
+    });
+  });
+  renderDay();
+}
+
+function updateField(idx, field, value) {
+  currentSession().exercises[idx][field] = value;
+}
+
+function togglePerSide(idx) {
+  const item = currentSession().exercises[idx];
+  item.perSide = !item.perSide;
+  renderDay();
+}
+
+function dropExercise(e) {
+  e.preventDefault();
+  const id = e.dataTransfer.getData('text/plain') || draggedExercise;
+  if (id) addExerciseToDay(id);
+  e.target.classList.remove('drag-over');
+}
+
+function dragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function dragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+
+// ── Supersets ──
+function startSuperset() {
+  const checks = document.querySelectorAll('.ss-check:checked');
+  if (checks.length < 2) { showToast('Select 2+ exercises to group'); return; }
+  const indices = Array.from(checks).map(c => parseInt(c.dataset.idx)).sort((a, b) => a - b);
+  activeSupersetGroup = indices;
+  document.getElementById('ssRounds').value = 3;
+  document.getElementById('ssRestEx').value = 0;
+  document.getElementById('ssRestRound').value = 90;
+  document.getElementById('ssNotes').value = '';
+  document.getElementById('supersetModal').classList.add('show');
+}
+
+function closeSupersetModal() { document.getElementById('supersetModal').classList.remove('show'); }
+
+function applySupersetSettings() {
+  const sess = currentSession();
+  const ss = {
+    id: 'ss_' + Date.now(),
+    type: document.getElementById('ssType').value,
+    rounds: parseInt(document.getElementById('ssRounds').value),
+    restBetweenEx: parseInt(document.getElementById('ssRestEx').value),
+    restBetweenRound: parseInt(document.getElementById('ssRestRound').value),
+    notes: document.getElementById('ssNotes').value,
+    exerciseIndices: activeSupersetGroup
+  };
+  sess.supersets.push(ss);
+  closeSupersetModal();
+  renderDay();
+  showToast(ss.type + ' created');
+}
+
+function editSuperset(ssId) {
+  const sess = currentSession();
+  if (!sess) return;
+  const ss = sess.supersets.find(s => s.id === ssId);
+  if (!ss) return;
+  activeSupersetGroup = ss.exerciseIndices;
+  document.getElementById('ssType').value = ss.type;
+  document.getElementById('ssRounds').value = ss.rounds;
+  document.getElementById('ssRestEx').value = ss.restBetweenEx;
+  document.getElementById('ssRestRound').value = ss.restBetweenRound;
+  document.getElementById('ssNotes').value = ss.notes || '';
+  // Remove old, apply will recreate
+  sess.supersets = sess.supersets.filter(s => s.id !== ssId);
+  document.getElementById('supersetModal').classList.add('show');
+}
+
+function ungroupSuperset(ssId) {
+  const sess = currentSession();
+  if (!sess) return;
+  sess.supersets = sess.supersets.filter(s => s.id !== ssId);
+  renderDay();
+  showToast('Superset ungrouped');
+}
+
+// ── Warm-up Block ──
+function addWarmupBlock() {
+  const warmups = exercises.filter(e => e.warmupSuitable || e.movementPattern === 'Warm-up' || e.movementPattern === 'Flexibility');
+  const shuffled = warmups.sort(() => Math.random() - 0.5);
+  // Pick a mix: 2-3 warm-up, 1-2 flexibility
+  const wuPool = shuffled.filter(e => e.movementPattern === 'Warm-up');
+  const flexPool = shuffled.filter(e => e.movementPattern === 'Flexibility');
+  const picks = [...wuPool.slice(0, 3), ...flexPool.slice(0, 2)].slice(0, 5);
+  // If not enough of one type, fill from the other
+  if (picks.length < 5) {
+    const ids = new Set(picks.map(p => p.id));
+    const remaining = shuffled.filter(e => !ids.has(e.id));
+    picks.push(...remaining.slice(0, 5 - picks.length));
+  }
+  picks.forEach(ex => {
+    currentSession().exercises.push({
+      exerciseId: ex.id, sets: 2,
+      reps: ex.metricType === 'Time Hold' ? '30s' : ex.metricType === 'Distance / Time' ? '30s' : '10',
+      weight: '', intensity: 'Light', rest: '15s', note: ex.movementPattern === 'Flexibility' ? 'Mobility / Flexibility' : 'Warm-up'
+    });
+  });
+  renderDay();
+  showToast('Warm-up & flexibility block added (' + picks.length + ' exercises)');
+}
+
+// ── Templates ──
+function saveAsTemplate() {
+  const name = document.getElementById('programmeName').value || 'Untitled Programme';
+  templates.push({
+    name, date: new Date().toISOString().split('T')[0],
+    client: document.getElementById('clientName').value,
+    programme: JSON.parse(JSON.stringify(programme))
+  });
+  try { localStorage.setItem('ah_templates', JSON.stringify(templates)); } catch(e) {}
+  showToast('Template saved: ' + name);
+}
+
+function showTemplates() {
+  document.getElementById('templateModalTitle').textContent = 'Load Template';
+  const content = document.getElementById('templateModalContent');
+  if (templates.length === 0) {
+    content.innerHTML = '<p style="color:var(--text-muted);padding:20px;text-align:center">No saved templates yet. Build a programme and save it as a template.</p>';
+  } else {
+    content.innerHTML = templates.map((t, i) => `
+      <div class="template-item" onclick="loadTemplate(${i})">
+        <h4>${t.name}</h4>
+        <p>${t.client ? 'Originally for: ' + t.client + ' · ' : ''}${t.programme.days.length} days · Saved ${t.date}</p>
+      </div>
+    `).join('');
+  }
+  document.getElementById('templateModal').classList.add('show');
+}
+
+function loadTemplate(idx) {
+  programme = JSON.parse(JSON.stringify(templates[idx].programme));
+  document.getElementById('programmeName').value = templates[idx].name + ' (Copy)';
+  document.getElementById('clientName').value = '';
+  closeTemplateModal();
+  activeDay = 0;
+  activeSessionIdx = 0;
+  renderDayTabs();
+  renderDay();
+  showToast('Template loaded — adjust for your client');
+}
+
+function closeTemplateModal() { document.getElementById('templateModal').classList.remove('show'); }
+
+// ── Export ──
+function exportProgramme() {
+  const client = document.getElementById('clientName').value || 'Client';
+  const progName = document.getElementById('programmeName').value || 'Programme';
+  const week = document.getElementById('weekNumber').value;
+  const date = document.getElementById('startDate').value;
+
+  let text = `AH PERFORMANCE — CLIENT PROGRAMME\n`;
+  text += `${'='.repeat(50)}\n`;
+  text += `Client: ${client}\n`;
+  text += `Programme: ${progName}\n`;
+  text += `Week: ${week}${date ? ' | Start: ' + date : ''}\n`;
+  text += `${'='.repeat(50)}\n\n`;
+
+  programme.days.forEach(day => {
+    text += `┌${'\u2500'.repeat(48)}┐\n`;
+    text += `│ ${day.name.toUpperCase().padEnd(47)}│\n`;
+    text += `└${'\u2500'.repeat(48)}┘\n\n`;
+
+    day.sessions.forEach((sess, si) => {
+      if (day.sessions.length > 1 || sess.focus) {
+        text += `  ▶ ${sess.focus || 'Session ' + (si + 1)}\n`;
+        text += `  ${'\u2500'.repeat(46)}\n\n`;
+      }
+
+    let i = 0;
+    let exerciseNum = 1;
+    while (i < sess.exercises.length) {
+      const ssGroup = sess.supersets.find(ss => ss.exerciseIndices.includes(i) && ss.exerciseIndices[0] === i);
+
+      if (ssGroup) {
+        text += `  ${exerciseNum}. ${ssGroup.type.toUpperCase()} — ${ssGroup.rounds} rounds\n`;
+        if (ssGroup.notes) text += `     ${ssGroup.notes}\n`;
+        ssGroup.exerciseIndices.forEach((idx, j) => {
+          const item = sess.exercises[idx];
+          const ex = exercises.find(e => e.id === item.exerciseId);
+          if (!ex) return;
+          text += `     ${String.fromCharCode(97 + j)}) ${ex.name}${item.perSide ? ' (each side)' : ''}`;
+          text += ` — ${item.sets} sets`;
+          if (item.reps) text += ` × ${item.reps}`;
+          if (item.weight) text += ` @ ${item.weight}`;
+          if (item.intensity) text += ` (${item.intensity})`;
+          text += `\n`;
+          if (item.note) text += `        ↳ ${item.note}\n`;
+        });
+        text += `     Rest between exercises: ${ssGroup.restBetweenEx}s | Between rounds: ${ssGroup.restBetweenRound}s\n\n`;
+        i = Math.max(...ssGroup.exerciseIndices) + 1;
+      } else {
+        const item = sess.exercises[i];
+        const ex = exercises.find(e => e.id === item.exerciseId);
+        if (ex) {
+          text += `  ${exerciseNum}. ${ex.name}${item.perSide ? ' (each side)' : ''}`;
+          text += ` — ${item.sets} sets`;
+          if (item.reps) text += ` × ${item.reps}`;
+          if (item.weight) text += ` @ ${item.weight}`;
+          if (item.intensity) text += ` (${item.intensity})`;
+          if (item.rest) text += ` | Rest: ${item.rest}`;
+          text += `\n`;
+          if (item.note) text += `     ↳ ${item.note}\n`;
+          text += `\n`;
+        }
+        i++;
+      }
+      exerciseNum++;
+    }
+    text += `\n`;
+    }); // end sessions
+    text += `\n`;
+  });
+
+  text += `${'\u2500'.repeat(50)}\n`;
+  text += `AH Performance | Performance for real life\n`;
+
+  document.getElementById('exportContent').value = text;
+  document.getElementById('exportModal').classList.add('show');
+}
+
+function closeExportModal() { document.getElementById('exportModal').classList.remove('show'); }
+function copyExport() {
+  navigator.clipboard.writeText(document.getElementById('exportContent').value);
+  showToast('Copied to clipboard');
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Parent App Integration (postMessage) ──
+let embeddedClients = [];
+const isEmbedded = window.parent !== window;
+
+function assignToClient() {
+  const sel = document.getElementById('clientSelect');
+  const clientId = parseInt(sel.value);
+  if (!clientId) { showToast('Please select a client first'); return; }
+  const client = embeddedClients.find(c => c.id === clientId);
+  if (!client) return;
+
+  const progName = document.getElementById('programmeName').value || 'Untitled Programme';
+  const weekNum = parseInt(document.getElementById('weekNumber').value) || 1;
+  const startDate = document.getElementById('startDate').value || '';
+
+  // Resolve exercise names and send programme data to parent app
+  const resolved = JSON.parse(JSON.stringify(programme));
+  resolved.days.forEach(day => {
+    day.sessions.forEach(sess => {
+      (sess.exercises || []).forEach(item => {
+        const ex = exercises.find(e => e.id === item.exerciseId);
+        item.resolvedName = ex ? ex.name : item.exerciseId;
+        item.movementPattern = ex ? ex.movementPattern : '';
+      });
+    });
+  });
+
+  window.parent.postMessage({
+    type: 'ah-assign-programme',
+    clientId: clientId,
+    clientName: client.name,
+    programmeName: progName,
+    weekNumber: weekNum,
+    startDate: startDate,
+    programme: resolved
+  }, '*');
+
+  showToast('Programme assigned to ' + client.name);
+}
+
+function saveProgrammeToApp() {
+  const progName = document.getElementById('programmeName').value || 'Untitled Programme';
+  const weekNum = parseInt(document.getElementById('weekNumber').value) || 1;
+  const startDate = document.getElementById('startDate').value || '';
+
+  window.parent.postMessage({
+    type: 'ah-save-programme',
+    programmeName: progName,
+    weekNumber: weekNum,
+    startDate: startDate,
+    programme: programme
+  }, '*');
+
+  showToast('Programme saved to app');
+}
+
+// Listen for client list from parent
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'ah-client-list') {
+    embeddedClients = e.data.clients || [];
+    const sel = document.getElementById('clientSelect');
+    sel.innerHTML = '<option value="">Select client...</option>' +
+      embeddedClients.map(c => `<option value="${c.id}">${c.name} — ${c.programme || 'No programme'}</option>`).join('');
+  }
+  if (e.data && e.data.type === 'ah-select-client') {
+    const sel = document.getElementById('clientSelect');
+    if (sel) sel.value = e.data.clientId;
+  }
+});
+
+// If embedded, show assign button and client dropdown, hide text input
+if (isEmbedded) {
+  document.getElementById('assignBtn').style.display = '';
+  document.getElementById('clientSelect').style.display = '';
+  document.getElementById('clientName').style.display = 'none';
+  // Request client list from parent
+  window.parent.postMessage({ type: 'ah-request-clients' }, '*');
+}
+
+// ── Init ──
+addDay('Monday');
+addDay('Wednesday');
+addDay('Friday');
+filterLibrary();
+</script>
+</body>
+</html>

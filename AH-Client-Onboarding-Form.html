@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AH Performance — Client Onboarding</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --ember: #E07A3A;
+    --ember-hover: #C96A30;
+    --ember-soft: rgba(224,122,58,0.10);
+    --ember-glow: rgba(224,122,58,0.18);
+    --sage: #8BB07E;
+    --sage-soft: rgba(139,176,126,0.08);
+    --sage-border: rgba(139,176,126,0.14);
+    --sage-text: #9FC294;
+    --ocean: #4A9DC8;
+    --ocean-soft: rgba(74,157,200,0.08);
+    --ocean-border: rgba(74,157,200,0.14);
+    --ocean-text: #6BB0D4;
+    --slate-deep: #13232E;
+    --slate-card: #182A36;
+    --slate-raised: #1D3140;
+    --slate-border: #243848;
+    --text-bright: #F0EDE8;
+    --text-body: #8CA0AD;
+    --text-muted: #5A7585;
+    --text-dim: #3A5565;
+    --danger: #D45B5B;
+    --danger-soft: rgba(212,91,91,0.08);
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #0B1117;
+    color: var(--text-bright);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .sg { font-family: 'Space Grotesk', sans-serif; }
+
+  /* Layout */
+  .form-container {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* Header */
+  .form-header {
+    text-align: center;
+    padding: 40px 0;
+    border-bottom: 1px solid var(--slate-border);
+    margin-bottom: 40px;
+  }
+
+  .form-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .logo-mark {
+    width: 48px; height: 48px; border-radius: 12px;
+    border: 2px solid var(--ember);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .logo-mark span { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: var(--ember); letter-spacing: -1px; }
+
+  .logo-divider { width: 1.5px; height: 28px; background: var(--text-dim); opacity: 0.4; }
+
+  .logo-text { text-align: left; }
+  .logo-name { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; }
+  .logo-tag { font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); }
+
+  .form-title { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 300; margin-bottom: 10px; }
+  .form-subtitle { font-size: 14px; color: var(--text-body); font-weight: 300; line-height: 1.7; max-width: 500px; margin: 0 auto; }
+
+  /* Progress bar */
+  .progress-bar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 40px;
+  }
+
+  .progress-step {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--slate-card);
+    transition: background 0.3s;
+    cursor: pointer;
+  }
+
+  .progress-step.active { background: var(--ember); }
+  .progress-step.completed { background: var(--ember); opacity: 0.5; }
+
+  .progress-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    margin-bottom: 30px;
+  }
+
+  .progress-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    transition: color 0.3s;
+  }
+
+  .progress-label.active { color: var(--ember); }
+
+  /* Sections */
+  .form-section {
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .form-section.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-header {
+    margin-bottom: 32px;
+  }
+
+  .section-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 14px;
+    font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600;
+  }
+
+  .section-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px; font-weight: 400; margin-bottom: 6px;
+  }
+
+  .section-desc {
+    font-size: 13px; color: var(--text-body); font-weight: 300; line-height: 1.7;
+  }
+
+  /* Form fields */
+  .field-group {
+    margin-bottom: 24px;
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .field-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    color: var(--text-body);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .field-label .required {
+    color: var(--ember);
+    margin-left: 2px;
+  }
+
+  .field-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    font-weight: 300;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="number"],
+  select,
+  textarea {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--slate-card);
+    border: 1.5px solid var(--slate-border);
+    border-radius: 8px;
+    color: var(--text-bright);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--ember);
+    background: var(--slate-raised);
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.6;
+  }
+
+  select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235A7585' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+
+  select option {
+    background: var(--slate-deep);
+    color: var(--text-bright);
+  }
+
+  /* Radio / Checkbox groups */
+  .option-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .option-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .option-item {
+    flex: 1;
+    padding: 12px 16px;
+    background: var(--slate-card);
+    border: 1.5px solid var(--slate-border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-body);
+  }
+
+  .option-item:hover { border-color: var(--text-muted); }
+  .option-item.selected { border-color: var(--ember); background: var(--ember-soft); color: var(--text-bright); }
+
+  /* Yes/No toggle for PAR-Q */
+  .parq-question {
+    background: var(--slate-card);
+    border: 1px solid var(--slate-border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .parq-text {
+    font-size: 14px;
+    font-weight: 300;
+    color: var(--text-bright);
+    line-height: 1.5;
+    flex: 1;
+  }
+
+  .parq-toggle {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .parq-btn {
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1.5px solid var(--slate-border);
+    background: transparent;
+    color: var(--text-muted);
+    transition: all 0.2s;
+  }
+
+  .parq-btn:hover { border-color: var(--text-muted); }
+  .parq-btn.yes-active { border-color: var(--ember); background: var(--ember-soft); color: var(--ember); }
+  .parq-btn.no-active { border-color: var(--sage); background: var(--sage-soft); color: var(--sage); }
+
+  /* Follow-up (conditionally shown) */
+  .parq-followup {
+    display: none;
+    margin: -4px 0 10px;
+    padding: 16px 20px;
+    background: var(--ember-soft);
+    border: 1px solid var(--ember-glow);
+    border-radius: 0 0 10px 10px;
+  }
+
+  .parq-followup.visible { display: block; }
+
+  .parq-followup label { font-size: 12px; color: var(--ember); }
+  .parq-followup textarea { margin-top: 6px; min-height: 60px; }
+
+  /* Injury body map section */
+  .injury-card {
+    background: var(--slate-card);
+    border: 1px solid var(--slate-border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 12px;
+  }
+
+  .injury-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .injury-card-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--ember-soft);
+    border: 1px solid var(--ember-glow);
+    border-radius: 6px;
+    color: var(--ember);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .add-btn:hover { background: var(--ember-glow); }
+
+  /* Consent section */
+  .consent-block {
+    background: var(--slate-card);
+    border: 1px solid var(--slate-border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  .consent-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 10px;
+  }
+
+  .consent-text {
+    font-size: 13px;
+    color: var(--text-body);
+    line-height: 1.8;
+    font-weight: 300;
+    margin-bottom: 16px;
+  }
+
+  .consent-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+    cursor: pointer;
+  }
+
+  .checkbox {
+    width: 22px; height: 22px; flex-shrink: 0;
+    border: 2px solid var(--slate-border);
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    cursor: pointer;
+    margin-top: 1px;
+  }
+
+  .checkbox.checked {
+    border-color: var(--ember);
+    background: var(--ember);
+  }
+
+  .checkbox.checked::after {
+    content: '✓';
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .consent-label {
+    font-size: 13px;
+    color: var(--text-body);
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  .consent-label strong { color: var(--text-bright); }
+
+  /* Data protection callout */
+  .protection-callout {
+    background: var(--ocean-soft);
+    border: 1px solid var(--ocean-border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .protection-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: rgba(74,157,200,0.15);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 14px;
+  }
+
+  .protection-text {
+    font-size: 12px;
+    color: var(--ocean-text);
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  /* Buttons */
+  .form-nav {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid var(--slate-border);
+  }
+
+  .btn {
+    padding: 14px 32px;
+    border-radius: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+
+  .btn-primary { background: var(--ember); color: #fff; }
+  .btn-primary:hover { background: var(--ember-hover); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text-body);
+    border: 1.5px solid var(--slate-border);
+  }
+  .btn-secondary:hover { border-color: var(--text-muted); color: var(--text-bright); }
+
+  .btn-submit { background: var(--ember); color: #fff; width: 100%; padding: 16px; font-size: 15px; }
+  .btn-submit:hover { background: var(--ember-hover); }
+
+  /* Section dividers */
+  .field-divider {
+    height: 1px;
+    background: var(--slate-border);
+    margin: 32px 0;
+  }
+
+  /* Confirmation screen */
+  .confirmation {
+    text-align: center;
+    padding: 60px 20px;
+  }
+
+  .confirmation-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--sage-soft);
+    border: 2px solid var(--sage);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 24px;
+    font-size: 28px;
+  }
+
+  /* Footer */
+  .form-footer {
+    text-align: center;
+    padding: 30px 0;
+    margin-top: 40px;
+    border-top: 1px solid var(--slate-border);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  @media (max-width: 600px) {
+    .field-row { grid-template-columns: 1fr; }
+    .form-container { padding: 24px 16px 60px; }
+    .form-title { font-size: 24px; }
+    .option-row { flex-direction: column; }
+    .parq-question { flex-direction: column; align-items: flex-start; }
+    .parq-toggle { width: 100%; }
+    .parq-btn { flex: 1; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="form-container">
+
+  <!-- Header -->
+  <div class="form-header">
+    <div class="form-logo">
+      <div class="logo-mark"><span>AH</span></div>
+      <div class="logo-divider"></div>
+      <div class="logo-text">
+        <div class="logo-name">Performance</div>
+        <div class="logo-tag">For real life</div>
+      </div>
+    </div>
+    <div class="form-title">Client Onboarding</div>
+    <div class="form-subtitle">Welcome. This form helps me understand who you are, where you're starting from, and how I can best support your training. It takes about 10 minutes.</div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-bar">
+    <div class="progress-step active" onclick="goToSection(0)"></div>
+    <div class="progress-step" onclick="goToSection(1)"></div>
+    <div class="progress-step" onclick="goToSection(2)"></div>
+    <div class="progress-step" onclick="goToSection(3)"></div>
+    <div class="progress-step" onclick="goToSection(4)"></div>
+  </div>
+  <div class="progress-labels">
+    <span class="progress-label active">About You</span>
+    <span class="progress-label">Goals</span>
+    <span class="progress-label">Health</span>
+    <span class="progress-label">Injuries</span>
+    <span class="progress-label">Consent</span>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       SECTION 1: ABOUT YOU
+       ═══════════════════════════════════ -->
+  <div class="form-section active" id="section-0">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--ember-soft); color:var(--ember);">1</div>
+      <div class="section-title">About You</div>
+      <div class="section-desc">Basic details so I know who I'm working with and how to reach you.</div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">First Name <span class="required">*</span></label>
+        <input type="text" placeholder="James">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Last Name <span class="required">*</span></label>
+        <input type="text" placeholder="Wilson">
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">Email <span class="required">*</span></label>
+        <input type="email" placeholder="james@example.com">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Phone <span class="required">*</span></label>
+        <input type="tel" placeholder="+44 7700 900000">
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">Date of Birth <span class="required">*</span></label>
+        <input type="date">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Gender</label>
+        <select>
+          <option value="">Select...</option>
+          <option>Male</option>
+          <option>Female</option>
+          <option>Non-binary</option>
+          <option>Prefer not to say</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">Height</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="number" placeholder="175" min="100" max="250" style="flex:1;">
+          <span style="color:var(--text-muted);font-size:13px;">cm</span>
+        </div>
+        <div class="field-hint">Used for programme planning and nutritional guidance</div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Weight</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="number" placeholder="80" min="30" max="300" step="0.1" style="flex:1;">
+          <span style="color:var(--text-muted);font-size:13px;">kg</span>
+        </div>
+        <div class="field-hint">Used for programme planning and nutritional guidance</div>
+      </div>
+    </div>
+
+    <div class="field-divider"></div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">Occupation</label>
+        <input type="text" placeholder="e.g. Office manager">
+        <div class="field-hint">Helps me understand your daily activity level</div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Typical Work Hours</label>
+        <select>
+          <option value="">Select...</option>
+          <option>Standard (9-5)</option>
+          <option>Early shifts</option>
+          <option>Late / evening shifts</option>
+          <option>Night shifts</option>
+          <option>Variable / irregular</option>
+          <option>Part-time</option>
+          <option>Not currently working</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Emergency Contact</label>
+      <div class="field-row">
+        <input type="text" placeholder="Name">
+        <input type="tel" placeholder="Phone number">
+      </div>
+      <div class="field-hint">Required for safety. This information is stored securely and only used in an emergency.</div>
+    </div>
+
+    <div class="form-nav">
+      <div></div>
+      <button class="btn btn-primary" onclick="nextSection()">Continue</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       SECTION 2: GOALS & BACKGROUND
+       ═══════════════════════════════════ -->
+  <div class="form-section" id="section-1">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--ember-soft); color:var(--ember);">2</div>
+      <div class="section-title">Goals & Background</div>
+      <div class="section-desc">What you want to achieve and where you're starting from. There are no wrong answers here.</div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">What are your main goals? <span class="required">*</span></label>
+      <div class="option-row" style="flex-wrap:wrap; gap:8px;">
+        <div class="option-item" onclick="toggleOption(this)">Lose weight</div>
+        <div class="option-item" onclick="toggleOption(this)">Build muscle</div>
+        <div class="option-item" onclick="toggleOption(this)">Get fitter</div>
+      </div>
+      <div class="option-row" style="flex-wrap:wrap; gap:8px; margin-top:8px;">
+        <div class="option-item" onclick="toggleOption(this)">Improve strength</div>
+        <div class="option-item" onclick="toggleOption(this)">Better mobility</div>
+        <div class="option-item" onclick="toggleOption(this)">Sport specific</div>
+      </div>
+      <div class="option-row" style="flex-wrap:wrap; gap:8px; margin-top:8px;">
+        <div class="option-item" onclick="toggleOption(this)">Rehab / recovery</div>
+        <div class="option-item" onclick="toggleOption(this)">Mental health</div>
+        <div class="option-item" onclick="toggleOption(this)">General wellbeing</div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Anything specific you'd like to tell me about your goals?</label>
+      <textarea placeholder="e.g. I want to run a 5k by summer, or I want to feel more confident in the gym..."></textarea>
+    </div>
+
+    <div class="field-divider"></div>
+
+    <div class="field-group">
+      <label class="field-label">How would you describe your current fitness level?</label>
+      <div class="option-row">
+        <div class="option-item" onclick="selectOne(this, 'fitness-level')">Beginner</div>
+        <div class="option-item" onclick="selectOne(this, 'fitness-level')">Some experience</div>
+        <div class="option-item" onclick="selectOne(this, 'fitness-level')">Intermediate</div>
+        <div class="option-item" onclick="selectOne(this, 'fitness-level')">Advanced</div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">What does your current exercise routine look like?</label>
+      <select>
+        <option value="">Select...</option>
+        <option>Not currently exercising</option>
+        <option>1-2 sessions per week</option>
+        <option>3-4 sessions per week</option>
+        <option>5+ sessions per week</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">What types of exercise have you done before?</label>
+      <textarea placeholder="e.g. Used to go to the gym a few years ago, done some running, tried a few classes..."></textarea>
+    </div>
+
+    <div class="field-divider"></div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">How many days per week can you train?</label>
+        <select>
+          <option value="">Select...</option>
+          <option>2 days</option>
+          <option>3 days</option>
+          <option>4 days</option>
+          <option>5 days</option>
+          <option>6+ days</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label">How long per session?</label>
+        <select>
+          <option value="">Select...</option>
+          <option>30 minutes</option>
+          <option>45 minutes</option>
+          <option>60 minutes</option>
+          <option>75+ minutes</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Where will you be training?</label>
+      <div class="option-row">
+        <div class="option-item" onclick="toggleOption(this)">Commercial gym</div>
+        <div class="option-item" onclick="toggleOption(this)">Home gym</div>
+        <div class="option-item" onclick="toggleOption(this)">Outdoors</div>
+        <div class="option-item" onclick="toggleOption(this)">No equipment</div>
+      </div>
+    </div>
+
+    <div class="form-nav">
+      <button class="btn btn-secondary" onclick="prevSection()">Back</button>
+      <button class="btn btn-primary" onclick="nextSection()">Continue</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       SECTION 3: HEALTH SCREENING (PAR-Q+)
+       ═══════════════════════════════════ -->
+  <div class="form-section" id="section-2">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--sage-soft); color:var(--sage);">3</div>
+      <div class="section-title" style="color:var(--sage-text);">Health Screening</div>
+      <div class="section-desc">Based on the PAR-Q+ (Physical Activity Readiness Questionnaire). These questions help me ensure your training is safe and appropriate. Please answer honestly — all information is confidential.</div>
+    </div>
+
+    <div class="protection-callout">
+      <div class="protection-icon">🔒</div>
+      <div class="protection-text">
+        <strong style="color:var(--ocean);">Your health data is protected.</strong> This information is classified as special category data under UK GDPR. It is stored securely, encrypted, only accessible to your trainer, and will never be shared with third parties. You can request its deletion at any time.
+      </div>
+    </div>
+
+    <!-- PAR-Q+ Core 7 Questions -->
+    <div style="margin-bottom:8px; font-family:'Space Grotesk',sans-serif; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-dim);">General Health</div>
+
+    <div class="parq-question" id="pq1">
+      <div class="parq-text">Has a doctor ever said that you have a heart condition <strong>or</strong> high blood pressure?</div>
+      <div class="parq-toggle">
+        <button class="parq-btn" onclick="parqAnswer(this, 'yes', 'pq1')">Yes</button>
+        <button class="parq-btn" onclick="parqAnswer(this, 'no', 'pq1')">No</button>
+      </div>
+    </div>
+    <div class="parq-followup" id="pq1-followup">
+      <label class="field-label" style="color:var(--ember);">Please provide details</label>
+      <textarea placeholder="e.g. Diagnosed with high blood pressure in 2022, managed with medication..."></textarea>
+    </div>
+
+    <div class="parq-question" id="pq2">
+      <div class="parq-text">Do you experience chest pain during physical activity <strong>or</strong> at rest?</div>
+      <div class="parq-toggle">
+        <button class="parq-btn" onclick="parqAnswer(this, 'yes', 'pq2')">Yes</button>
+        <button class="parq-btn" onclick="parqAnswer(this, 'no', 'pq2')">No</button>
+      </div>
+    </div>
+    <div class="parq-followup" id="pq2-followup">
+      <label class="field-label" style="color:var(--ember);">Please provide details</label>
+      <textarea placeholder="When does this occur? How frequently?"></textarea>
+    </div>
+
+    <div class="parq-question" id="pq3">
+      <div class="parq-text">Do you lose balance because of dizziness, or have you lost consciousness in the last 12 months?</div>
+      <div class="parq-toggle">
+        <button class="parq-btn" onclick="parqAnswer(this, 'yes', 'pq3')">Yes</button>
+        <button class="parq-btn" onclick="parqAnswer(this, 'no', 'pq3')">No</button>
+      </div>
+    </div>
+    <div class="parq-followup" id="pq3-followup">
+      <label class="field-label" style="color:var(--ember);">Please provide details</label>
+      <textarea placeholder="How often does this happen? Any known cause?"></textarea>
+    </div>
+
+    <div class="parq-question" id="pq4">
+      <div class="parq-text">Have you ever been diagnosed with a chronic medical condition (e.g. diabetes, asthma, arthritis, cancer)?</div>
+      <div class="parq-toggle">
+        <button class="parq-btn" onclick="parqAnswer(this, 'yes', 'pq4')">Yes</button>
+        <button class="parq-btn" onclick="parqAnswer(this, 'no', 'pq4')">No</button>
+      </div>
+    </div>
+    <div class="parq-followup" id="pq4-followup">
+      <label class="field-label" style="color:var(--ember);">Please list any diagnosed conditions</label>
+      <textarea placeholder="Condition, when diagnosed, and current status..."></textarea>
+    </div>
+
+    <div class="parq-question" id="pq5">
+      <div class="parq-text">Are you currently taking any prescribed medication?</div>
+      <div class="parq-toggle">
+        <button class="parq-btn" onclick="parqAnswer(this, 'yes', 'pq5')">Yes</button>
+        <button class="parq-btn" onclick="parqAnswer(this, 'no', 'pq5')">No</button>
+      </div>
+    </div>
+    <div class="parq-followup" id="pq5-followup">
+      <label class="field-label" style="color:var(--ember);">Please list medications and what they're for</label>
+      <textarea placeholder="Medication name — what it's prescribed for..."></textarea>
+    </div>
+
+    <div class="parq-question" id="pq6">
+      <div class="parq-text">Do you have a bone, joint, or soft tissue problem that could be made worse by physical activity?</div>
+      <div class="parq-toggle">
+        <button class="parq-btn" onclick="parqAnswer(this, 'yes', 'pq6')">Yes</button>
+        <button class="parq-btn" onclick="parqAnswer(this, 'no', 'pq6')">No</button>
+      </div>
+    </div>
+    <div class="parq-followup" id="pq6-followup">
+      <label class="field-label" style="color:var(--ember);">Please describe the condition</label>
+      <textarea placeholder="What area is affected? Does it limit certain movements?"></textarea>
+    </div>
+
+    <div class="parq-question" id="pq7">
+      <div class="parq-text">Has a doctor ever said you should only do medically supervised physical activity?</div>
+      <div class="parq-toggle">
+        <button class="parq-btn" onclick="parqAnswer(this, 'yes', 'pq7')">Yes</button>
+        <button class="parq-btn" onclick="parqAnswer(this, 'no', 'pq7')">No</button>
+      </div>
+    </div>
+    <div class="parq-followup" id="pq7-followup">
+      <label class="field-label" style="color:var(--ember);">Please provide details</label>
+      <textarea placeholder="When were you advised this? Is it still current?"></textarea>
+    </div>
+
+    <div class="field-divider"></div>
+
+    <div style="margin-bottom:8px; font-family:'Space Grotesk',sans-serif; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-dim);">Additional Health Information</div>
+
+    <div class="field-group">
+      <label class="field-label">Do you have any allergies or food intolerances?</label>
+      <textarea placeholder="e.g. Lactose intolerant, nut allergy..."></textarea>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Are you pregnant or have you given birth in the last 6 months?</label>
+      <div class="option-row">
+        <div class="option-item" onclick="selectOne(this, 'pregnancy')" style="flex:none; padding:12px 24px;">Yes</div>
+        <div class="option-item" onclick="selectOne(this, 'pregnancy')" style="flex:none; padding:12px 24px;">No</div>
+        <div class="option-item" onclick="selectOne(this, 'pregnancy')" style="flex:none; padding:12px 24px;">N/A</div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Is there anything else about your health I should know?</label>
+      <textarea placeholder="Anything that might affect your ability to exercise safely..."></textarea>
+    </div>
+
+    <div class="form-nav">
+      <button class="btn btn-secondary" onclick="prevSection()">Back</button>
+      <button class="btn btn-primary" onclick="nextSection()">Continue</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       SECTION 4: INJURY HISTORY
+       ═══════════════════════════════════ -->
+  <div class="form-section" id="section-3">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--ocean-soft); color:var(--ocean);">4</div>
+      <div class="section-title" style="color:var(--ocean-text);">Injury & Rehab History</div>
+      <div class="section-desc">Understanding past and current injuries helps me programme safely around any limitations and support your recovery.</div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Do you have any current injuries or areas of pain?</label>
+      <div class="option-row" style="margin-bottom:12px;">
+        <div class="option-item" onclick="selectOne(this, 'current-injury')" id="injury-yes">Yes</div>
+        <div class="option-item" onclick="selectOne(this, 'current-injury')" id="injury-no">No</div>
+      </div>
+    </div>
+
+    <div id="current-injury-details">
+      <div class="injury-card">
+        <div class="injury-card-header">
+          <div class="injury-card-title" style="color:var(--ocean-text);">Current Injury 1</div>
+        </div>
+        <div class="field-row" style="margin-bottom:12px;">
+          <div class="field-group" style="margin-bottom:0;">
+            <label class="field-label">Body area</label>
+            <select>
+              <option value="">Select area...</option>
+              <option>Neck</option>
+              <option>Shoulder (Left)</option>
+              <option>Shoulder (Right)</option>
+              <option>Upper back</option>
+              <option>Lower back</option>
+              <option>Elbow (Left)</option>
+              <option>Elbow (Right)</option>
+              <option>Wrist / Hand</option>
+              <option>Hip (Left)</option>
+              <option>Hip (Right)</option>
+              <option>Knee (Left)</option>
+              <option>Knee (Right)</option>
+              <option>Ankle / Foot (Left)</option>
+              <option>Ankle / Foot (Right)</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field-group" style="margin-bottom:0;">
+            <label class="field-label">Type of injury</label>
+            <select>
+              <option value="">Select type...</option>
+              <option>Muscle strain / pull</option>
+              <option>Ligament sprain</option>
+              <option>Tendinitis / tendinopathy</option>
+              <option>Joint pain / inflammation</option>
+              <option>Disc / nerve issue</option>
+              <option>Post-surgical</option>
+              <option>Chronic / ongoing pain</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-group" style="margin-bottom:0;">
+          <label class="field-label">Please describe</label>
+          <textarea placeholder="When did it happen? What makes it better/worse? Are you receiving treatment?"></textarea>
+        </div>
+      </div>
+
+      <div class="add-btn" onclick="this.style.opacity='0.5'; this.textContent='+ Another injury card would be added here';">+ Add another injury</div>
+    </div>
+
+    <div class="field-divider"></div>
+
+    <div class="field-group">
+      <label class="field-label">Have you had any past injuries or surgeries that might affect training?</label>
+      <textarea placeholder="e.g. ACL reconstruction in 2019, fractured wrist 2020, disc herniation 2018..."></textarea>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Are you currently seeing any of the following?</label>
+      <div class="option-row" style="flex-wrap:wrap; gap:8px;">
+        <div class="option-item" onclick="toggleOption(this)">Physiotherapist</div>
+        <div class="option-item" onclick="toggleOption(this)">Osteopath / Chiro</div>
+        <div class="option-item" onclick="toggleOption(this)">Doctor / Specialist</div>
+        <div class="option-item" onclick="toggleOption(this)">None</div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Are there any movements or exercises you've been told to avoid?</label>
+      <textarea placeholder="e.g. No overhead pressing, avoid deep squatting, no impact work..."></textarea>
+    </div>
+
+    <div class="form-nav">
+      <button class="btn btn-secondary" onclick="prevSection()">Back</button>
+      <button class="btn btn-primary" onclick="nextSection()">Continue</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       SECTION 5: CONSENT & DATA PROTECTION
+       ═══════════════════════════════════ -->
+  <div class="form-section" id="section-4">
+    <div class="section-header">
+      <div class="section-icon" style="background:var(--ocean-soft); color:var(--ocean);">5</div>
+      <div class="section-title">Consent & Data Protection</div>
+      <div class="section-desc">Your data is important. Please read the following carefully and confirm your consent.</div>
+    </div>
+
+    <div class="protection-callout">
+      <div class="protection-icon">🔒</div>
+      <div class="protection-text">
+        <strong style="color:var(--ocean);">How your data is handled.</strong> AH Performance operates in full compliance with UK GDPR and the Data Protection Act 2018. Your personal and health data is encrypted, stored securely, and never shared with third parties. You have the right to access, correct, or request deletion of your data at any time.
+      </div>
+    </div>
+
+    <!-- Consent Block 1: Data Processing -->
+    <div class="consent-block">
+      <div class="consent-title">Data Processing Consent</div>
+      <div class="consent-text">I, Adam Heayberd trading as AH Performance, need to collect and process your personal data (name, contact details, date of birth, occupation) in order to provide personal training services to you. This data is processed under the lawful basis of contractual necessity (UK GDPR Article 6(1)(b)).</div>
+      <div class="consent-check" onclick="toggleCheck(this)">
+        <div class="checkbox"></div>
+        <div class="consent-label"><strong>I consent</strong> to AH Performance collecting and processing my personal data for the purposes of providing personal training services.</div>
+      </div>
+    </div>
+
+    <!-- Consent Block 2: Health Data -->
+    <div class="consent-block" style="border-color:var(--sage-border); background:rgba(139,176,126,0.03);">
+      <div class="consent-title" style="color:var(--sage-text);">Health Data Consent (Special Category)</div>
+      <div class="consent-text">Your health information (medical history, injuries, medications, PAR-Q responses) is classified as "special category data" under UK GDPR and requires your explicit consent to process. This data is used solely to ensure your safety during training and to design appropriate exercise programmes.</div>
+      <div class="consent-check" onclick="toggleCheck(this)">
+        <div class="checkbox"></div>
+        <div class="consent-label"><strong>I explicitly consent</strong> to AH Performance collecting and processing my health data for the purposes of safe and effective programme design. I understand this data will be stored securely and never shared with third parties without my permission.</div>
+      </div>
+    </div>
+
+    <!-- Consent Block 3: Communication -->
+    <div class="consent-block">
+      <div class="consent-title">Communication Consent</div>
+      <div class="consent-text">To deliver your programmes, check-in reminders, and coaching feedback, I need to contact you via email and/or the AH Performance app.</div>
+      <div class="consent-check" onclick="toggleCheck(this)">
+        <div class="checkbox"></div>
+        <div class="consent-label"><strong>I consent</strong> to receiving programme updates, coaching communications, and check-in reminders from AH Performance via email and app notifications.</div>
+      </div>
+    </div>
+
+    <!-- Consent Block 4: Progress Data -->
+    <div class="consent-block" style="border-color:var(--ocean-border); background:rgba(74,157,200,0.03);">
+      <div class="consent-title" style="color:var(--ocean-text);">Progress Tracking Consent</div>
+      <div class="consent-text">To monitor your progress, I will record data including body weight, measurements, performance metrics, and check-in responses. Progress photos are optional and stored with the same level of security as all other data.</div>
+      <div class="consent-check" onclick="toggleCheck(this)">
+        <div class="checkbox"></div>
+        <div class="consent-label"><strong>I consent</strong> to AH Performance recording and storing my progress data for the purposes of monitoring and adapting my training programme.</div>
+      </div>
+    </div>
+
+    <!-- Your rights -->
+    <div class="consent-block" style="background:var(--slate-raised); border-color:var(--slate-border);">
+      <div class="consent-title">Your Rights</div>
+      <div class="consent-text" style="margin-bottom:0;">
+        Under UK GDPR, you have the right to: <strong>access</strong> all data held about you; <strong>correct</strong> any inaccurate data; <strong>request deletion</strong> of your data; <strong>withdraw consent</strong> at any time; <strong>restrict processing</strong> of your data; and <strong>data portability</strong> — receive your data in a portable format. To exercise any of these rights, contact adam@ahperformance.co.uk. You also have the right to lodge a complaint with the ICO (Information Commissioner's Office) at ico.org.uk.
+      </div>
+    </div>
+
+    <div class="field-divider"></div>
+
+    <!-- Declaration -->
+    <div class="consent-block" style="border-color:var(--ember-glow); background:rgba(224,122,58,0.03);">
+      <div class="consent-title" style="color:var(--ember);">Declaration</div>
+      <div class="consent-check" onclick="toggleCheck(this)">
+        <div class="checkbox"></div>
+        <div class="consent-label"><strong>I declare</strong> that the information I have provided is true and complete to the best of my knowledge. I understand that withholding relevant health information may affect the safety of my training. I will inform AH Performance of any changes to my health status.</div>
+      </div>
+    </div>
+
+    <div class="field-row" style="margin-top:24px;">
+      <div class="field-group">
+        <label class="field-label">Full Name (as signature) <span class="required">*</span></label>
+        <input type="text" placeholder="Type your full name">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Date <span class="required">*</span></label>
+        <input type="date">
+      </div>
+    </div>
+
+    <div style="margin-top:32px;">
+      <button class="btn btn-submit" onclick="submitForm()">Submit Onboarding Form</button>
+    </div>
+
+    <div class="form-nav" style="border-top:none; margin-top:16px;">
+      <button class="btn btn-secondary" onclick="prevSection()">Back</button>
+      <div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       CONFIRMATION
+       ═══════════════════════════════════ -->
+  <div class="form-section" id="section-confirm">
+    <div class="confirmation">
+      <div class="confirmation-icon">✓</div>
+      <div class="section-title" style="margin-bottom:12px;">You're all set.</div>
+      <div class="section-desc" style="max-width:460px; margin:0 auto;">
+        Thank you for completing your onboarding. I'll review your information and be in touch within 24 hours to discuss your programme. If anything changes with your health or circumstances, just let me know.
+      </div>
+      <div style="margin-top:32px; padding:20px; background:var(--sage-soft); border:1px solid var(--sage-border); border-radius:10px; display:inline-block;">
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:12px; color:var(--sage-text); letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;">What happens next</div>
+        <div style="font-size:13px; color:var(--text-body); font-weight:300;">Programme design → First session plan → Welcome email with everything you need</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="form-footer">
+    <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8px;">
+      <div style="width:24px; height:24px; border-radius:6px; border:1.5px solid var(--ember); display:flex; align-items:center; justify-content:center;">
+        <span style="font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:700; color:var(--ember);">AH</span>
+      </div>
+      <span style="font-family:'Space Grotesk',sans-serif; letter-spacing:1px;">PERFORMANCE</span>
+    </div>
+    Your data is encrypted and stored in compliance with UK GDPR.<br>
+    AH Performance · adam@ahperformance.co.uk
+  </div>
+
+</div>
+
+<script>
+  let currentSection = 0;
+  const totalSections = 5;
+
+  function updateProgress() {
+    document.querySelectorAll('.progress-step').forEach((step, i) => {
+      step.className = 'progress-step';
+      if (i < currentSection) step.classList.add('completed');
+      if (i === currentSection) step.classList.add('active');
+    });
+    document.querySelectorAll('.progress-label').forEach((label, i) => {
+      label.className = 'progress-label';
+      if (i === currentSection) label.classList.add('active');
+    });
+  }
+
+  function showSection(index) {
+    document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+    const target = document.getElementById('section-' + index);
+    if (target) target.classList.add('active');
+    currentSection = index;
+    updateProgress();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function nextSection() {
+    if (currentSection < totalSections - 1) showSection(currentSection + 1);
+  }
+
+  function prevSection() {
+    if (currentSection > 0) showSection(currentSection - 1);
+  }
+
+  function goToSection(index) {
+    showSection(index);
+  }
+
+  function toggleOption(el) {
+    el.classList.toggle('selected');
+  }
+
+  function selectOne(el, group) {
+    const parent = el.closest('.option-row') || el.closest('.field-group');
+    parent.querySelectorAll('.option-item').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function parqAnswer(btn, answer, qId) {
+    const toggle = btn.closest('.parq-toggle');
+    toggle.querySelectorAll('.parq-btn').forEach(b => {
+      b.classList.remove('yes-active', 'no-active');
+    });
+    if (answer === 'yes') {
+      btn.classList.add('yes-active');
+      document.getElementById(qId + '-followup').classList.add('visible');
+    } else {
+      btn.classList.add('no-active');
+      document.getElementById(qId + '-followup').classList.remove('visible');
+    }
+  }
+
+  function toggleCheck(el) {
+    el.querySelector('.checkbox').classList.toggle('checked');
+  }
+
+  function submitForm() {
+    document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('section-confirm').classList.add('active');
+    document.querySelector('.progress-bar').style.display = 'none';
+    document.querySelector('.progress-labels').style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+
+</body>
+</html>

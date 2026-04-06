@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AH Performance — Client Progress Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+
+  :root{
+    --ember:#E07A3A;--ember-hover:#C96A30;--ember-soft:rgba(224,122,58,0.10);--ember-glow:rgba(224,122,58,0.18);
+    --sage:#8BB07E;--sage-soft:rgba(139,176,126,0.08);--sage-border:rgba(139,176,126,0.14);--sage-text:#9FC294;
+    --ocean:#4A9DC8;--ocean-soft:rgba(74,157,200,0.08);--ocean-border:rgba(74,157,200,0.14);--ocean-text:#6BB0D4;
+    --slate-deep:#13232E;--slate-card:#182A36;--slate-raised:#1D3140;--slate-border:#243848;--slate-hover:#2A4555;
+    --text-bright:#F0EDE8;--text-body:#8CA0AD;--text-muted:#5A7585;--text-dim:#3A5565;
+    --danger:#D45B5B;--danger-soft:rgba(212,91,91,0.08);
+  }
+
+  body{font-family:'Inter',-apple-system,sans-serif;background:#0B1117;color:var(--text-bright);line-height:1.6;min-height:100vh;}
+  .sg{font-family:'Space Grotesk',sans-serif;}
+
+  .app{display:flex;min-height:100vh;}
+
+  /* Sidebar */
+  .sidebar{width:220px;background:var(--slate-deep);border-right:1px solid var(--slate-border);padding:24px 0;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:10;}
+  .sidebar-logo{display:flex;align-items:center;gap:10px;padding:0 20px;margin-bottom:32px;}
+  .sidebar-logo .mark{width:36px;height:36px;border-radius:10px;border:2px solid var(--ember);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--ember);}
+  .sidebar-logo .wordmark{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;}
+  .sidebar-logo .tag{font-size:7px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-dim);}
+  .sidebar-section{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);padding:0 20px;margin:24px 0 8px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;color:var(--text-muted);cursor:pointer;transition:all 0.15s;border-left:3px solid transparent;}
+  .nav-item:hover{color:var(--text-body);background:rgba(255,255,255,0.02);}
+  .nav-item.active{color:var(--ember);border-left-color:var(--ember);background:var(--ember-soft);}
+  .nav-item .icon{width:18px;text-align:center;font-size:14px;}
+  .client-select{margin:0 16px 16px;padding:8px 12px;background:var(--slate-card);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);font-size:12px;font-family:'Inter',sans-serif;width:calc(100% - 32px);}
+
+  .main{margin-left:220px;flex:1;padding:32px;max-width:1100px;}
+  .page{display:none;}.page.active{display:block;}
+  .page-header{margin-bottom:28px;}
+  .page-header h1{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:400;margin-bottom:4px;}
+  .page-header p{font-size:13px;color:var(--text-body);font-weight:300;}
+
+  /* Cards */
+  .card{background:var(--slate-card);border:1px solid var(--slate-border);border-radius:14px;padding:24px;margin-bottom:20px;}
+  .card h3{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:500;margin-bottom:14px;}
+  .card h4{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:400;margin-bottom:10px;color:var(--text-body);}
+
+  /* KPI */
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:24px;}
+  .kpi{background:var(--slate-card);border:1px solid var(--slate-border);border-radius:12px;padding:18px;text-align:center;}
+  .kpi-label{font-size:11px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;}
+  .kpi-value{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:600;}
+  .kpi-sub{font-size:11px;color:var(--text-dim);margin-top:2px;}
+
+  /* Forms */
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+  .form-row.three{grid-template-columns:1fr 1fr 1fr;}
+  .form-row.four{grid-template-columns:1fr 1fr 1fr 1fr;}
+  .form-row.five{grid-template-columns:1fr 1fr 1fr 1fr 1fr;}
+  .form-row.full{grid-template-columns:1fr;}
+  .form-group{display:flex;flex-direction:column;gap:4px;}
+  .form-label{font-size:11px;font-weight:500;letter-spacing:0.3px;text-transform:uppercase;color:var(--text-muted);}
+  input,select,textarea{background:var(--slate-deep);border:1px solid var(--slate-border);border-radius:8px;padding:9px 12px;color:var(--text-bright);font-size:13px;font-family:'Inter',sans-serif;font-weight:300;transition:border-color 0.2s;width:100%;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ember);}
+  textarea{min-height:60px;resize:vertical;}
+
+  /* Buttons */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 20px;border-radius:8px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all 0.2s;}
+  .btn-primary{background:var(--ember);color:white;}
+  .btn-primary:hover{background:var(--ember-hover);transform:translateY(-1px);}
+  .btn-secondary{background:var(--slate-raised);color:var(--text-body);border:1px solid var(--slate-border);}
+  .btn-secondary:hover{border-color:var(--text-muted);color:var(--text-bright);}
+  .btn-sm{padding:6px 14px;font-size:12px;}
+  .btn-row{display:flex;gap:8px;margin-top:14px;}
+
+  /* Tables */
+  .data-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .data-table th{text-align:left;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-muted);padding:10px 12px;border-bottom:1px solid var(--slate-border);}
+  .data-table td{padding:10px 12px;border-bottom:1px solid rgba(36,56,72,0.4);color:var(--text-body);}
+  .data-table tr:hover td{background:rgba(255,255,255,0.01);}
+  .data-table .val{color:var(--text-bright);font-weight:400;}
+
+  /* Action icons */
+  .action-icons{display:flex;gap:8px;align-items:center;}
+  .action-icon{cursor:pointer;color:var(--text-dim);font-size:13px;transition:color 0.15s;background:none;border:none;padding:2px;}
+  .action-icon:hover{color:var(--text-bright);}
+  .action-icon.edit:hover{color:var(--ocean-text);}
+  .action-icon.delete:hover{color:var(--danger);}
+
+  /* Chart */
+  .chart-wrap{position:relative;height:280px;margin:16px 0;}
+
+  /* Photo grid */
+  .photo-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;}
+  .photo-slot{background:var(--slate-deep);border:2px dashed var(--slate-border);border-radius:12px;aspect-ratio:3/4;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;overflow:hidden;position:relative;}
+  .photo-slot:hover{border-color:var(--text-dim);}
+  .photo-slot.has-photo{border-style:solid;border-color:var(--ember);}
+  .photo-slot .placeholder{text-align:center;color:var(--text-dim);}
+  .photo-slot .placeholder .label{font-size:12px;font-weight:500;margin-top:8px;}
+  .photo-slot .placeholder .hint{font-size:10px;margin-top:4px;}
+  .photo-slot img{width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0;}
+  .photo-slot .remove-photo{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,0.7);color:white;border:none;cursor:pointer;font-size:14px;display:none;align-items:center;justify-content:center;z-index:2;}
+  .photo-slot.has-photo .remove-photo{display:flex;}
+  .photo-timeline{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+  .photo-date-chip{padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;background:var(--slate-deep);border:1px solid var(--slate-border);color:var(--text-muted);transition:all 0.15s;}
+  .photo-date-chip.active{background:var(--ember);color:white;border-color:var(--ember);}
+
+  /* Sub-tabs */
+  .sub-tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--slate-deep);border-radius:10px;padding:4px;border:1px solid var(--slate-border);}
+  .sub-tab{flex:1;padding:8px 14px;border-radius:8px;font-size:12px;font-family:'Space Grotesk',sans-serif;color:var(--text-muted);cursor:pointer;text-align:center;transition:all 0.15s;border:none;background:none;}
+  .sub-tab.active{background:var(--ember);color:white;font-weight:500;}
+
+  /* Weekly summary */
+  .week-nav{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+  .week-nav button{background:var(--slate-raised);border:1px solid var(--slate-border);color:var(--text-body);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:14px;transition:all 0.15s;}
+  .week-nav button:hover{border-color:var(--text-muted);color:var(--text-bright);}
+  .week-nav .week-label{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:500;min-width:220px;text-align:center;}
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+  .summary-stat{background:var(--slate-deep);border:1px solid var(--slate-border);border-radius:10px;padding:16px;}
+  .summary-stat .stat-label{font-size:11px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;}
+  .summary-stat .stat-main{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:600;margin-bottom:4px;}
+  .summary-stat .stat-detail{font-size:12px;color:var(--text-dim);line-height:1.6;}
+  .day-bar-row{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:12px;}
+  .day-bar-row .day-label{width:36px;color:var(--text-muted);font-weight:500;}
+  .day-bar-row .bar-track{flex:1;height:16px;background:var(--slate-deep);border-radius:4px;overflow:hidden;display:flex;}
+  .day-bar-row .bar-seg{height:100%;transition:width 0.3s;}
+  .day-bar-row .bar-val{width:50px;text-align:right;color:var(--text-body);font-family:'Space Grotesk',sans-serif;}
+  .bar-legend{display:flex;gap:16px;margin-top:10px;font-size:11px;color:var(--text-muted);}
+  .bar-legend .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+
+  /* History pagination */
+  .history-toggle{display:flex;justify-content:center;padding:12px 0;}
+  .history-toggle button{background:none;border:1px solid var(--slate-border);border-radius:6px;padding:6px 16px;font-size:12px;font-family:'Space Grotesk',sans-serif;color:var(--text-muted);cursor:pointer;transition:all 0.15s;}
+  .history-toggle button:hover{border-color:var(--text-dim);color:var(--text-bright);}
+  .data-table tbody tr.hidden-row{display:none;}
+  .data-table tbody.expanded tr.hidden-row{display:table-row;}
+
+  .empty-state{text-align:center;padding:48px 24px;color:var(--text-dim);}
+  .empty-state p{font-size:13px;max-width:320px;margin:0 auto;line-height:1.7;}
+  .divider{height:1px;background:var(--slate-border);margin:20px 0;}
+  .hidden{display:none!important;}
+  .text-ember{color:var(--ember);}.text-sage{color:var(--sage-text);}.text-ocean{color:var(--ocean-text);}
+
+  /* Sync badge */
+  .sync-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;color:var(--ocean-text);background:var(--ocean-soft);padding:3px 8px;border-radius:4px;margin-left:8px;}
+
+  @media(max-width:768px){
+    .sidebar{width:60px;padding:12px 0;}
+    .sidebar-logo .wordmark,.sidebar-logo .tag,.sidebar-section,.nav-item span:not(.icon),.client-select{display:none;}
+    .sidebar-logo{padding:0 12px;}
+    .nav-item{padding:12px;justify-content:center;}
+    .main{margin-left:60px;padding:20px;}
+    .form-row,.form-row.three,.form-row.four,.form-row.five{grid-template-columns:1fr 1fr;}
+    .photo-grid{grid-template-columns:1fr 1fr;}
+    .kpi-row{grid-template-columns:1fr 1fr;}
+    .summary-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="mark">AH</div>
+      <div><div class="wordmark">Performance</div><div class="tag">Progress Tracker</div></div>
+    </div>
+
+    <select class="client-select" id="clientSelect" onchange="switchClient()">
+      <option value="demo">James Wilson (Demo)</option>
+    </select>
+
+    <div class="sidebar-section">Tracking</div>
+    <div class="nav-item active" onclick="showPage('dashboard',this)"><span class="icon">&#9673;</span><span>Dashboard</span></div>
+    <div class="nav-item" onclick="showPage('strength',this)"><span class="icon">&#9878;</span><span>Strength</span></div>
+    <div class="nav-item" onclick="showPage('cardio',this)"><span class="icon">&#9829;</span><span>Cardio</span></div>
+    <div class="nav-item" onclick="showPage('measurements',this)"><span class="icon">&#9634;</span><span>Measurements</span></div>
+    <div class="nav-item" onclick="showPage('photos',this)"><span class="icon">&#9635;</span><span>Photos</span></div>
+    <div class="nav-item" onclick="showPage('wearable',this)"><span class="icon">&#9201;</span><span>Wearable</span></div>
+    <div class="nav-item" onclick="showPage('weekly',this)"><span class="icon">&#9776;</span><span>Weekly Summary</span></div>
+
+    <div class="sidebar-section">Data</div>
+    <div class="nav-item" onclick="exportData()"><span class="icon">&#8681;</span><span>Export JSON</span></div>
+    <div class="nav-item" onclick="document.getElementById('importFile').click()"><span class="icon">&#8679;</span><span>Import JSON</span></div>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- ── DASHBOARD ── -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header"><h1 class="sg">Dashboard</h1><p>Overview of progress across all tracking categories.</p></div>
+      <div class="kpi-row" id="dashKpis">
+        <div class="kpi"><div class="kpi-label">Total Sessions</div><div class="kpi-value text-ember" id="kpiSessions">0</div></div>
+        <div class="kpi"><div class="kpi-label">Body Weight</div><div class="kpi-value text-ocean" id="kpiWeight">—</div><div class="kpi-sub" id="kpiWeightDelta"></div></div>
+        <div class="kpi"><div class="kpi-label">Strength PRs</div><div class="kpi-value text-sage" id="kpiPRs">0</div></div>
+        <div class="kpi"><div class="kpi-label">VO2 Max</div><div class="kpi-value text-ocean" id="kpiVO2">—</div></div>
+        <div class="kpi"><div class="kpi-label">Resting HR</div><div class="kpi-value" id="kpiHR">—</div><div class="kpi-sub">bpm</div></div>
+      </div>
+      <div class="card"><h3>Body Weight Trend</h3><div class="chart-wrap"><canvas id="dashWeightChart"></canvas></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="card"><h3>Recent Strength</h3><div id="dashRecentStrength"><div class="empty-state"><p>No strength entries yet.</p></div></div></div>
+        <div class="card"><h3>Recent Cardio</h3><div id="dashRecentCardio"><div class="empty-state"><p>No cardio entries yet.</p></div></div></div>
+      </div>
+    </div>
+
+    <!-- ── STRENGTH ── -->
+    <div class="page" id="page-strength">
+      <div class="page-header"><h1 class="sg">Strength Tracking</h1><p>Log exercises, track weight progression, and identify PRs over time.</p></div>
+      <div class="card" id="strFormCard">
+        <h3 id="strFormTitle">Log Entry</h3>
+        <div class="form-row three">
+          <div class="form-group"><label class="form-label">Date</label><input type="date" id="strDate"></div>
+          <div class="form-group"><label class="form-label">Exercise</label><input type="text" id="strExercise" placeholder="e.g. Back Squat" list="exerciseList"><datalist id="exerciseList"></datalist></div>
+          <div class="form-group"><label class="form-label">RPE (1-10)</label><input type="number" id="strRPE" placeholder="8" min="1" max="10"></div>
+        </div>
+        <div id="strSets">
+          <div class="form-row five" data-set="0">
+            <div class="form-group"><label class="form-label">Set</label><input type="text" value="1" readonly style="text-align:center;color:var(--text-dim);"></div>
+            <div class="form-group"><label class="form-label">Weight (kg)</label><input type="number" class="set-weight" placeholder="0" step="0.5"></div>
+            <div class="form-group"><label class="form-label">Reps</label><input type="number" class="set-reps" placeholder="0"></div>
+            <div class="form-group"><label class="form-label">Side</label><select class="set-side"><option value="">Both</option><option value="L">Left</option><option value="R">Right</option></select></div>
+            <div class="form-group"><label class="form-label">&nbsp;</label><button class="btn btn-secondary btn-sm" onclick="removeSet(this)" style="width:100%;">&times;</button></div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-secondary btn-sm" onclick="addSet()">+ Add Set</button>
+          <div style="flex:1;"></div>
+          <button class="btn btn-secondary btn-sm hidden" id="strCancelBtn" onclick="cancelEditStr()">Cancel</button>
+          <button class="btn btn-primary" id="strSaveBtn" onclick="saveStrength()">Save Entry</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Exercise Progress</h3>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Select Exercise</label><select id="strChartExercise" onchange="renderStrengthChart()"><option value="">— select —</option></select></div>
+          <div class="form-group"><label class="form-label">Metric</label><select id="strChartMetric" onchange="renderStrengthChart()"><option value="maxWeight">Max Weight</option><option value="volume">Total Volume</option><option value="e1rm">Estimated 1RM</option></select></div>
+        </div>
+        <div class="chart-wrap"><canvas id="strengthChart"></canvas></div>
+      </div>
+      <div class="card"><h3>History</h3><div class="form-row" style="margin-bottom:14px;"><div class="form-group"><label class="form-label">Filter by Exercise</label><select id="strHistoryFilter" onchange="renderStrengthTable()"><option value="">All Exercises</option></select></div></div><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Exercise</th><th>Sets</th><th>Best Set</th><th>Est. 1RM</th><th>RPE</th><th></th></tr></thead><tbody id="strTableBody"></tbody></table></div><div class="history-toggle" id="strToggle" style="display:none;"><button onclick="toggleHistory('str')">Show all</button></div></div>
+    </div>
+
+    <!-- ── CARDIO ── -->
+    <div class="page" id="page-cardio">
+      <div class="page-header"><h1 class="sg">Cardio Tracking</h1><p>Track running, rowing, skiing, cycling, and more.</p></div>
+      <div class="card" id="cardFormCard">
+        <h3 id="cardFormTitle">Log Entry</h3>
+        <div class="form-row four">
+          <div class="form-group"><label class="form-label">Date</label><input type="date" id="cardDate"></div>
+          <div class="form-group"><label class="form-label">Activity</label><select id="cardActivity"><option value="Run">Run</option><option value="Row">Row (Erg)</option><option value="SkiErg">Ski Erg</option><option value="Bike">Bike / Assault Bike</option><option value="Sled Push">Sled Push</option><option value="Sled Pull">Sled Pull</option><option value="Swim">Swim</option><option value="Other">Other</option></select></div>
+          <div class="form-group"><label class="form-label">Distance</label><input type="number" id="cardDistance" placeholder="5000" step="1"></div>
+          <div class="form-group"><label class="form-label">Unit</label><select id="cardDistUnit"><option value="m">metres</option><option value="km">km</option><option value="mi">miles</option><option value="cal">calories</option></select></div>
+        </div>
+        <div class="form-row four">
+          <div class="form-group"><label class="form-label">Time (mm:ss)</label><input type="text" id="cardTime" placeholder="25:30"></div>
+          <div class="form-group"><label class="form-label">Avg HR (bpm)</label><input type="number" id="cardHR" placeholder="155"></div>
+          <div class="form-group"><label class="form-label">Max HR (bpm)</label><input type="number" id="cardMaxHR" placeholder="178"></div>
+          <div class="form-group"><label class="form-label">RPE (1-10)</label><input type="number" id="cardRPE" placeholder="7" min="1" max="10"></div>
+        </div>
+        <div class="form-row full"><div class="form-group"><label class="form-label">Notes</label><input type="text" id="cardNotes" placeholder="e.g. felt strong, negative split"></div></div>
+        <div class="btn-row">
+          <div style="flex:1;"></div>
+          <button class="btn btn-secondary btn-sm hidden" id="cardCancelBtn" onclick="cancelEditCard()">Cancel</button>
+          <button class="btn btn-primary" id="cardSaveBtn" onclick="saveCardio()">Save Entry</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Performance Over Time</h3>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Activity</label><select id="cardChartActivity" onchange="renderCardioChart()"><option value="">— select —</option></select></div>
+          <div class="form-group"><label class="form-label">Metric</label><select id="cardChartMetric" onchange="renderCardioChart()"><option value="time">Total Time</option><option value="hr">Avg Heart Rate</option></select></div>
+        </div>
+        <div class="chart-wrap"><canvas id="cardioChart"></canvas></div>
+      </div>
+      <div class="card"><h3>History</h3><div class="form-row" style="margin-bottom:14px;"><div class="form-group"><label class="form-label">Filter by Activity</label><select id="cardHistoryFilter" onchange="renderCardioTable()"><option value="">All Activities</option></select></div></div><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Activity</th><th>Distance</th><th>Time</th><th>Avg HR</th><th></th></tr></thead><tbody id="cardTableBody"></tbody></table></div><div class="history-toggle" id="cardToggle" style="display:none;"><button onclick="toggleHistory('card')">Show all</button></div></div>
+    </div>
+
+    <!-- ── MEASUREMENTS ── -->
+    <div class="page" id="page-measurements">
+      <div class="page-header"><h1 class="sg">Body Measurements</h1><p>Track body weight and circumference measurements over time. Measure consistently — same time of day, same conditions.</p></div>
+      <div class="card" id="measFormCard">
+        <h3 id="measFormTitle">Log Measurements</h3>
+        <div class="form-row three">
+          <div class="form-group"><label class="form-label">Date</label><input type="date" id="measDate"></div>
+          <div class="form-group"><label class="form-label">Body Weight (kg)</label><input type="number" id="measWeight" placeholder="80.0" step="0.1"></div>
+          <div class="form-group"><label class="form-label">Chest (cm)</label><input type="number" id="measChest" placeholder="" step="0.5"></div>
+        </div>
+        <div class="form-row four">
+          <div class="form-group"><label class="form-label">Waist (cm)</label><input type="number" id="measWaist" placeholder="" step="0.5"></div>
+          <div class="form-group"><label class="form-label">Hips (cm)</label><input type="number" id="measHips" placeholder="" step="0.5"></div>
+          <div class="form-group"><label class="form-label">Glutes (cm)</label><input type="number" id="measGlutes" placeholder="" step="0.5"></div>
+          <div class="form-group"><label class="form-label">Arm (cm)</label><input type="number" id="measArm" placeholder="" step="0.5"></div>
+        </div>
+        <div class="form-row three">
+          <div class="form-group"><label class="form-label">Thigh (cm)</label><input type="number" id="measThigh" placeholder="" step="0.5"></div>
+          <div class="form-group"><label class="form-label">Calf (cm)</label><input type="number" id="measCalf" placeholder="" step="0.5"></div>
+          <div class="form-group">&nbsp;</div>
+        </div>
+        <div class="btn-row">
+          <div style="flex:1;"></div>
+          <button class="btn btn-secondary btn-sm hidden" id="measCancelBtn" onclick="cancelEditMeas()">Cancel</button>
+          <button class="btn btn-primary" id="measSaveBtn" onclick="saveMeasurement()">Save</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Trend</h3>
+        <div class="form-row"><div class="form-group"><label class="form-label">Metric</label><select id="measChartMetric" onchange="renderMeasChart()"><option value="weight">Body Weight</option><option value="chest">Chest</option><option value="waist">Waist</option><option value="hips">Hips</option><option value="glutes">Glutes</option><option value="arm">Arm</option><option value="thigh">Thigh</option><option value="calf">Calf</option></select></div></div>
+        <div class="chart-wrap"><canvas id="measChart"></canvas></div>
+      </div>
+      <div class="card"><h3>History</h3><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Weight</th><th>Chest</th><th>Waist</th><th>Hips</th><th>Glutes</th><th>Arm</th><th>Thigh</th><th>Calf</th><th></th></tr></thead><tbody id="measTableBody"></tbody></table></div><div class="history-toggle" id="measToggle" style="display:none;"><button onclick="toggleHistory('meas')">Show all</button></div></div>
+    </div>
+
+    <!-- ── PHOTOS ── -->
+    <div class="page" id="page-photos">
+      <div class="page-header"><h1 class="sg">Body Composition Photos</h1><p>Visual record of your physique over time. Front, side, and back.</p></div>
+      <div class="card">
+        <h3>Add Photos</h3>
+        <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;">
+          <div class="form-group" style="min-width:160px;"><label class="form-label">Date</label><input type="date" id="photoDate"></div>
+          <button class="btn btn-primary" onclick="savePhotoSet()" style="margin-top:18px;">Save Photo Set</button>
+        </div>
+        <div class="photo-grid">
+          <div class="photo-slot" id="photoFront" onclick="pickPhoto('front')"><input type="file" accept="image/*" class="hidden" id="photoFrontInput" onchange="previewPhoto('front',event)"><button class="remove-photo" onclick="event.stopPropagation();clearPhoto('front')">&times;</button><div class="placeholder"><div style="font-size:28px;opacity:0.3;">&#9634;</div><div class="label">Front</div><div class="hint">Click to browse</div></div></div>
+          <div class="photo-slot" id="photoSide" onclick="pickPhoto('side')"><input type="file" accept="image/*" class="hidden" id="photoSideInput" onchange="previewPhoto('side',event)"><button class="remove-photo" onclick="event.stopPropagation();clearPhoto('side')">&times;</button><div class="placeholder"><div style="font-size:28px;opacity:0.3;">&#9634;</div><div class="label">Side</div><div class="hint">Click to browse</div></div></div>
+          <div class="photo-slot" id="photoBack" onclick="pickPhoto('back')"><input type="file" accept="image/*" class="hidden" id="photoBackInput" onchange="previewPhoto('back',event)"><button class="remove-photo" onclick="event.stopPropagation();clearPhoto('back')">&times;</button><div class="placeholder"><div style="font-size:28px;opacity:0.3;">&#9634;</div><div class="label">Back</div><div class="hint">Click to browse</div></div></div>
+        </div>
+      </div>
+      <div class="card"><h3>Photo Timeline</h3><div class="photo-timeline" id="photoTimeline"><div class="empty-state" style="width:100%;"><p>No photo sets saved yet.</p></div></div><div id="photoTimelineView" class="hidden"><div class="photo-grid" id="photoTimelineGrid"></div></div></div>
+    </div>
+
+    <!-- ── WEARABLE ── -->
+    <div class="page" id="page-wearable">
+      <div class="page-header"><h1 class="sg">Wearable & Recovery Data</h1><p>Track heart rate, VO2 max, recovery, sleep, and daily steps.</p></div>
+      <div class="card" id="wearFormCard">
+        <h3 id="wearFormTitle">Log Entry</h3>
+        <div class="form-row four">
+          <div class="form-group"><label class="form-label">Date</label><input type="date" id="wearDate"></div>
+          <div class="form-group"><label class="form-label">Resting HR (bpm)</label><input type="number" id="wearRHR" placeholder="52"></div>
+          <div class="form-group"><label class="form-label">HRV (ms)</label><input type="number" id="wearHRV" placeholder="65"></div>
+          <div class="form-group"><label class="form-label">VO2 Max</label><input type="number" id="wearVO2" placeholder="48" step="0.1"></div>
+        </div>
+        <div class="form-row four">
+          <div class="form-group"><label class="form-label">Recovery Score (%)</label><input type="number" id="wearRecovery" placeholder="78" min="0" max="100"></div>
+          <div class="form-group"><label class="form-label">Sleep (hours)</label><input type="number" id="wearSleep" placeholder="7.5" step="0.1"></div>
+          <div class="form-group"><label class="form-label">Strain (0-21)</label><input type="number" id="wearStrain" placeholder="14.5" step="0.1" min="0" max="21"></div>
+          <div class="form-group"><label class="form-label">Steps <span class="sync-badge">auto-sync</span></label><input type="number" id="wearSteps" placeholder="8500"></div>
+        </div>
+        <div class="btn-row">
+          <div style="flex:1;"></div>
+          <button class="btn btn-secondary btn-sm hidden" id="wearCancelBtn" onclick="cancelEditWear()">Cancel</button>
+          <button class="btn btn-primary" id="wearSaveBtn" onclick="saveWearable()">Save Entry</button>
+        </div>
+        <div style="margin-top:12px;font-size:11px;color:var(--text-dim);line-height:1.6;">
+          <strong style="color:var(--text-muted);">Steps auto-sync:</strong> In the app, daily steps will sync automatically from Apple Health, Google Health Connect, or your wearable (Garmin, WHOOP, Fitbit). Data populates each evening or first thing in the morning. Manual entry is available as a fallback.
+        </div>
+      </div>
+      <div class="card">
+        <h3>Trends</h3>
+        <div class="sub-tabs" id="wearTabs">
+          <button class="sub-tab active" onclick="setWearTab('rhr',this)">RHR</button>
+          <button class="sub-tab" onclick="setWearTab('hrv',this)">HRV</button>
+          <button class="sub-tab" onclick="setWearTab('vo2',this)">VO2</button>
+          <button class="sub-tab" onclick="setWearTab('recovery',this)">Recovery</button>
+          <button class="sub-tab" onclick="setWearTab('sleep',this)">Sleep</button>
+          <button class="sub-tab" onclick="setWearTab('steps',this)">Steps</button>
+        </div>
+        <div class="chart-wrap"><canvas id="wearChart"></canvas></div>
+      </div>
+      <div class="card"><h3>History</h3><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Date</th><th>RHR</th><th>HRV</th><th>VO2</th><th>Recovery</th><th>Sleep</th><th>Steps</th><th></th></tr></thead><tbody id="wearTableBody"></tbody></table></div><div class="history-toggle" id="wearToggle" style="display:none;"><button onclick="toggleHistory('wear')">Show all</button></div></div>
+    </div>
+
+    <!-- ── WEEKLY SUMMARY ── -->
+    <div class="page" id="page-weekly">
+      <div class="page-header"><h1 class="sg">Weekly Summary</h1><p>Breakdown of your training week — hours, distance, steps, and sleep.</p></div>
+      <div class="week-nav">
+        <button onclick="changeWeek(-1)">&larr;</button>
+        <div class="week-label" id="weekLabel">—</div>
+        <button onclick="changeWeek(1)">&rarr;</button>
+      </div>
+
+      <!-- KPIs for the week -->
+      <div class="summary-grid" id="weeklySummaryGrid">
+        <div class="summary-stat">
+          <div class="stat-label">Total Workout Hours</div>
+          <div class="stat-main text-ember" id="wkTotalHours">0h 0m</div>
+          <div class="stat-detail" id="wkHoursBreakdown">—</div>
+        </div>
+        <div class="summary-stat">
+          <div class="stat-label">Total Running KM</div>
+          <div class="stat-main text-ocean" id="wkTotalKm">0 km</div>
+          <div class="stat-detail" id="wkKmBreakdown">—</div>
+        </div>
+        <div class="summary-stat">
+          <div class="stat-label">Total Steps</div>
+          <div class="stat-main text-sage" id="wkTotalSteps">0</div>
+          <div class="stat-detail" id="wkStepsAvg">—</div>
+        </div>
+        <div class="summary-stat">
+          <div class="stat-label">Avg Sleep</div>
+          <div class="stat-main" id="wkAvgSleep">—</div>
+          <div class="stat-detail" id="wkSleepBreakdown">—</div>
+        </div>
+      </div>
+
+      <!-- Daily workout hours bar chart -->
+      <div class="card">
+        <h3>Daily Workout Hours</h3>
+        <div id="wkDailyHoursBars"></div>
+        <div class="bar-legend">
+          <span><span class="dot" style="background:var(--ember);"></span>Strength</span>
+          <span><span class="dot" style="background:var(--ocean);"></span>Running</span>
+          <span><span class="dot" style="background:var(--sage);"></span>Other Cardio</span>
+        </div>
+      </div>
+
+      <!-- Daily running km -->
+      <div class="card">
+        <h3>Daily Running KM</h3>
+        <div class="chart-wrap"><canvas id="wkRunChart"></canvas></div>
+      </div>
+
+      <!-- Daily steps -->
+      <div class="card">
+        <h3>Daily Steps</h3>
+        <div class="chart-wrap"><canvas id="wkStepsChart"></canvas></div>
+      </div>
+
+      <!-- Daily sleep -->
+      <div class="card">
+        <h3>Daily Sleep (hours)</h3>
+        <div class="chart-wrap"><canvas id="wkSleepChart"></canvas></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════
+const DATA = {
+  strength: [], cardio: [], measurements: [], photos: [], wearable: []
+};
+
+let charts = {};
+let editIdx = { str: -1, card: -1, meas: -1, wear: -1 };
+let currentWeekStart = null;
+
+// ── INIT ──
+function init() {
+  const today = new Date().toISOString().split('T')[0];
+  document.querySelectorAll('input[type="date"]').forEach(el => { if (!el.value) el.value = today; });
+  populateExerciseList();
+  // Set current week
+  const d = new Date();
+  const day = d.getDay() || 7;
+  d.setDate(d.getDate() - day + 1);
+  currentWeekStart = new Date(d);
+}
+
+function populateExerciseList() {
+  const exercises = ['Back Squat','Front Squat','Goblet Squat','Leg Press','Bench Press','Incline Bench Press','DB Bench Press','Overhead Press','Push Press','Deadlift','Romanian Deadlift','Sumo Deadlift','Trap Bar Deadlift','Barbell Row','DB Row','Pendlay Row','Lat Pulldown','Pull-Up','Chin-Up','Barbell Clean','Clean & Jerk','Snatch','Barbell Curl','Tricep Pushdown','Lateral Raise','Face Pull','Hip Thrust','Bulgarian Split Squat','Walking Lunge','Leg Extension','Leg Curl','Seated Hamstring Curl','Lying Hamstring Curl','Machine Hip Adduction','Calf Raise','Barbell Thruster','DB Thruster','KB Swing','Wall Ball'];
+  const dl = document.getElementById('exerciseList');
+  exercises.forEach(e => { const o = document.createElement('option'); o.value = e; dl.appendChild(o); });
+}
+
+// ── NAV ──
+function showPage(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  setTimeout(() => {
+    if (page === 'dashboard') refreshDashboard();
+    if (page === 'strength') renderStrengthChart();
+    if (page === 'cardio') renderCardioChart();
+    if (page === 'measurements') renderMeasChart();
+    if (page === 'wearable') renderWearChart();
+    if (page === 'weekly') renderWeeklySummary();
+  }, 50);
+}
+
+// ══════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════
+function formatDate(d) { if (!d) return '—'; const p = d.split('-'); return p[2]+'/'+p[1]+'/'+p[0].slice(2); }
+function e1rm(w, r) { return r <= 0 || w <= 0 ? 0 : r === 1 ? w : Math.round(w * (1 + r/30) * 10) / 10; }
+function timeToSeconds(t) { if (!t) return 0; const p = t.split(':').map(Number); return p.length === 3 ? p[0]*3600+p[1]*60+p[2] : p.length === 2 ? p[0]*60+p[1] : p[0]; }
+function secondsToTime(s) { if (!s) return '—'; return Math.floor(s/60)+':'+String(Math.round(s%60)).padStart(2,'0'); }
+function calcPace(e) {
+  const s = timeToSeconds(e.time); if (!s||!e.distance) return '—';
+  let m = e.distance; if (e.unit==='km') m*=1000; else if (e.unit==='mi') m*=1609.34;
+  return ['Row','SkiErg'].includes(e.activity) ? secondsToTime(s/(m/500))+'/500m' : secondsToTime(s/(m/1000))+'/km';
+}
+function renderLineChart(id, labels, data, label, color) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  charts[id] = new Chart(document.getElementById(id).getContext('2d'), {
+    type:'line', data:{ labels, datasets:[{ label, data, borderColor:color, backgroundColor:color+'18', borderWidth:2, pointBackgroundColor:color, pointRadius:4, pointHoverRadius:6, fill:true, tension:0.3, spanGaps:true }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{backgroundColor:'#13232E',titleColor:'#F0EDE8',bodyColor:'#8CA0AD',borderColor:'#243848',borderWidth:1,padding:10,cornerRadius:8} }, scales:{ x:{grid:{color:'rgba(36,56,72,0.4)'},ticks:{color:'#5A7585',font:{size:11}}}, y:{grid:{color:'rgba(36,56,72,0.4)'},ticks:{color:'#5A7585',font:{size:11}}} } }
+  });
+}
+function renderBarChart(id, labels, datasets) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  charts[id] = new Chart(document.getElementById(id).getContext('2d'), {
+    type:'bar', data:{ labels, datasets },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ x:{grid:{color:'rgba(36,56,72,0.4)'},ticks:{color:'#5A7585',font:{size:11}},stacked:false}, y:{grid:{color:'rgba(36,56,72,0.4)'},ticks:{color:'#5A7585',font:{size:11}},beginAtZero:true} } }
+  });
+}
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+const HISTORY_LIMIT = 10;
+function applyHistoryLimit(tbodyId, toggleId) {
+  const tbody = document.getElementById(tbodyId);
+  const toggle = document.getElementById(toggleId);
+  const rows = tbody.querySelectorAll('tr');
+  if (rows.length > HISTORY_LIMIT) {
+    rows.forEach((r,i) => { if (i >= HISTORY_LIMIT) r.classList.add('hidden-row'); });
+    tbody.classList.remove('expanded');
+    toggle.style.display = '';
+    toggle.querySelector('button').textContent = `Show all (${rows.length} entries)`;
+  } else {
+    toggle.style.display = 'none';
+  }
+}
+function toggleHistory(section) {
+  const map = { str:'strTableBody', card:'cardTableBody', meas:'measTableBody', wear:'wearTableBody' };
+  const tbody = document.getElementById(map[section]);
+  const toggle = document.getElementById(section+'Toggle');
+  const expanded = tbody.classList.toggle('expanded');
+  toggle.querySelector('button').textContent = expanded ? 'Show less' : `Show all (${tbody.querySelectorAll('tr').length} entries)`;
+}
+
+function actionIcons(editFn, deleteFn) {
+  return `<div class="action-icons"><button class="action-icon edit" onclick="${editFn}" title="Edit">&#9998;</button><button class="action-icon delete" onclick="${deleteFn}" title="Delete">&#10005;</button></div>`;
+}
+
+// ══════════════════════════════════════
+//  STRENGTH
+// ══════════════════════════════════════
+let setCount = 1;
+function addSet() {
+  setCount++;
+  document.getElementById('strSets').insertAdjacentHTML('beforeend', `<div class="form-row five" data-set="${setCount-1}"><div class="form-group"><label class="form-label">Set</label><input type="text" value="${setCount}" readonly style="text-align:center;color:var(--text-dim);"></div><div class="form-group"><label class="form-label">Weight (kg)</label><input type="number" class="set-weight" placeholder="0" step="0.5"></div><div class="form-group"><label class="form-label">Reps</label><input type="number" class="set-reps" placeholder="0"></div><div class="form-group"><label class="form-label">Side</label><select class="set-side"><option value="">Both</option><option value="L">Left</option><option value="R">Right</option></select></div><div class="form-group"><label class="form-label">&nbsp;</label><button class="btn btn-secondary btn-sm" onclick="removeSet(this)" style="width:100%;">&times;</button></div></div>`);
+}
+function removeSet(btn) { if (document.querySelectorAll('#strSets .form-row').length > 1) btn.closest('.form-row').remove(); }
+
+function saveStrength() {
+  const date = document.getElementById('strDate').value;
+  const exercise = document.getElementById('strExercise').value.trim();
+  const rpe = parseFloat(document.getElementById('strRPE').value) || null;
+  if (!date || !exercise) { alert('Enter date and exercise.'); return; }
+  const sets = [];
+  document.querySelectorAll('#strSets .form-row').forEach(row => {
+    const w = parseFloat(row.querySelector('.set-weight')?.value) || 0;
+    const r = parseInt(row.querySelector('.set-reps')?.value) || 0;
+    const s = row.querySelector('.set-side')?.value || '';
+    if (r > 0) sets.push({ weight:w, reps:r, side:s });
+  });
+  if (!sets.length) { alert('Log at least one set.'); return; }
+
+  if (editIdx.str >= 0) { DATA.strength[editIdx.str] = { date, exercise, sets, rpe }; editIdx.str = -1; }
+  else DATA.strength.push({ date, exercise, sets, rpe });
+  DATA.strength.sort((a,b) => b.date.localeCompare(a.date));
+  resetStrForm(); renderStrengthTable(); updateStrengthExerciseOptions(); renderStrengthChart();
+}
+function editStrength(idx) {
+  const e = DATA.strength[idx]; editIdx.str = idx;
+  document.getElementById('strDate').value = e.date;
+  document.getElementById('strExercise').value = e.exercise;
+  document.getElementById('strRPE').value = e.rpe || '';
+  document.getElementById('strSets').innerHTML = '';
+  e.sets.forEach((s,i) => {
+    document.getElementById('strSets').insertAdjacentHTML('beforeend', `<div class="form-row five"><div class="form-group"><label class="form-label">Set</label><input type="text" value="${i+1}" readonly style="text-align:center;color:var(--text-dim);"></div><div class="form-group"><label class="form-label">Weight (kg)</label><input type="number" class="set-weight" value="${s.weight}" step="0.5"></div><div class="form-group"><label class="form-label">Reps</label><input type="number" class="set-reps" value="${s.reps}"></div><div class="form-group"><label class="form-label">Side</label><select class="set-side"><option value="">Both</option><option value="L" ${s.side==='L'?'selected':''}>Left</option><option value="R" ${s.side==='R'?'selected':''}>Right</option></select></div><div class="form-group"><label class="form-label">&nbsp;</label><button class="btn btn-secondary btn-sm" onclick="removeSet(this)" style="width:100%;">&times;</button></div></div>`);
+  });
+  setCount = e.sets.length;
+  document.getElementById('strFormTitle').textContent = 'Edit Entry';
+  document.getElementById('strSaveBtn').textContent = 'Update Entry';
+  document.getElementById('strCancelBtn').classList.remove('hidden');
+  document.getElementById('strFormCard').scrollIntoView({ behavior:'smooth' });
+}
+function cancelEditStr() { editIdx.str = -1; resetStrForm(); }
+function resetStrForm() {
+  document.getElementById('strExercise').value = ''; document.getElementById('strRPE').value = '';
+  document.getElementById('strSets').innerHTML = `<div class="form-row five"><div class="form-group"><label class="form-label">Set</label><input type="text" value="1" readonly style="text-align:center;color:var(--text-dim);"></div><div class="form-group"><label class="form-label">Weight (kg)</label><input type="number" class="set-weight" placeholder="0" step="0.5"></div><div class="form-group"><label class="form-label">Reps</label><input type="number" class="set-reps" placeholder="0"></div><div class="form-group"><label class="form-label">Side</label><select class="set-side"><option value="">Both</option><option value="L">Left</option><option value="R">Right</option></select></div><div class="form-group"><label class="form-label">&nbsp;</label><button class="btn btn-secondary btn-sm" onclick="removeSet(this)" style="width:100%;">&times;</button></div></div>`;
+  setCount = 1;
+  document.getElementById('strFormTitle').textContent = 'Log Entry';
+  document.getElementById('strSaveBtn').textContent = 'Save Entry';
+  document.getElementById('strCancelBtn').classList.add('hidden');
+}
+function deleteStrength(idx) { DATA.strength.splice(idx,1); renderStrengthTable(); updateStrengthExerciseOptions(); renderStrengthChart(); }
+function renderStrengthTable() {
+  const tb = document.getElementById('strTableBody'); tb.innerHTML = '';
+  const filter = document.getElementById('strHistoryFilter').value;
+  DATA.strength.forEach((e,i) => {
+    if (filter && e.exercise !== filter) return;
+    const best = e.sets.reduce((b,s) => s.weight>b.weight?s:b, e.sets[0]);
+    const est = e1rm(best.weight,best.reps);
+    const sStr = e.sets.map(s => `${s.weight}×${s.reps}${s.side?' ('+s.side+')':''}`).join(', ');
+    tb.innerHTML += `<tr><td class="val">${formatDate(e.date)}</td><td class="val">${e.exercise}</td><td>${sStr}</td><td class="val">${best.weight}kg × ${best.reps}</td><td class="val">${est}kg</td><td>${e.rpe||'—'}</td><td>${actionIcons('editStrength('+i+')','deleteStrength('+i+')')}</td></tr>`;
+  });
+  applyHistoryLimit('strTableBody','strToggle');
+}
+function updateStrengthExerciseOptions() {
+  const sel = document.getElementById('strChartExercise'); const cur = sel.value;
+  const ex = [...new Set(DATA.strength.map(e=>e.exercise))].sort();
+  sel.innerHTML = '<option value="">— select —</option>'; ex.forEach(e => sel.innerHTML += `<option>${e}</option>`);
+  if (ex.includes(cur)) sel.value = cur;
+  const hf = document.getElementById('strHistoryFilter'); const hCur = hf.value;
+  hf.innerHTML = '<option value="">All Exercises</option>'; ex.forEach(e => hf.innerHTML += `<option>${e}</option>`);
+  if (ex.includes(hCur)) hf.value = hCur;
+}
+function renderStrengthChart() {
+  const ex = document.getElementById('strChartExercise').value;
+  const met = document.getElementById('strChartMetric').value;
+  if (!ex) { destroyChart('strengthChart'); return; }
+  const entries = DATA.strength.filter(e=>e.exercise===ex).reverse();
+  const labels = entries.map(e=>formatDate(e.date));
+  let vals;
+  if (met==='maxWeight') vals = entries.map(e=>Math.max(...e.sets.map(s=>s.weight)));
+  else if (met==='volume') vals = entries.map(e=>e.sets.reduce((s,x)=>s+x.weight*x.reps,0));
+  else vals = entries.map(e=>{ const b=e.sets.reduce((a,s)=>e1rm(s.weight,s.reps)>e1rm(a.weight,a.reps)?s:a,e.sets[0]); return e1rm(b.weight,b.reps); });
+  renderLineChart('strengthChart',labels,vals,{maxWeight:'Max Weight (kg)',volume:'Volume (kg)',e1rm:'Est. 1RM (kg)'}[met],'#E07A3A');
+}
+
+// ══════════════════════════════════════
+//  CARDIO
+// ══════════════════════════════════════
+function saveCardio() {
+  const date=document.getElementById('cardDate').value, activity=document.getElementById('cardActivity').value;
+  const distance=parseFloat(document.getElementById('cardDistance').value)||0, unit=document.getElementById('cardDistUnit').value;
+  const time=document.getElementById('cardTime').value.trim(), hr=parseInt(document.getElementById('cardHR').value)||null;
+  const maxHR=parseInt(document.getElementById('cardMaxHR').value)||null, rpe=parseFloat(document.getElementById('cardRPE').value)||null;
+  const notes=document.getElementById('cardNotes').value.trim();
+  if (!date||!activity) { alert('Enter date and activity.'); return; }
+  if (!distance&&!time) { alert('Enter distance or time.'); return; }
+
+  if (editIdx.card >= 0) { DATA.cardio[editIdx.card] = {date,activity,distance,unit,time,hr,maxHR,rpe,notes}; editIdx.card = -1; }
+  else DATA.cardio.push({date,activity,distance,unit,time,hr,maxHR,rpe,notes});
+  DATA.cardio.sort((a,b)=>b.date.localeCompare(a.date));
+  resetCardForm(); renderCardioTable(); updateCardioActivityOptions(); renderCardioChart();
+}
+function editCardio(idx) {
+  const e = DATA.cardio[idx]; editIdx.card = idx;
+  document.getElementById('cardDate').value = e.date; document.getElementById('cardActivity').value = e.activity;
+  document.getElementById('cardDistance').value = e.distance||''; document.getElementById('cardDistUnit').value = e.unit;
+  document.getElementById('cardTime').value = e.time||''; document.getElementById('cardHR').value = e.hr||'';
+  document.getElementById('cardMaxHR').value = e.maxHR||''; document.getElementById('cardRPE').value = e.rpe||'';
+  document.getElementById('cardNotes').value = e.notes||'';
+  document.getElementById('cardFormTitle').textContent = 'Edit Entry';
+  document.getElementById('cardSaveBtn').textContent = 'Update Entry';
+  document.getElementById('cardCancelBtn').classList.remove('hidden');
+  document.getElementById('cardFormCard').scrollIntoView({behavior:'smooth'});
+}
+function cancelEditCard() { editIdx.card = -1; resetCardForm(); }
+function resetCardForm() {
+  ['cardDistance','cardTime','cardHR','cardMaxHR','cardRPE','cardNotes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cardFormTitle').textContent='Log Entry'; document.getElementById('cardSaveBtn').textContent='Save Entry'; document.getElementById('cardCancelBtn').classList.add('hidden');
+}
+function deleteCardio(idx) { DATA.cardio.splice(idx,1); renderCardioTable(); updateCardioActivityOptions(); renderCardioChart(); }
+function renderCardioTable() {
+  const tb = document.getElementById('cardTableBody'); tb.innerHTML = '';
+  const filter = document.getElementById('cardHistoryFilter').value;
+  DATA.cardio.forEach((e,i) => {
+    if (filter && e.activity !== filter) return;
+    tb.innerHTML += `<tr><td class="val">${formatDate(e.date)}</td><td class="val">${e.activity}</td><td>${e.distance?e.distance+' '+e.unit:'—'}</td><td class="val">${e.time||'—'}</td><td>${e.hr||'—'}</td><td>${actionIcons('editCardio('+i+')','deleteCardio('+i+')')}</td></tr>`;
+  });
+  applyHistoryLimit('cardTableBody','cardToggle');
+}
+function updateCardioActivityOptions() {
+  const sel = document.getElementById('cardChartActivity'); const cur = sel.value;
+  const acts = [...new Set(DATA.cardio.map(e=>e.activity))].sort();
+  sel.innerHTML = '<option value="">— select —</option>'; acts.forEach(a=>sel.innerHTML+=`<option>${a}</option>`);
+  if (acts.includes(cur)) sel.value = cur;
+  const hf = document.getElementById('cardHistoryFilter'); const hCur = hf.value;
+  hf.innerHTML = '<option value="">All Activities</option>'; acts.forEach(a => hf.innerHTML += `<option>${a}</option>`);
+  if (acts.includes(hCur)) hf.value = hCur;
+}
+function renderCardioChart() {
+  const act = document.getElementById('cardChartActivity').value;
+  const met = document.getElementById('cardChartMetric').value;
+  if (!act) { destroyChart('cardioChart'); return; }
+  const entries = DATA.cardio.filter(e=>e.activity===act).reverse();
+  const labels = entries.map(e=>formatDate(e.date));
+  let vals, label, color;
+  if (met==='time') { vals = entries.map(e=>timeToSeconds(e.time)||null); label='Time (secs)'; color='#E07A3A'; }
+  else { vals = entries.map(e=>e.hr); label='Avg HR'; color='#D45B5B'; }
+  renderLineChart('cardioChart',labels,vals,label,color);
+}
+
+// ══════════════════════════════════════
+//  MEASUREMENTS
+// ══════════════════════════════════════
+const measFields = ['weight','chest','waist','hips','glutes','arm','thigh','calf'];
+function saveMeasurement() {
+  const date = document.getElementById('measDate').value;
+  if (!date) { alert('Enter a date.'); return; }
+  const entry = { date };
+  measFields.forEach(f => entry[f] = parseFloat(document.getElementById('meas'+f.charAt(0).toUpperCase()+f.slice(1)).value) || null);
+  if (editIdx.meas >= 0) { DATA.measurements[editIdx.meas] = entry; editIdx.meas = -1; }
+  else DATA.measurements.push(entry);
+  DATA.measurements.sort((a,b)=>b.date.localeCompare(a.date));
+  resetMeasForm(); renderMeasTable(); renderMeasChart();
+}
+function editMeas(idx) {
+  const e = DATA.measurements[idx]; editIdx.meas = idx;
+  document.getElementById('measDate').value = e.date;
+  measFields.forEach(f => document.getElementById('meas'+f.charAt(0).toUpperCase()+f.slice(1)).value = e[f]||'');
+  document.getElementById('measFormTitle').textContent = 'Edit Measurements';
+  document.getElementById('measSaveBtn').textContent = 'Update';
+  document.getElementById('measCancelBtn').classList.remove('hidden');
+  document.getElementById('measFormCard').scrollIntoView({behavior:'smooth'});
+}
+function cancelEditMeas() { editIdx.meas = -1; resetMeasForm(); }
+function resetMeasForm() {
+  measFields.forEach(f => document.getElementById('meas'+f.charAt(0).toUpperCase()+f.slice(1)).value = '');
+  document.getElementById('measFormTitle').textContent='Log Measurements'; document.getElementById('measSaveBtn').textContent='Save'; document.getElementById('measCancelBtn').classList.add('hidden');
+}
+function deleteMeas(idx) { DATA.measurements.splice(idx,1); renderMeasTable(); renderMeasChart(); }
+function renderMeasTable() {
+  const tb = document.getElementById('measTableBody'); tb.innerHTML = '';
+  DATA.measurements.forEach((e,i) => {
+    tb.innerHTML += `<tr><td class="val">${formatDate(e.date)}</td><td class="val">${e.weight?e.weight+'kg':'—'}</td><td>${e.chest||'—'}</td><td>${e.waist||'—'}</td><td>${e.hips||'—'}</td><td>${e.glutes||'—'}</td><td>${e.arm||'—'}</td><td>${e.thigh||'—'}</td><td>${e.calf||'—'}</td><td>${actionIcons('editMeas('+i+')','deleteMeas('+i+')')}</td></tr>`;
+  });
+  applyHistoryLimit('measTableBody','measToggle');
+}
+function renderMeasChart() {
+  const met = document.getElementById('measChartMetric').value;
+  const entries = DATA.measurements.filter(e=>e[met]!=null).reverse();
+  if (!entries.length) { destroyChart('measChart'); return; }
+  renderLineChart('measChart', entries.map(e=>formatDate(e.date)), entries.map(e=>e[met]), {weight:'Weight (kg)',chest:'Chest (cm)',waist:'Waist (cm)',hips:'Hips (cm)',glutes:'Glutes (cm)',arm:'Arm (cm)',thigh:'Thigh (cm)',calf:'Calf (cm)'}[met], '#8BB07E');
+}
+
+// ══════════════════════════════════════
+//  PHOTOS
+// ══════════════════════════════════════
+const photoTemp = {front:null,side:null,back:null};
+function pickPhoto(v) { document.getElementById('photo'+v.charAt(0).toUpperCase()+v.slice(1)+'Input').click(); }
+function previewPhoto(v, ev) {
+  const f = ev.target.files[0]; if (!f) return;
+  const r = new FileReader(); r.onload = function(e) { photoTemp[v]=e.target.result; const slot=document.getElementById('photo'+v.charAt(0).toUpperCase()+v.slice(1)); slot.classList.add('has-photo'); let img=slot.querySelector('img'); if(!img){img=document.createElement('img');slot.appendChild(img);} img.src=e.target.result; }; r.readAsDataURL(f);
+}
+function clearPhoto(v) { photoTemp[v]=null; const slot=document.getElementById('photo'+v.charAt(0).toUpperCase()+v.slice(1)); slot.classList.remove('has-photo'); const img=slot.querySelector('img'); if(img)img.remove(); document.getElementById('photo'+v.charAt(0).toUpperCase()+v.slice(1)+'Input').value=''; }
+function savePhotoSet() {
+  const date=document.getElementById('photoDate').value; if(!date){alert('Enter a date.');return;} if(!photoTemp.front&&!photoTemp.side&&!photoTemp.back){alert('Add at least one photo.');return;}
+  DATA.photos.push({date,...photoTemp}); DATA.photos.sort((a,b)=>b.date.localeCompare(a.date));
+  ['front','side','back'].forEach(clearPhoto); renderPhotoTimeline();
+}
+function renderPhotoTimeline() {
+  const tl=document.getElementById('photoTimeline');
+  if(!DATA.photos.length){tl.innerHTML='<div class="empty-state" style="width:100%;"><p>No photo sets saved yet.</p></div>';document.getElementById('photoTimelineView').classList.add('hidden');return;}
+  tl.innerHTML=''; DATA.photos.forEach((p,i)=>tl.innerHTML+=`<div class="photo-date-chip ${i===0?'active':''}" onclick="viewPhotoSet(${i})">${formatDate(p.date)}</div>`);
+  viewPhotoSet(0);
+}
+function viewPhotoSet(idx) {
+  document.querySelectorAll('.photo-date-chip').forEach((c,i)=>c.classList.toggle('active',i===idx));
+  const p=DATA.photos[idx], grid=document.getElementById('photoTimelineGrid');
+  document.getElementById('photoTimelineView').classList.remove('hidden');
+  grid.innerHTML=''; ['front','side','back'].forEach(v=>{
+    grid.innerHTML += p[v] ? `<div class="photo-slot has-photo" style="cursor:default;"><img src="${p[v]}"></div>` : `<div class="photo-slot" style="cursor:default;"><div class="placeholder"><div class="label">${v.charAt(0).toUpperCase()+v.slice(1)}</div><div class="hint">No photo</div></div></div>`;
+  });
+}
+
+// ══════════════════════════════════════
+//  WEARABLE
+// ══════════════════════════════════════
+let wearTab = 'rhr';
+function saveWearable() {
+  const date=document.getElementById('wearDate').value; if(!date){alert('Enter a date.');return;}
+  const entry = {date, rhr:parseInt(document.getElementById('wearRHR').value)||null, hrv:parseInt(document.getElementById('wearHRV').value)||null, vo2:parseFloat(document.getElementById('wearVO2').value)||null, recovery:parseInt(document.getElementById('wearRecovery').value)||null, sleep:parseFloat(document.getElementById('wearSleep').value)||null, strain:parseFloat(document.getElementById('wearStrain').value)||null, steps:parseInt(document.getElementById('wearSteps').value)||null};
+  if (editIdx.wear >= 0) { DATA.wearable[editIdx.wear] = entry; editIdx.wear = -1; }
+  else DATA.wearable.push(entry);
+  DATA.wearable.sort((a,b)=>b.date.localeCompare(a.date));
+  resetWearForm(); renderWearTable(); renderWearChart();
+}
+function editWear(idx) {
+  const e = DATA.wearable[idx]; editIdx.wear = idx;
+  document.getElementById('wearDate').value = e.date;
+  ['RHR','HRV','VO2','Recovery','Sleep','Strain','Steps'].forEach(f => { const k=f.toLowerCase(); document.getElementById('wear'+f).value = e[k==='steps'?'steps':k]||''; });
+  document.getElementById('wearFormTitle').textContent = 'Edit Entry';
+  document.getElementById('wearSaveBtn').textContent = 'Update Entry';
+  document.getElementById('wearCancelBtn').classList.remove('hidden');
+  document.getElementById('wearFormCard').scrollIntoView({behavior:'smooth'});
+}
+function cancelEditWear() { editIdx.wear = -1; resetWearForm(); }
+function resetWearForm() {
+  ['wearRHR','wearHRV','wearVO2','wearRecovery','wearSleep','wearStrain','wearSteps'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('wearFormTitle').textContent='Log Entry'; document.getElementById('wearSaveBtn').textContent='Save Entry'; document.getElementById('wearCancelBtn').classList.add('hidden');
+}
+function deleteWear(idx) { DATA.wearable.splice(idx,1); renderWearTable(); renderWearChart(); }
+function setWearTab(tab, el) { wearTab=tab; document.querySelectorAll('#wearTabs .sub-tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); renderWearChart(); }
+function renderWearTable() {
+  const tb=document.getElementById('wearTableBody'); tb.innerHTML='';
+  DATA.wearable.forEach((e,i)=>{ tb.innerHTML+=`<tr><td class="val">${formatDate(e.date)}</td><td>${e.rhr||'—'}</td><td>${e.hrv||'—'}</td><td>${e.vo2||'—'}</td><td>${e.recovery?e.recovery+'%':'—'}</td><td>${e.sleep?e.sleep+'h':'—'}</td><td>${e.steps?e.steps.toLocaleString():'—'}</td><td>${actionIcons('editWear('+i+')','deleteWear('+i+')')}</td></tr>`; });
+  applyHistoryLimit('wearTableBody','wearToggle');
+}
+function renderWearChart() {
+  const cfg={rhr:{key:'rhr',label:'Resting HR (bpm)',color:'#D45B5B'},hrv:{key:'hrv',label:'HRV (ms)',color:'#4A9DC8'},vo2:{key:'vo2',label:'VO2 Max',color:'#8BB07E'},recovery:{key:'recovery',label:'Recovery %',color:'#E07A3A'},sleep:{key:'sleep',label:'Sleep (hours)',color:'#6BB0D4'},steps:{key:'steps',label:'Steps',color:'#9FC294'}};
+  const c=cfg[wearTab]; const entries=DATA.wearable.filter(e=>e[c.key]!=null).reverse();
+  if(!entries.length){destroyChart('wearChart');return;}
+  renderLineChart('wearChart',entries.map(e=>formatDate(e.date)),entries.map(e=>e[c.key]),c.label,c.color);
+}
+
+// ══════════════════════════════════════
+//  WEEKLY SUMMARY
+// ══════════════════════════════════════
+function getWeekDates(start) {
+  const dates = [];
+  for (let i=0; i<7; i++) { const d=new Date(start); d.setDate(d.getDate()+i); dates.push(d.toISOString().split('T')[0]); }
+  return dates;
+}
+function changeWeek(dir) {
+  currentWeekStart.setDate(currentWeekStart.getDate() + dir*7);
+  renderWeeklySummary();
+}
+function renderWeeklySummary() {
+  if (!currentWeekStart) return;
+  const dates = getWeekDates(currentWeekStart);
+  const endDate = new Date(currentWeekStart); endDate.setDate(endDate.getDate()+6);
+  document.getElementById('weekLabel').textContent = formatDate(dates[0]) + ' — ' + formatDate(dates[6]);
+
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  let totalStrMins=0, totalRunMins=0, totalOtherCardioMins=0, totalRunKm=0, totalSteps=0, sleepVals=[];
+  const dailyStr=[], dailyRun=[], dailyOther=[], dailyRunKm=[], dailySteps=[], dailySleep=[];
+
+  dates.forEach(date => {
+    // Strength mins: estimate 45min per session on that date
+    const strSessions = [...new Set(DATA.strength.filter(e=>e.date===date).map(e=>e.date+e.exercise))].length ? 1 : 0;
+    // Actually count unique exercise groups per date as rough session count
+    const strExercises = DATA.strength.filter(e=>e.date===date);
+    const strMins = strExercises.length > 0 ? 45 : 0; // Assume ~45min per strength session
+    dailyStr.push(strMins); totalStrMins += strMins;
+
+    // Cardio
+    const cardioEntries = DATA.cardio.filter(e=>e.date===date);
+    let runMins=0, otherMins=0, runKm=0;
+    cardioEntries.forEach(e => {
+      const mins = timeToSeconds(e.time)/60;
+      if (e.activity === 'Run') {
+        runMins += mins;
+        let dist = e.distance||0;
+        if (e.unit==='m') dist /= 1000; else if (e.unit==='mi') dist *= 1.60934;
+        runKm += dist;
+      } else { otherMins += mins; }
+    });
+    dailyRun.push(runMins); dailyOther.push(otherMins); dailyRunKm.push(runKm);
+    totalRunMins += runMins; totalOtherCardioMins += otherMins; totalRunKm += runKm;
+
+    // Wearable (steps + sleep)
+    const wear = DATA.wearable.find(w=>w.date===date);
+    const steps = wear?.steps || 0;
+    dailySteps.push(steps); totalSteps += steps;
+    const sleep = wear?.sleep || null;
+    dailySleep.push(sleep);
+    if (sleep) sleepVals.push(sleep);
+  });
+
+  const totalMins = totalStrMins + totalRunMins + totalOtherCardioMins;
+  const totalH = Math.floor(totalMins/60), totalM = Math.round(totalMins%60);
+  document.getElementById('wkTotalHours').textContent = totalH+'h '+totalM+'m';
+  document.getElementById('wkHoursBreakdown').textContent =
+    `Strength: ${Math.floor(totalStrMins/60)}h ${Math.round(totalStrMins%60)}m · Running: ${Math.floor(totalRunMins/60)}h ${Math.round(totalRunMins%60)}m · Other: ${Math.floor(totalOtherCardioMins/60)}h ${Math.round(totalOtherCardioMins%60)}m`;
+
+  document.getElementById('wkTotalKm').textContent = totalRunKm.toFixed(1)+' km';
+  const runDays = dailyRunKm.filter(d=>d>0);
+  document.getElementById('wkKmBreakdown').textContent = runDays.length ? runDays.length+' run(s) this week' : 'No runs this week';
+
+  document.getElementById('wkTotalSteps').textContent = totalSteps.toLocaleString();
+  const stepDays = dailySteps.filter(d=>d>0).length;
+  document.getElementById('wkStepsAvg').textContent = stepDays ? 'Daily avg: '+Math.round(totalSteps/stepDays).toLocaleString() : '—';
+
+  const avgSleep = sleepVals.length ? (sleepVals.reduce((a,b)=>a+b,0)/sleepVals.length).toFixed(1) : null;
+  document.getElementById('wkAvgSleep').textContent = avgSleep ? avgSleep+'h' : '—';
+  document.getElementById('wkSleepBreakdown').textContent = sleepVals.length ? sleepVals.length+' night(s) tracked' : 'No sleep data';
+
+  // Daily workout hours stacked bars
+  let barsHtml = '';
+  const maxDailyMins = Math.max(1, ...dailyStr.map((s,i)=>s+dailyRun[i]+dailyOther[i]));
+  dates.forEach((d,i) => {
+    const total = dailyStr[i]+dailyRun[i]+dailyOther[i];
+    const strW = total ? (dailyStr[i]/Math.max(maxDailyMins,90))*100 : 0;
+    const runW = total ? (dailyRun[i]/Math.max(maxDailyMins,90))*100 : 0;
+    const othW = total ? (dailyOther[i]/Math.max(maxDailyMins,90))*100 : 0;
+    barsHtml += `<div class="day-bar-row"><span class="day-label">${dayNames[i]}</span><div class="bar-track"><div class="bar-seg" style="width:${strW}%;background:var(--ember);"></div><div class="bar-seg" style="width:${runW}%;background:var(--ocean);"></div><div class="bar-seg" style="width:${othW}%;background:var(--sage);"></div></div><span class="bar-val">${total>0?Math.round(total)+'m':'—'}</span></div>`;
+  });
+  document.getElementById('wkDailyHoursBars').innerHTML = barsHtml;
+
+  // Running km bar chart
+  renderBarChart('wkRunChart', dayNames, [{ label:'km', data:dailyRunKm.map(d=>Math.round(d*10)/10), backgroundColor:'#4A9DC8', borderRadius:4 }]);
+
+  // Steps bar chart
+  renderBarChart('wkStepsChart', dayNames, [{ label:'Steps', data:dailySteps, backgroundColor:'#9FC294', borderRadius:4 }]);
+
+  // Sleep bar chart
+  renderBarChart('wkSleepChart', dayNames, [{ label:'Hours', data:dailySleep.map(s=>s||0), backgroundColor:'#6BB0D4', borderRadius:4 }]);
+}
+
+// ══════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════
+function refreshDashboard() {
+  document.getElementById('kpiSessions').textContent = DATA.strength.length + DATA.cardio.length;
+  const weights = DATA.measurements.filter(m=>m.weight).sort((a,b)=>a.date.localeCompare(b.date));
+  if (weights.length) {
+    document.getElementById('kpiWeight').textContent = weights[weights.length-1].weight+'kg';
+    if (weights.length>1) { const d=(weights[weights.length-1].weight-weights[weights.length-2].weight).toFixed(1); document.getElementById('kpiWeightDelta').textContent=(d>0?'+':'')+d+'kg'; }
+  }
+  const prMap={}; DATA.strength.forEach(e=>e.sets.forEach(s=>{ const est=e1rm(s.weight,s.reps); if(!prMap[e.exercise]||est>prMap[e.exercise])prMap[e.exercise]=est; }));
+  document.getElementById('kpiPRs').textContent = Object.keys(prMap).length;
+  const ws=[...DATA.wearable].sort((a,b)=>a.date.localeCompare(b.date));
+  const lv=ws.filter(w=>w.vo2).pop(); const lr=ws.filter(w=>w.rhr).pop();
+  document.getElementById('kpiVO2').textContent = lv?lv.vo2:'—';
+  document.getElementById('kpiHR').textContent = lr?lr.rhr:'—';
+  if (weights.length) renderLineChart('dashWeightChart',weights.map(w=>formatDate(w.date)),weights.map(w=>w.weight),'Weight (kg)','#4A9DC8');
+
+  const rs = DATA.strength.slice(0,5); const rc = DATA.cardio.slice(0,5);
+  document.getElementById('dashRecentStrength').innerHTML = rs.length ? '<table class="data-table"><thead><tr><th>Date</th><th>Exercise</th><th>Best</th></tr></thead><tbody>'+rs.map(e=>{const b=e.sets.reduce((a,s)=>s.weight>a.weight?s:a,e.sets[0]);return`<tr><td>${formatDate(e.date)}</td><td class="val">${e.exercise}</td><td>${b.weight}kg×${b.reps}</td></tr>`;}).join('')+'</tbody></table>' : '<div class="empty-state"><p>No entries yet.</p></div>';
+  document.getElementById('dashRecentCardio').innerHTML = rc.length ? '<table class="data-table"><thead><tr><th>Date</th><th>Activity</th><th>Time</th></tr></thead><tbody>'+rc.map(e=>`<tr><td>${formatDate(e.date)}</td><td class="val">${e.activity}</td><td>${e.time||'—'}</td></tr>`).join('')+'</tbody></table>' : '<div class="empty-state"><p>No entries yet.</p></div>';
+}
+
+// ══════════════════════════════════════
+//  EXPORT / IMPORT
+// ══════════════════════════════════════
+function exportData() {
+  const blob = new Blob([JSON.stringify(DATA,null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='AH-Progress-'+new Date().toISOString().split('T')[0]+'.json'; a.click();
+}
+function importData(ev) {
+  const f=ev.target.files[0]; if(!f)return;
+  const r=new FileReader(); r.onload=function(e){
+    try { const d=JSON.parse(e.target.result); ['strength','cardio','measurements','photos','wearable'].forEach(k=>{if(d[k])DATA[k]=d[k];}); refreshAll(); alert('Data imported!'); } catch(err){alert('Error: '+err.message);}
+  }; r.readAsText(f); ev.target.value='';
+}
+function refreshAll() {
+  renderStrengthTable(); updateStrengthExerciseOptions();
+  renderCardioTable(); updateCardioActivityOptions();
+  renderMeasTable(); renderPhotoTimeline(); renderWearTable();
+  refreshDashboard();
+}
+function switchClient() {}
+
+// ══════════════════════════════════════
+//  DEMO DATA
+// ══════════════════════════════════════
+function loadDemoData() {
+  // 8 weeks of data: 3x strength, 2x runs per week with progression
+  const startDate = new Date('2026-02-02'); // Monday
+
+  for (let week=0; week<8; week++) {
+    const mon = new Date(startDate); mon.setDate(mon.getDate() + week*7);
+    const wed = new Date(mon); wed.setDate(wed.getDate()+2);
+    const fri = new Date(mon); fri.setDate(fri.getDate()+4);
+    const tue = new Date(mon); tue.setDate(tue.getDate()+1);
+    const sat = new Date(mon); sat.setDate(sat.getDate()+5);
+
+    const fmt = d => d.toISOString().split('T')[0];
+    const baseSquat = 80 + week*2.5;
+    const baseBench = 60 + week*1.5;
+    const baseDL = 100 + week*2.5;
+    const baseOHP = 40 + week*1;
+    const baseRow = 60 + week*1.5;
+
+    // Monday: Lower body
+    DATA.strength.push({ date:fmt(mon), exercise:'Back Squat', sets:[{weight:baseSquat,reps:8,side:''},{weight:baseSquat,reps:8,side:''},{weight:baseSquat+5,reps:6,side:''},{weight:baseSquat+5,reps:6,side:''}], rpe: 7+Math.min(week*0.2,1.5) });
+    DATA.strength.push({ date:fmt(mon), exercise:'Romanian Deadlift', sets:[{weight:baseDL*0.7,reps:10,side:''},{weight:baseDL*0.7,reps:10,side:''},{weight:baseDL*0.7,reps:8,side:''}], rpe:7 });
+    DATA.strength.push({ date:fmt(mon), exercise:'Leg Extension', sets:[{weight:40+week*2,reps:12,side:''},{weight:40+week*2,reps:12,side:''},{weight:40+week*2,reps:10,side:''}], rpe:6 });
+
+    // Wednesday: Upper body
+    DATA.strength.push({ date:fmt(wed), exercise:'Bench Press', sets:[{weight:baseBench,reps:8,side:''},{weight:baseBench,reps:8,side:''},{weight:baseBench+5,reps:5,side:''},{weight:baseBench+5,reps:5,side:''}], rpe:8 });
+    DATA.strength.push({ date:fmt(wed), exercise:'Barbell Row', sets:[{weight:baseRow,reps:8,side:''},{weight:baseRow,reps:8,side:''},{weight:baseRow,reps:8,side:''}], rpe:7 });
+    DATA.strength.push({ date:fmt(wed), exercise:'Overhead Press', sets:[{weight:baseOHP,reps:8,side:''},{weight:baseOHP,reps:8,side:''},{weight:baseOHP,reps:6,side:''}], rpe:8 });
+
+    // Friday: Full body / compound
+    DATA.strength.push({ date:fmt(fri), exercise:'Deadlift', sets:[{weight:baseDL,reps:5,side:''},{weight:baseDL+5,reps:5,side:''},{weight:baseDL+10,reps:3,side:''}], rpe:8.5 });
+    DATA.strength.push({ date:fmt(fri), exercise:'Hip Thrust', sets:[{weight:60+week*5,reps:10,side:''},{weight:60+week*5,reps:10,side:''},{weight:60+week*5,reps:10,side:''}], rpe:7 });
+    DATA.strength.push({ date:fmt(fri), exercise:'Pull-Up', sets:[{weight:0,reps:Math.min(6+Math.floor(week*0.5),12),side:''},{weight:0,reps:Math.min(5+Math.floor(week*0.5),10),side:''},{weight:0,reps:Math.min(4+Math.floor(week*0.5),8),side:''}], rpe:8 });
+
+    // Tuesday: 5km run — pace improves
+    const basePace5k = 28*60 - week*15; // starts 28:00, drops ~15s/week
+    DATA.cardio.push({ date:fmt(tue), activity:'Run', distance:5, unit:'km', time:Math.floor(basePace5k/60)+':'+String(basePace5k%60).padStart(2,'0'), hr:152+Math.floor(Math.random()*8)-4, maxHR:172+Math.floor(Math.random()*6), rpe:7, notes:week<3?'Building base':'Pushing pace' });
+
+    // Saturday: longer run — distance grows
+    const longDist = 7 + Math.min(week*0.5, 3); // 7km growing to 10km
+    const longPace = (longDist * (340 - week*4)); // slower pace for long runs
+    const longTime = Math.round(longPace);
+    DATA.cardio.push({ date:fmt(sat), activity:'Run', distance:parseFloat(longDist.toFixed(1)), unit:'km', time:Math.floor(longTime/60)+':'+String(longTime%60).padStart(2,'0'), hr:145+Math.floor(Math.random()*8), maxHR:165+Math.floor(Math.random()*8), rpe:6+Math.min(week*0.2,1), notes:'Long steady run' });
+
+    // Weekly measurements (every Monday)
+    DATA.measurements.push({ date:fmt(mon), weight:82-week*0.3+Math.random()*0.4-0.2, chest:102+week*0.2, waist:86-week*0.3, hips:100, glutes:104+week*0.3, arm:35+week*0.15, thigh:58+week*0.2, calf:38 });
+
+    // Daily wearable data
+    for (let d=0; d<7; d++) {
+      const day = new Date(mon); day.setDate(day.getDate()+d);
+      const isTraining = [0,1,2,4,5].includes(d); // Mon,Tue,Wed,Fri,Sat
+      DATA.wearable.push({
+        date: fmt(day),
+        rhr: 56 - Math.floor(week*0.3) + Math.floor(Math.random()*4)-2,
+        hrv: 55 + Math.floor(week*1.5) + Math.floor(Math.random()*10)-5,
+        vo2: week%2===0 && d===0 ? 44+week*0.5 : null, // VO2 every 2 weeks
+        recovery: 50 + Math.floor(Math.random()*35) + (isTraining?0:10),
+        sleep: 6.5 + Math.random()*2,
+        strain: isTraining ? 10+Math.random()*6 : 3+Math.random()*4,
+        steps: isTraining ? 8000+Math.floor(Math.random()*5000) : 4000+Math.floor(Math.random()*4000)
+      });
+    }
+  }
+
+  // Round measurement values
+  DATA.measurements.forEach(m => { Object.keys(m).forEach(k => { if (k!=='date' && m[k]!==null) m[k]=Math.round(m[k]*10)/10; }); });
+  DATA.wearable.forEach(w => { if(w.sleep) w.sleep=Math.round(w.sleep*10)/10; if(w.strain) w.strain=Math.round(w.strain*10)/10; });
+
+  // Sort all
+  DATA.strength.sort((a,b)=>b.date.localeCompare(a.date));
+  DATA.cardio.sort((a,b)=>b.date.localeCompare(a.date));
+  DATA.measurements.sort((a,b)=>b.date.localeCompare(a.date));
+  DATA.wearable.sort((a,b)=>b.date.localeCompare(a.date));
+
+  // Set week nav to most recent training week
+  const lastDate = new Date(DATA.strength[0].date);
+  const lastDay = lastDate.getDay() || 7;
+  lastDate.setDate(lastDate.getDate() - lastDay + 1);
+  currentWeekStart = lastDate;
+
+  refreshAll();
+  renderWeeklySummary();
+}
+
+// ── BOOT ──
+init();
+loadDemoData();
+</script>
+</body>
+</html>

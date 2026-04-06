@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AH Performance — Nutrition Guide Framework</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --ember: #E07A3A;
+    --ember-hover: #C96A30;
+    --ember-soft: rgba(224,122,58,0.10);
+    --ember-glow: rgba(224,122,58,0.18);
+    --sage: #8BB07E;
+    --sage-soft: rgba(139,176,126,0.08);
+    --sage-border: rgba(139,176,126,0.14);
+    --sage-text: #9FC294;
+    --ocean: #4A9DC8;
+    --ocean-soft: rgba(74,157,200,0.08);
+    --ocean-border: rgba(74,157,200,0.14);
+    --ocean-text: #6BB0D4;
+    --slate-deep: #13232E;
+    --slate-card: #182A36;
+    --slate-raised: #1D3140;
+    --slate-border: #243848;
+    --slate-hover: #2A4555;
+    --text-bright: #F0EDE8;
+    --text-body: #8CA0AD;
+    --text-muted: #5A7585;
+    --text-dim: #3A5565;
+    --danger: #D45B5B;
+    --danger-soft: rgba(212,91,91,0.08);
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #0B1117;
+    color: var(--text-bright);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .sg { font-family: 'Space Grotesk', sans-serif; }
+
+  /* Layout */
+  .container {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 40px 0;
+    border-bottom: 1px solid var(--slate-border);
+    margin-bottom: 40px;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .logo-mark {
+    width: 48px; height: 48px; border-radius: 12px;
+    border: 2px solid var(--ember);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .logo-mark span { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: var(--ember); letter-spacing: -1px; }
+
+  .logo-divider { width: 1.5px; height: 28px; background: var(--text-dim); opacity: 0.4; }
+
+  .logo-text { text-align: left; }
+  .logo-name { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; }
+  .logo-tag { font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); }
+
+  .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 300; margin-bottom: 10px; }
+  .header p { font-size: 14px; color: var(--text-body); font-weight: 300; line-height: 1.7; max-width: 540px; margin: 0 auto; }
+
+  /* Disclaimer banner */
+  .disclaimer-banner {
+    background: var(--danger-soft);
+    border: 1px solid rgba(212,91,91,0.2);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 32px;
+    font-size: 13px;
+    color: var(--text-body);
+    line-height: 1.7;
+  }
+
+  .disclaimer-banner strong { color: var(--danger); font-weight: 600; }
+
+  /* Cards */
+  .card {
+    background: var(--slate-card);
+    border: 1px solid var(--slate-border);
+    border-radius: 14px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .card-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600;
+  }
+
+  .card-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px; font-weight: 400;
+  }
+
+  .card-desc {
+    font-size: 13px; color: var(--text-body); font-weight: 300; line-height: 1.7;
+    margin-bottom: 20px;
+  }
+
+  /* Input fields */
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .field-row.three { grid-template-columns: 1fr 1fr 1fr; }
+
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+
+  .field-label {
+    font-size: 12px; font-weight: 500; letter-spacing: 0.5px;
+    text-transform: uppercase; color: var(--text-body);
+  }
+
+  .field-label .required { color: var(--ember); }
+
+  input[type="number"], input[type="text"], select {
+    background: var(--slate-deep);
+    border: 1px solid var(--slate-border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text-bright);
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--ember);
+  }
+
+  .field-hint {
+    font-size: 11px; color: var(--text-dim); font-weight: 300;
+  }
+
+  .input-with-unit {
+    display: flex; gap: 8px; align-items: center;
+  }
+
+  .input-with-unit input { flex: 1; }
+  .input-with-unit .unit { color: var(--text-muted); font-size: 13px; min-width: 24px; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px 28px;
+    border-radius: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px; font-weight: 500;
+    cursor: pointer; border: none;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--ember);
+    color: white;
+  }
+
+  .btn-primary:hover { background: var(--ember-hover); transform: translateY(-1px); }
+
+  .btn-secondary {
+    background: var(--slate-raised);
+    color: var(--text-body);
+    border: 1px solid var(--slate-border);
+  }
+
+  .btn-secondary:hover { border-color: var(--text-muted); color: var(--text-bright); }
+
+  /* Toggle */
+  .mode-toggle {
+    display: flex;
+    background: var(--slate-deep);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 24px;
+    border: 1px solid var(--slate-border);
+  }
+
+  .mode-option {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px; font-weight: 400;
+    color: var(--text-muted);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    border: none;
+    background: none;
+  }
+
+  .mode-option.active {
+    background: var(--ember);
+    color: white;
+    font-weight: 500;
+  }
+
+  /* Results */
+  .results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 20px;
+  }
+
+  .results-grid.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .result-box {
+    background: var(--slate-deep);
+    border: 1px solid var(--slate-border);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .result-label {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.5px;
+    text-transform: uppercase; color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .result-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 28px; font-weight: 600;
+    color: var(--text-bright);
+  }
+
+  .result-value.small { font-size: 20px; }
+
+  .result-unit {
+    font-size: 12px; color: var(--text-muted); font-weight: 300;
+  }
+
+  .result-note {
+    font-size: 11px; color: var(--text-dim); margin-top: 4px;
+  }
+
+  /* BMI colour classes */
+  .bmi-underweight { color: var(--ocean-text); }
+  .bmi-normal { color: var(--sage-text); }
+  .bmi-overweight { color: var(--ember); }
+  .bmi-obese { color: var(--danger); }
+
+  /* Goal ranges */
+  .goal-card {
+    background: var(--slate-deep);
+    border: 1px solid var(--slate-border);
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .goal-card:hover { border-color: var(--text-dim); }
+  .goal-card.selected { border-color: var(--ember); background: var(--ember-soft); }
+
+  .goal-card h4 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px; font-weight: 500; margin-bottom: 4px;
+  }
+
+  .goal-card p {
+    font-size: 12px; color: var(--text-muted); font-weight: 300; line-height: 1.6;
+  }
+
+  .goal-card .goal-range {
+    margin-top: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px; font-weight: 600; color: var(--ember);
+  }
+
+  .goal-card .goal-range span {
+    font-size: 12px; color: var(--text-muted); font-weight: 300;
+  }
+
+  /* Macros bar */
+  .macro-bar {
+    display: flex;
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 16px 0 10px;
+  }
+
+  .macro-bar .protein { background: var(--ember); }
+  .macro-bar .carbs { background: var(--ocean); }
+  .macro-bar .fat { background: var(--sage); }
+
+  .macro-legend {
+    display: flex;
+    gap: 20px;
+    font-size: 12px;
+    color: var(--text-body);
+  }
+
+  .macro-legend .dot {
+    display: inline-block;
+    width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  .macro-legend .dot.protein { background: var(--ember); }
+  .macro-legend .dot.carbs { background: var(--ocean); }
+  .macro-legend .dot.fat { background: var(--sage); }
+
+  /* Recipe template */
+  .recipe-card {
+    background: var(--slate-deep);
+    border: 1px solid var(--slate-border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 14px;
+  }
+
+  .recipe-card h4 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px; font-weight: 500; margin-bottom: 10px;
+    color: var(--text-bright);
+  }
+
+  .recipe-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 13px;
+    color: var(--text-body);
+    border-bottom: 1px solid rgba(36,56,72,0.5);
+  }
+
+  .recipe-row:last-child { border-bottom: none; }
+  .recipe-row .val { font-weight: 500; color: var(--text-bright); }
+
+  /* Export section */
+  .export-section {
+    background: var(--ember-soft);
+    border: 1px solid rgba(224,122,58,0.15);
+    border-radius: 14px;
+    padding: 28px;
+    text-align: center;
+    margin-top: 32px;
+  }
+
+  .export-section h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px; font-weight: 400; margin-bottom: 8px;
+  }
+
+  .export-section p {
+    font-size: 13px; color: var(--text-body); margin-bottom: 20px;
+  }
+
+  /* Hidden */
+  .hidden { display: none !important; }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--slate-border);
+    margin: 20px 0;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .field-row { grid-template-columns: 1fr; }
+    .field-row.three { grid-template-columns: 1fr 1fr; }
+    .results-grid { grid-template-columns: 1fr; }
+    .results-grid.four { grid-template-columns: 1fr 1fr; }
+    .container { padding: 20px 16px 60px; }
+  }
+
+  /* Coach Controls */
+  .coach-panel {
+    background: linear-gradient(135deg, rgba(224,122,58,0.06), rgba(74,157,200,0.06));
+    border: 1px dashed var(--ember);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 16px 0;
+  }
+
+  .coach-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .coach-badge {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--ember);
+    background: var(--ember-soft);
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+
+  .coach-panel-header span:last-child {
+    font-size: 12px; color: var(--text-dim); font-weight: 300;
+  }
+
+  .coach-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .coach-row.two { grid-template-columns: 1fr 1fr; }
+
+  .coach-field { display: flex; flex-direction: column; gap: 4px; }
+
+  .coach-field label {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.3px;
+    text-transform: uppercase; color: var(--text-muted);
+  }
+
+  .coach-field input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--slate-border);
+    outline: none;
+  }
+
+  .coach-field input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--ember);
+    cursor: pointer;
+    border: 2px solid var(--slate-deep);
+  }
+
+  .coach-field input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--ember);
+    cursor: pointer;
+    border: 2px solid var(--slate-deep);
+  }
+
+  .slider-val {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px; font-weight: 500;
+    color: var(--text-bright);
+    text-align: center;
+  }
+
+  .coach-total {
+    text-align: center;
+    font-size: 12px;
+    padding: 6px;
+    border-radius: 6px;
+    margin-top: 4px;
+  }
+
+  .coach-total.valid { color: var(--sage-text); background: var(--sage-soft); }
+  .coach-total.invalid { color: var(--danger); background: var(--danger-soft); }
+
+  .coach-override-toggle {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 40px; height: 22px;
+    background: var(--slate-border);
+    border-radius: 11px;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .toggle-switch.on { background: var(--ember); }
+
+  .toggle-switch::after {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: white;
+    top: 3px; left: 3px;
+    transition: transform 0.2s;
+  }
+
+  .toggle-switch.on::after { transform: translateX(18px); }
+
+  .coach-override-toggle span {
+    font-size: 12px; color: var(--text-muted); font-weight: 300;
+  }
+
+  /* Print */
+  @media print {
+    body { background: white; color: #13232E; }
+    .card { border: 1px solid #ddd; break-inside: avoid; }
+    .btn, .mode-toggle, .no-print, .coach-panel { display: none !important; }
+    .result-box { border: 1px solid #ddd; }
+    .result-value { color: #13232E; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════
+       HEADER
+       ═══════════════════════════════ -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-mark"><span>AH</span></div>
+      <div class="logo-divider"></div>
+      <div class="logo-text">
+        <div class="logo-name">Performance</div>
+        <div class="logo-tag">For Real Life</div>
+      </div>
+    </div>
+    <h1>Nutrition Guide</h1>
+    <p>A general framework to support your training. This is guidance to help you make informed choices — not a prescriptive diet plan.</p>
+  </div>
+
+  <!-- ═══════════════════════════════
+       DISCLAIMER
+       ═══════════════════════════════ -->
+  <div class="disclaimer-banner">
+    <strong>Important:</strong> I am a personal trainer, not a registered nutritionist or dietitian. The information in this guide is for general educational purposes only and should not be taken as medical or nutritional advice. If you have specific dietary requirements, allergies, medical conditions, or eating disorder history, please consult a qualified nutrition professional. Always check with your GP before making significant changes to your diet.
+  </div>
+
+  <!-- ═══════════════════════════════
+       CLIENT INFO & BMI
+       ═══════════════════════════════ -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:var(--ember-soft); color:var(--ember);">1</div>
+      <div class="card-title">Your Details</div>
+    </div>
+    <div class="card-desc">Enter your basic details to calculate your BMI and estimated energy needs.</div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">Client Name</label>
+        <input type="text" id="clientName" placeholder="e.g. James Wilson">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Date Prepared</label>
+        <input type="text" id="guideDate" placeholder="" readonly>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">Gender <span class="required">*</span></label>
+        <select id="gender">
+          <option value="">Select...</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Age <span class="required">*</span></label>
+        <div class="input-with-unit">
+          <input type="number" id="age" placeholder="32" min="16" max="100">
+          <span class="unit">yrs</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">Height <span class="required">*</span></label>
+        <div class="input-with-unit">
+          <input type="number" id="height" placeholder="175" min="100" max="250">
+          <span class="unit">cm</span>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Weight <span class="required">*</span></label>
+        <div class="input-with-unit">
+          <input type="number" id="weight" placeholder="80" min="30" max="300" step="0.1">
+          <span class="unit">kg</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field-group" style="grid-column: 1 / -1;">
+        <label class="field-label">Activity Level <span class="required">*</span></label>
+        <select id="activity">
+          <option value="">Select...</option>
+          <option value="1.2">Sedentary — desk job, little or no exercise</option>
+          <option value="1.375">Lightly active — light exercise 1-3 days/week</option>
+          <option value="1.55">Moderately active — moderate exercise 3-5 days/week</option>
+          <option value="1.725">Very active — hard training 6-7 days/week</option>
+          <option value="1.9">Extremely active — very hard training, physical job, or 2x/day</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:20px; text-align:center;">
+      <button class="btn btn-primary" onclick="calculate()">Calculate</button>
+    </div>
+
+    <!-- BMI Result -->
+    <div id="bmiResult" class="hidden">
+      <div class="divider"></div>
+      <div class="results-grid">
+        <div class="result-box">
+          <div class="result-label">BMI</div>
+          <div class="result-value" id="bmiValue">—</div>
+          <div class="result-note" id="bmiCategory">—</div>
+        </div>
+        <div class="result-box">
+          <div class="result-label">BMR</div>
+          <div class="result-value small" id="bmrValue">—</div>
+          <div class="result-unit">kcal/day at rest</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="field-hint" style="text-align:center; line-height:1.7;">
+          BMI is a rough screening tool and does not account for muscle mass, body composition, or individual factors. It is one data point among many.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════
+       CALORIE & MACRO ESTIMATOR
+       ═══════════════════════════════ -->
+  <div id="calorieSection" class="card hidden">
+    <div class="card-header">
+      <div class="card-icon" style="background:var(--sage-soft); color:var(--sage-text);">2</div>
+      <div class="card-title">Calorie & Macro Guidance</div>
+    </div>
+    <div class="card-desc">These are estimates based on standard formulas. Real-world results will vary — use these as a starting point and adjust based on how you feel, perform, and progress over 2-4 weeks.</div>
+
+    <!-- Mode toggle -->
+    <div class="mode-toggle no-print">
+      <button class="mode-option active" onclick="setMode('calculated')" id="modeCalc">Calculated Estimate</button>
+      <button class="mode-option" onclick="setMode('simple')" id="modeSimple">Goal-Based Ranges</button>
+    </div>
+
+    <!-- ── CALCULATED MODE ── -->
+    <div id="calculatedMode">
+      <div class="field-row">
+        <div class="field-group" style="grid-column: 1 / -1;">
+          <label class="field-label">Primary Goal</label>
+          <select id="goal" onchange="updateCalories()">
+            <option value="lose">Fat Loss</option>
+            <option value="maintain" selected>Maintenance</option>
+            <option value="gain">Muscle Gain</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Coach Controls — hidden on print -->
+      <div id="coachPanel" class="coach-panel no-print hidden">
+        <div class="coach-panel-header">
+          <span class="coach-badge">Coach Controls</span>
+          <span>These overrides are only visible to you — not shown on the client's printed guide.</span>
+        </div>
+
+        <!-- Calorie override -->
+        <div class="coach-override-toggle">
+          <div class="toggle-switch" id="calOverrideToggle" onclick="toggleCalOverride()"></div>
+          <span>Override calculated calorie target</span>
+        </div>
+        <div id="calOverrideField" class="hidden" style="margin-bottom:16px;">
+          <div class="coach-row two">
+            <div class="coach-field">
+              <label>Custom Daily Calories</label>
+              <div class="input-with-unit">
+                <input type="number" id="customCalories" placeholder="e.g. 2200" min="800" max="5000" step="50" oninput="applyCoachOverrides()">
+                <span class="unit">kcal</span>
+              </div>
+            </div>
+            <div class="coach-field">
+              <label>Calculated TDEE (reference)</label>
+              <div style="font-family:'Space Grotesk',sans-serif; font-size:14px; color:var(--text-dim); padding:10px 0;" id="tdeeReference">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Macro split sliders -->
+        <div class="coach-override-toggle">
+          <div class="toggle-switch" id="macroOverrideToggle" onclick="toggleMacroOverride()"></div>
+          <span>Override macro split percentages</span>
+        </div>
+        <div id="macroOverrideField" class="hidden">
+          <div class="coach-row">
+            <div class="coach-field">
+              <label>Protein</label>
+              <input type="range" id="sliderProtein" min="10" max="60" value="30" oninput="updateSliders()">
+              <div class="slider-val" id="sliderProteinVal" style="color:var(--ember)">30%</div>
+            </div>
+            <div class="coach-field">
+              <label>Carbs</label>
+              <input type="range" id="sliderCarbs" min="10" max="60" value="40" oninput="updateSliders()">
+              <div class="slider-val" id="sliderCarbsVal" style="color:var(--ocean-text)">40%</div>
+            </div>
+            <div class="coach-field">
+              <label>Fat</label>
+              <input type="range" id="sliderFat" min="10" max="60" value="30" oninput="updateSliders()">
+              <div class="slider-val" id="sliderFatVal" style="color:var(--sage-text)">30%</div>
+            </div>
+          </div>
+          <div class="coach-total" id="macroTotal">Total: 100%</div>
+        </div>
+      </div>
+
+      <div id="calcResults" class="hidden">
+        <div class="results-grid four">
+          <div class="result-box">
+            <div class="result-label">Daily Target</div>
+            <div class="result-value small" id="tdeeTarget">—</div>
+            <div class="result-unit">kcal/day</div>
+          </div>
+          <div class="result-box">
+            <div class="result-label">Protein</div>
+            <div class="result-value small" id="proteinG" style="color:var(--ember)">—</div>
+            <div class="result-unit" id="proteinKcal">— kcal</div>
+          </div>
+          <div class="result-box">
+            <div class="result-label">Carbs</div>
+            <div class="result-value small" id="carbsG" style="color:var(--ocean-text)">—</div>
+            <div class="result-unit" id="carbsKcal">— kcal</div>
+          </div>
+          <div class="result-box">
+            <div class="result-label">Fat</div>
+            <div class="result-value small" id="fatG" style="color:var(--sage-text)">—</div>
+            <div class="result-unit" id="fatKcal">— kcal</div>
+          </div>
+        </div>
+
+        <div class="macro-bar">
+          <div class="protein" id="barProtein" style="width:30%"></div>
+          <div class="carbs" id="barCarbs" style="width:40%"></div>
+          <div class="fat" id="barFat" style="width:30%"></div>
+        </div>
+        <div class="macro-legend">
+          <span><span class="dot protein"></span>Protein <span id="proteinPct">30%</span></span>
+          <span><span class="dot carbs"></span>Carbs <span id="carbsPct">40%</span></span>
+          <span><span class="dot fat"></span>Fat <span id="fatPct">30%</span></span>
+        </div>
+
+        <div style="margin-top:16px;">
+          <div class="field-hint" style="line-height:1.7;">
+            <strong style="color:var(--text-body);">How to use:</strong> These are estimated daily targets based on the Mifflin-St Jeor equation. Track your intake for 2 weeks and adjust: if weight is stable when you want to lose, reduce by 100-200 kcal. If gaining too fast, reduce slightly. Small adjustments beat drastic changes.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SIMPLE / GOAL-BASED MODE ── -->
+    <div id="simpleMode" class="hidden">
+      <div id="goalCards"></div>
+      <div style="margin-top:12px;">
+        <div class="field-hint" style="line-height:1.7;">
+          These are broad ranges suited to most people at your weight. Pick the range that matches your primary goal and start in the middle. Adjust based on how you feel after 2-3 weeks.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════
+       DAILY NUTRITION FRAMEWORK
+       ═══════════════════════════════ -->
+  <div id="frameworkSection" class="card hidden">
+    <div class="card-header">
+      <div class="card-icon" style="background:var(--ocean-soft); color:var(--ocean-text);">3</div>
+      <div class="card-title">Daily Nutrition Framework</div>
+    </div>
+    <div class="card-desc">A simple structure to help you build balanced meals throughout the day. This isn't a rigid meal plan — it's a framework to guide your choices.</div>
+
+    <div class="recipe-card">
+      <h4 style="color:var(--ember);">Breakfast</h4>
+      <div class="recipe-row"><span>Protein source</span><span class="val">e.g. eggs, Greek yoghurt, protein oats</span></div>
+      <div class="recipe-row"><span>Complex carb</span><span class="val">e.g. oats, wholegrain toast, fruit</span></div>
+      <div class="recipe-row"><span>Healthy fat</span><span class="val">e.g. avocado, nuts, seeds</span></div>
+      <div class="recipe-row"><span>Target</span><span class="val" id="breakfastTarget">~25% of daily calories</span></div>
+    </div>
+
+    <div class="recipe-card">
+      <h4 style="color:var(--sage-text);">Lunch</h4>
+      <div class="recipe-row"><span>Protein source</span><span class="val">e.g. chicken, fish, tofu, lentils</span></div>
+      <div class="recipe-row"><span>Complex carb</span><span class="val">e.g. rice, sweet potato, pasta, bread</span></div>
+      <div class="recipe-row"><span>Vegetables</span><span class="val">Aim for half the plate — any colour</span></div>
+      <div class="recipe-row"><span>Target</span><span class="val" id="lunchTarget">~30% of daily calories</span></div>
+    </div>
+
+    <div class="recipe-card">
+      <h4 style="color:var(--ocean-text);">Dinner</h4>
+      <div class="recipe-row"><span>Protein source</span><span class="val">e.g. meat, fish, eggs, beans</span></div>
+      <div class="recipe-row"><span>Complex carb</span><span class="val">e.g. potatoes, rice, quinoa</span></div>
+      <div class="recipe-row"><span>Vegetables</span><span class="val">Aim for half the plate — variety is key</span></div>
+      <div class="recipe-row"><span>Target</span><span class="val" id="dinnerTarget">~30% of daily calories</span></div>
+    </div>
+
+    <div class="recipe-card">
+      <h4 style="color:var(--text-muted);">Snacks (1-2 per day)</h4>
+      <div class="recipe-row"><span>Options</span><span class="val">Fruit, nuts, yoghurt, rice cakes, protein bar</span></div>
+      <div class="recipe-row"><span>Target</span><span class="val" id="snackTarget">~15% of daily calories</span></div>
+    </div>
+
+    <div style="margin-top:12px;">
+      <div class="field-hint" style="line-height:1.8;">
+        <strong style="color:var(--text-body);">General principles:</strong> Prioritise whole foods over processed. Stay hydrated (aim for 2-3 litres of water daily). Eat a protein source with every meal. Don't skip meals — consistency matters more than perfection. If you're training hard, time your largest carb meal around your workout.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════
+       RECIPE GUIDANCE TEMPLATE
+       ═══════════════════════════════ -->
+  <div id="recipeSection" class="card hidden">
+    <div class="card-header">
+      <div class="card-icon" style="background:var(--ember-soft); color:var(--ember);">4</div>
+      <div class="card-title">Recipe Guidance</div>
+    </div>
+    <div class="card-desc">If you'd like help structuring meals, here's a template you can follow. The goal is building habits, not counting every gram.</div>
+
+    <div id="recipeTemplates">
+      <!-- Populated by JS based on goal -->
+    </div>
+
+    <div class="divider"></div>
+
+    <h4 class="sg" style="font-size:15px; font-weight:400; margin-bottom:12px;">Quick Reference: Portion Sizes</h4>
+    <div class="recipe-card" style="margin-bottom:0;">
+      <div class="recipe-row"><span>Protein (per meal)</span><span class="val">Palm-sized portion (~30-40g)</span></div>
+      <div class="recipe-row"><span>Carbs (per meal)</span><span class="val">Cupped-hand portion (~40-60g)</span></div>
+      <div class="recipe-row"><span>Fats (per meal)</span><span class="val">Thumb-sized portion (~10-15g)</span></div>
+      <div class="recipe-row"><span>Vegetables (per meal)</span><span class="val">Fist-sized portion or more</span></div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <div class="field-hint" style="line-height:1.7;">
+        Hand-based portions are a practical, no-scales-needed approach. They're not perfectly accurate but they're consistent and easy to use anywhere — at home, at work, or eating out.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════
+       HYDRATION & SUPPLEMENTS
+       ═══════════════════════════════ -->
+  <div id="hydrationSection" class="card hidden">
+    <div class="card-header">
+      <div class="card-icon" style="background:var(--sage-soft); color:var(--sage-text);">5</div>
+      <div class="card-title">Hydration & Supplements</div>
+    </div>
+
+    <div class="recipe-card">
+      <h4>Daily Hydration</h4>
+      <div class="recipe-row"><span>Minimum target</span><span class="val" id="waterTarget">2.5 litres</span></div>
+      <div class="recipe-row"><span>Training days</span><span class="val">Add 500ml-1L around workouts</span></div>
+      <div class="recipe-row"><span>Signs of dehydration</span><span class="val">Dark urine, headaches, fatigue, poor performance</span></div>
+    </div>
+
+    <div class="recipe-card">
+      <h4>Evidence-Based Supplements</h4>
+      <div class="card-desc" style="margin-bottom:12px; margin-top: -4px;">Only listing supplements with strong research backing. Most people don't need anything beyond a good diet.</div>
+      <div class="recipe-row"><span>Creatine Monohydrate</span><span class="val">3-5g daily — strength & power</span></div>
+      <div class="recipe-row"><span>Whey Protein</span><span class="val">If struggling to hit protein targets</span></div>
+      <div class="recipe-row"><span>Vitamin D</span><span class="val">Especially in Ireland — consider Oct-Apr</span></div>
+      <div class="recipe-row"><span>Caffeine</span><span class="val">Pre-workout if tolerated — 1-3mg/kg</span></div>
+    </div>
+
+    <div class="field-hint" style="line-height:1.7;">
+      Supplements are exactly that — supplementary. They fill gaps, they don't replace a solid diet. If you're considering any supplement, do your own research or speak to a qualified professional.
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════
+       EXPORT / PRINT
+       ═══════════════════════════════ -->
+  <div id="exportSection" class="export-section hidden no-print">
+    <h3 class="sg">Save This Guide</h3>
+    <p>Print this page or save as PDF to keep a copy of your personalised nutrition framework.</p>
+    <button class="btn btn-primary" onclick="window.print()">Print / Save as PDF</button>
+    <button class="btn btn-secondary" style="margin-left:8px;" onclick="copyText()">Copy as Text</button>
+  </div>
+
+  <!-- Footer disclaimer -->
+  <div id="footerDisclaimer" class="hidden" style="margin-top:32px; padding:20px; text-align:center;">
+    <div class="field-hint" style="line-height:1.8; max-width:500px; margin:0 auto;">
+      This guide provides general fitness-related nutrition information only. It is not a substitute for professional nutritional advice, diagnosis, or treatment. Always seek the advice of a qualified healthcare provider with any questions regarding your diet or medical conditions.
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── STATE ──
+let currentMode = 'calculated';
+let tdee = 0;
+let bmr = 0;
+let weightKg = 0;
+
+// Auto-fill date
+document.getElementById('guideDate').value = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+// ── MODE TOGGLE ──
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('modeCalc').classList.toggle('active', mode === 'calculated');
+  document.getElementById('modeSimple').classList.toggle('active', mode === 'simple');
+  document.getElementById('calculatedMode').classList.toggle('hidden', mode !== 'calculated');
+  document.getElementById('simpleMode').classList.toggle('hidden', mode !== 'simple');
+}
+
+// ── CALCULATE ──
+function calculate() {
+  const gender = document.getElementById('gender').value;
+  const age = parseFloat(document.getElementById('age').value);
+  const height = parseFloat(document.getElementById('height').value);
+  const weight = parseFloat(document.getElementById('weight').value);
+  const activity = parseFloat(document.getElementById('activity').value);
+
+  if (!gender || !age || !height || !weight || !activity) {
+    alert('Please fill in all required fields.');
+    return;
+  }
+
+  weightKg = weight;
+
+  // BMI
+  const heightM = height / 100;
+  const bmi = weight / (heightM * heightM);
+
+  let bmiClass = '';
+  let bmiLabel = '';
+  if (bmi < 18.5) { bmiClass = 'bmi-underweight'; bmiLabel = 'Underweight'; }
+  else if (bmi < 25) { bmiClass = 'bmi-normal'; bmiLabel = 'Normal range'; }
+  else if (bmi < 30) { bmiClass = 'bmi-overweight'; bmiLabel = 'Overweight'; }
+  else { bmiClass = 'bmi-obese'; bmiLabel = 'Obese'; }
+
+  document.getElementById('bmiValue').textContent = bmi.toFixed(1);
+  document.getElementById('bmiValue').className = 'result-value ' + bmiClass;
+  document.getElementById('bmiCategory').textContent = bmiLabel;
+  document.getElementById('bmiCategory').className = 'result-note ' + bmiClass;
+
+  // Mifflin-St Jeor BMR
+  if (gender === 'male') {
+    bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
+  } else {
+    bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
+  }
+
+  document.getElementById('bmrValue').textContent = Math.round(bmr);
+
+  // TDEE
+  tdee = Math.round(bmr * activity);
+
+  // Show sections
+  document.getElementById('bmiResult').classList.remove('hidden');
+  document.getElementById('calorieSection').classList.remove('hidden');
+  document.getElementById('frameworkSection').classList.remove('hidden');
+  document.getElementById('recipeSection').classList.remove('hidden');
+  document.getElementById('hydrationSection').classList.remove('hidden');
+  document.getElementById('exportSection').classList.remove('hidden');
+  document.getElementById('footerDisclaimer').classList.remove('hidden');
+
+  // Update calorie targets
+  updateCalories();
+
+  // Build simple mode goal cards
+  buildGoalCards();
+
+  // Build recipe templates
+  buildRecipeTemplates();
+
+  // Update water target based on weight
+  const waterL = Math.max(2, (weight * 0.033)).toFixed(1);
+  document.getElementById('waterTarget').textContent = waterL + ' litres';
+
+  // Scroll to results
+  document.getElementById('bmiResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── COACH CONTROLS STATE ──
+let calOverride = false;
+let macroOverride = false;
+
+function toggleCalOverride() {
+  calOverride = !calOverride;
+  document.getElementById('calOverrideToggle').classList.toggle('on', calOverride);
+  document.getElementById('calOverrideField').classList.toggle('hidden', !calOverride);
+  applyCoachOverrides();
+}
+
+function toggleMacroOverride() {
+  macroOverride = !macroOverride;
+  document.getElementById('macroOverrideToggle').classList.toggle('on', macroOverride);
+  document.getElementById('macroOverrideField').classList.toggle('hidden', !macroOverride);
+  applyCoachOverrides();
+}
+
+function updateSliders() {
+  const p = parseInt(document.getElementById('sliderProtein').value);
+  const c = parseInt(document.getElementById('sliderCarbs').value);
+  const f = parseInt(document.getElementById('sliderFat').value);
+  const total = p + c + f;
+
+  document.getElementById('sliderProteinVal').textContent = p + '%';
+  document.getElementById('sliderCarbsVal').textContent = c + '%';
+  document.getElementById('sliderFatVal').textContent = f + '%';
+
+  const totalEl = document.getElementById('macroTotal');
+  totalEl.textContent = 'Total: ' + total + '%';
+  if (total === 100) {
+    totalEl.className = 'coach-total valid';
+  } else {
+    totalEl.className = 'coach-total invalid';
+    totalEl.textContent += total < 100 ? ' (' + (100 - total) + '% unallocated)' : ' (' + (total - 100) + '% over)';
+  }
+
+  applyCoachOverrides();
+}
+
+function applyCoachOverrides() {
+  if (!tdee) return;
+  updateCalories();
+}
+
+// ── UPDATE CALORIES (calculated mode) ──
+function updateCalories() {
+  if (!tdee) return;
+
+  const goal = document.getElementById('goal').value;
+  let target, proteinPctTarget, carbPctTarget, fatPctTarget;
+
+  // Step 1: Get base values from goal
+  if (goal === 'lose') {
+    target = Math.round(tdee * 0.8);
+    proteinPctTarget = null; // will use per-kg
+    carbPctTarget = 35;
+    fatPctTarget = 25;
+  } else if (goal === 'gain') {
+    target = Math.round(tdee * 1.1);
+    proteinPctTarget = null;
+    carbPctTarget = 45;
+    fatPctTarget = 20;
+  } else {
+    target = tdee;
+    proteinPctTarget = null;
+    carbPctTarget = 40;
+    fatPctTarget = 25;
+  }
+
+  // Step 2: Apply coach calorie override
+  if (calOverride) {
+    const custom = parseInt(document.getElementById('customCalories').value);
+    if (custom && custom >= 800 && custom <= 5000) {
+      target = custom;
+    }
+  }
+
+  // Update TDEE reference in coach panel
+  document.getElementById('tdeeReference').textContent = tdee.toLocaleString() + ' kcal (formula)';
+
+  // Show coach panel
+  document.getElementById('coachPanel').classList.remove('hidden');
+
+  // Step 3: Calculate macros
+  let proteinG, carbsG, fatG, proteinKcal, carbsKcal, fatKcal, proteinPct, actualCarbPct, actualFatPct;
+
+  if (macroOverride) {
+    // Use slider percentages directly
+    const sp = parseInt(document.getElementById('sliderProtein').value);
+    const sc = parseInt(document.getElementById('sliderCarbs').value);
+    const sf = parseInt(document.getElementById('sliderFat').value);
+    const total = sp + sc + sf;
+
+    // Normalise to 100% if not exact
+    const normP = sp / total;
+    const normC = sc / total;
+    const normF = sf / total;
+
+    proteinKcal = Math.round(target * normP);
+    carbsKcal = Math.round(target * normC);
+    fatKcal = target - proteinKcal - carbsKcal;
+
+    proteinG = Math.round(proteinKcal / 4);
+    carbsG = Math.round(carbsKcal / 4);
+    fatG = Math.round(fatKcal / 9);
+
+    proteinPct = Math.round(normP * 100);
+    actualCarbPct = Math.round(normC * 100);
+    actualFatPct = 100 - proteinPct - actualCarbPct;
+  } else {
+    // Default: protein per-kg, then split remainder by carb/fat ratio
+    let proteinPerKg;
+    if (goal === 'lose') proteinPerKg = 2.2;
+    else if (goal === 'gain') proteinPerKg = 2.0;
+    else proteinPerKg = 1.8;
+
+    proteinG = Math.round(weightKg * proteinPerKg);
+    proteinKcal = proteinG * 4;
+    proteinPct = Math.round((proteinKcal / target) * 100);
+
+    const remainingKcal = target - proteinKcal;
+    const carbKcalShare = carbPctTarget / (carbPctTarget + fatPctTarget);
+    carbsKcal = Math.round(remainingKcal * carbKcalShare);
+    fatKcal = remainingKcal - carbsKcal;
+    carbsG = Math.round(carbsKcal / 4);
+    fatG = Math.round(fatKcal / 9);
+
+    actualCarbPct = Math.round((carbsKcal / target) * 100);
+    actualFatPct = 100 - proteinPct - actualCarbPct;
+
+    // Sync sliders to match current calculated values
+    document.getElementById('sliderProtein').value = proteinPct;
+    document.getElementById('sliderCarbs').value = actualCarbPct;
+    document.getElementById('sliderFat').value = actualFatPct;
+    document.getElementById('sliderProteinVal').textContent = proteinPct + '%';
+    document.getElementById('sliderCarbsVal').textContent = actualCarbPct + '%';
+    document.getElementById('sliderFatVal').textContent = actualFatPct + '%';
+    document.getElementById('macroTotal').textContent = 'Total: 100%';
+    document.getElementById('macroTotal').className = 'coach-total valid';
+  }
+
+  // Step 4: Render results
+  document.getElementById('tdeeTarget').textContent = target.toLocaleString();
+  document.getElementById('proteinG').textContent = proteinG + 'g';
+  document.getElementById('proteinKcal').textContent = proteinKcal + ' kcal';
+  document.getElementById('carbsG').textContent = carbsG + 'g';
+  document.getElementById('carbsKcal').textContent = carbsKcal + ' kcal';
+  document.getElementById('fatG').textContent = fatG + 'g';
+  document.getElementById('fatKcal').textContent = fatKcal + ' kcal';
+
+  // Update bar
+  document.getElementById('barProtein').style.width = proteinPct + '%';
+  document.getElementById('barCarbs').style.width = actualCarbPct + '%';
+  document.getElementById('barFat').style.width = actualFatPct + '%';
+
+  document.getElementById('proteinPct').textContent = proteinPct + '%';
+  document.getElementById('carbsPct').textContent = actualCarbPct + '%';
+  document.getElementById('fatPct').textContent = actualFatPct + '%';
+
+  document.getElementById('calcResults').classList.remove('hidden');
+
+  // Update meal targets
+  updateMealTargets(target);
+
+  // Update recipe templates if visible
+  buildRecipeTemplates();
+}
+
+function updateMealTargets(totalCal) {
+  document.getElementById('breakfastTarget').textContent = '~' + Math.round(totalCal * 0.25) + ' kcal (25%)';
+  document.getElementById('lunchTarget').textContent = '~' + Math.round(totalCal * 0.30) + ' kcal (30%)';
+  document.getElementById('dinnerTarget').textContent = '~' + Math.round(totalCal * 0.30) + ' kcal (30%)';
+  document.getElementById('snackTarget').textContent = '~' + Math.round(totalCal * 0.15) + ' kcal (15%)';
+}
+
+// ── BUILD GOAL CARDS (simple mode) ──
+function buildGoalCards() {
+  const w = weightKg;
+  const goals = [
+    {
+      title: 'Fat Loss',
+      desc: 'Moderate calorie deficit with high protein to preserve muscle mass while losing body fat.',
+      low: Math.round(w * 22),
+      high: Math.round(w * 26),
+      protein: '2.0-2.4g per kg',
+      id: 'lose'
+    },
+    {
+      title: 'Maintenance / Recomposition',
+      desc: 'Eating at or near your energy expenditure. Good for body recomp, general health, or transitioning between phases.',
+      low: Math.round(w * 28),
+      high: Math.round(w * 32),
+      protein: '1.6-2.0g per kg',
+      id: 'maintain'
+    },
+    {
+      title: 'Muscle Gain',
+      desc: 'Slight calorie surplus to support muscle growth. Pair with a structured resistance training programme.',
+      low: Math.round(w * 33),
+      high: Math.round(w * 38),
+      protein: '1.8-2.2g per kg',
+      id: 'gain'
+    }
+  ];
+
+  let html = '';
+  goals.forEach(g => {
+    html += `
+      <div class="goal-card" onclick="selectGoalCard('${g.id}', this)">
+        <h4>${g.title}</h4>
+        <p>${g.desc}</p>
+        <div class="goal-range">${g.low.toLocaleString()} – ${g.high.toLocaleString()} <span>kcal/day</span></div>
+        <div style="margin-top:6px; font-size:12px; color:var(--text-muted);">Protein: ${g.protein} (${Math.round(w * parseFloat(g.protein))}–${Math.round(w * parseFloat(g.protein.split('-')[1]))}g/day)</div>
+      </div>
+    `;
+  });
+
+  document.getElementById('goalCards').innerHTML = html;
+}
+
+function selectGoalCard(goalId, el) {
+  document.querySelectorAll('.goal-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('goal').value = goalId;
+  updateCalories();
+}
+
+// ── BUILD RECIPE TEMPLATES ──
+function buildRecipeTemplates() {
+  if (!tdee) return;
+
+  const goal = document.getElementById('goal').value;
+  let recipes;
+
+  if (goal === 'lose') {
+    recipes = [
+      { name: 'High-Protein Breakfast Bowl', ingredients: 'Greek yoghurt (200g), mixed berries (80g), granola (30g), honey drizzle', calories: '~350 kcal', protein: '~30g', notes: 'Quick to prepare. Swap granola for oats if watching sugar.' },
+      { name: 'Chicken & Veg Stir-Fry', ingredients: 'Chicken breast (150g), mixed vegetables (200g), soy sauce, rice (100g cooked)', calories: '~450 kcal', protein: '~40g', notes: 'Use cooking spray instead of oil to reduce calories. Load up on veg.' },
+      { name: 'Salmon with Sweet Potato', ingredients: 'Salmon fillet (130g), sweet potato (150g), steamed broccoli (100g), lemon', calories: '~480 kcal', protein: '~35g', notes: 'Omega-3 from salmon supports recovery. Bake both for easy prep.' }
+    ];
+  } else if (goal === 'gain') {
+    recipes = [
+      { name: 'Loaded Protein Oats', ingredients: 'Oats (80g), protein powder (1 scoop), banana, peanut butter (20g), milk (200ml)', calories: '~550 kcal', protein: '~35g', notes: 'Great pre-training meal. Add honey for extra carbs on heavy training days.' },
+      { name: 'Beef & Rice Power Bowl', ingredients: 'Lean mince (150g), rice (150g cooked), peppers, onion, spices, avocado (half)', calories: '~650 kcal', protein: '~40g', notes: 'Batch cook mince and rice for easy meal prep across the week.' },
+      { name: 'Pasta with Chicken & Pesto', ingredients: 'Pasta (100g dry), chicken breast (150g), pesto (1 tbsp), cherry tomatoes, parmesan', calories: '~600 kcal', protein: '~45g', notes: 'Solid post-workout meal. Add extra olive oil if you need more calories.' }
+    ];
+  } else {
+    recipes = [
+      { name: 'Eggs on Toast', ingredients: '3 eggs (scrambled or poached), wholegrain toast (2 slices), avocado (half), tomatoes', calories: '~450 kcal', protein: '~25g', notes: 'Simple and balanced. Add smoked salmon for extra protein and flavour.' },
+      { name: 'Turkey Wrap', ingredients: 'Wholemeal wrap, turkey slices (100g), hummus, mixed leaves, cucumber, peppers', calories: '~400 kcal', protein: '~30g', notes: 'Easy to take to work. Swap turkey for chicken or tofu.' },
+      { name: 'One-Pan Chicken Thighs', ingredients: 'Chicken thighs (2), potatoes (200g), mixed roast veg, olive oil, herbs', calories: '~550 kcal', protein: '~35g', notes: 'Throw everything on a tray and bake. Minimal effort, maximum result.' }
+    ];
+  }
+
+  let html = '<h4 class="sg" style="font-size:15px; font-weight:400; margin-bottom:14px;">Sample Meal Ideas</h4>';
+  recipes.forEach(r => {
+    html += `
+      <div class="recipe-card">
+        <h4>${r.name}</h4>
+        <div class="recipe-row"><span>Ingredients</span><span class="val">${r.ingredients}</span></div>
+        <div class="recipe-row"><span>Approx. calories</span><span class="val">${r.calories}</span></div>
+        <div class="recipe-row"><span>Approx. protein</span><span class="val">${r.protein}</span></div>
+        <div class="recipe-row"><span>Notes</span><span class="val">${r.notes}</span></div>
+      </div>
+    `;
+  });
+
+  document.getElementById('recipeTemplates').innerHTML = html;
+}
+
+// ── COPY AS TEXT ──
+function copyText() {
+  const name = document.getElementById('clientName').value || 'Client';
+  const date = document.getElementById('guideDate').value;
+  const goal = document.getElementById('goal').value;
+  const goalLabel = goal === 'lose' ? 'Fat Loss' : goal === 'gain' ? 'Muscle Gain' : 'Maintenance';
+
+  let text = `AH PERFORMANCE — NUTRITION GUIDE\n`;
+  text += `${'═'.repeat(40)}\n`;
+  text += `Client: ${name}\n`;
+  text += `Date: ${date}\n`;
+  text += `Goal: ${goalLabel}\n\n`;
+
+  text += `BMI: ${document.getElementById('bmiValue').textContent} (${document.getElementById('bmiCategory').textContent})\n`;
+  text += `BMR: ${document.getElementById('bmrValue').textContent} kcal/day\n`;
+  text += `Daily Target: ${document.getElementById('tdeeTarget').textContent} kcal/day\n\n`;
+
+  text += `MACROS\n`;
+  text += `Protein: ${document.getElementById('proteinG').textContent} (${document.getElementById('proteinKcal').textContent})\n`;
+  text += `Carbs: ${document.getElementById('carbsG').textContent} (${document.getElementById('carbsKcal').textContent})\n`;
+  text += `Fat: ${document.getElementById('fatG').textContent} (${document.getElementById('fatKcal').textContent})\n\n`;
+
+  text += `DAILY FRAMEWORK\n`;
+  text += `Breakfast: ${document.getElementById('breakfastTarget').textContent}\n`;
+  text += `Lunch: ${document.getElementById('lunchTarget').textContent}\n`;
+  text += `Dinner: ${document.getElementById('dinnerTarget').textContent}\n`;
+  text += `Snacks: ${document.getElementById('snackTarget').textContent}\n\n`;
+
+  text += `HYDRATION: ${document.getElementById('waterTarget').textContent} daily (more on training days)\n\n`;
+
+  text += `DISCLAIMER: This is general guidance from a personal trainer, not a registered nutritionist. Consult a qualified professional for specific dietary needs.\n`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy as Text'; }, 2000);
+  });
+}
+</script>
+
+</body>
+</html>
