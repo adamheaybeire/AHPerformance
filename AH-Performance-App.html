@@ -67,7 +67,7 @@
   .login-demo-hint .demo-val{color:var(--text-body);font-family:'Space Grotesk',sans-serif;}
 
   /* ─── APP SHELL ─── */
-  .app{display:none;min-height:100vh;}.app.active{display:flex;}
+  .app{display:none;min-height:100vh;min-height:100dvh;}.app.active{display:flex;}
 
   .sidebar{width:230px;background:var(--slate-deep);border-right:1px solid var(--slate-border);padding:24px 0;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:10;}
   .sidebar-logo{display:flex;align-items:center;gap:10px;padding:0 20px;margin-bottom:8px;}
@@ -297,7 +297,7 @@
   @media(max-width:768px){
     /* Client app — full mobile layout */
     #clientApp .sidebar{display:none !important;}
-    #clientApp .main{margin-left:0 !important;padding:16px 16px 80px !important;}
+    #clientApp .main{margin-left:0 !important;padding:16px 16px 80px !important;height:100vh;height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
     #clientApp .mobile-tab-bar{display:block;}
 
     /* Full-width cards */
@@ -723,7 +723,7 @@
 
       <div class="week-nav">
         <button onclick="changeProgrammeWeek(-1)">&larr; Prev</button>
-        <span class="week-label" id="progWeekLabel">Week 8</span>
+        <span class="week-label" id="progWeekLabel">Week 1</span>
         <button onclick="changeProgrammeWeek(1)">Next &rarr;</button>
       </div>
       <div id="programmeContent"></div>
@@ -2279,8 +2279,15 @@ function renderProgrammeSummary() {
   const cardioCount = sessions.filter(s => s.type === 'cardio').length;
   const cid = loggedInUser ? loggedInUser.clientId : null;
   const logs = cid && WORKOUT_LOG[cid] ? WORKOUT_LOG[cid].length : 0;
+  // Get programme name from client record or PT_PROGRAMMES
+  const clientRec = cid ? CLIENTS.find(c => c.id === cid) : null;
+  let progName = clientRec && clientRec.programme ? clientRec.programme : '';
+  if (!progName) {
+    const ptProg = PT_PROGRAMMES.find(p => p.clientId === cid && p.status === 'active');
+    if (ptProg) progName = ptProg.name;
+  }
   el.innerHTML = `<div class="card card-ember" style="margin-bottom:16px;">
-    <div class="flex-between mb-12"><div><h3 style="margin-bottom:2px;">${latestWeek.label || 'Current Programme'}</h3><p style="font-size:12px;color:var(--text-muted);">${sessions.length} sessions per week</p></div><span class="status-pill status-active">Active</span></div>
+    <div class="flex-between mb-12"><div>${progName ? '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--ember);font-weight:600;margin-bottom:4px;">' + progName + '</div>' : ''}<h3 style="margin-bottom:2px;">${latestWeek.label || 'Current Programme'}</h3><p style="font-size:12px;color:var(--text-muted);">${sessions.length} sessions per week</p></div><span class="status-pill status-active">Active</span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px;">
       <div style="background:var(--slate-raised);border-radius:10px;padding:12px;"><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Sessions</div><div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:600;">${sessions.length}</div><div style="font-size:10px;color:var(--text-dim);">${strengthCount} strength · ${cardioCount} cardio</div></div>
       <div style="background:var(--slate-raised);border-radius:10px;padding:12px;"><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Weeks</div><div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:600;">${totalWeeks}</div><div style="font-size:10px;color:var(--text-dim);">programmed</div></div>
@@ -2306,9 +2313,39 @@ function renderProgrammeWeek() {
     const colour = isCardio ? 'var(--ocean)' : 'var(--ember)';
     let content = '';
     if (s.exercises) {
-      content = `<table><thead><tr><th>Exercise</th><th>Sets × Reps</th><th>Weight</th><th>RPE</th></tr></thead><tbody>` +
-        s.exercises.map(e => { const esc = (e.n||'').replace(/'/g,"\\'").replace(/"/g,'&quot;'); return `<tr><td class="val"><span class="ex-clickable" onclick="openExModal('${esc}')">${e.n}</span></td><td>${e.sr}</td><td class="val">${e.w}</td><td>${e.rpe}</td></tr>`; }).join('') +
-        `</tbody></table>`;
+      // Build superset lookup: exerciseIndex → superset info
+      const ssMap = {};
+      const ssRendered = {};
+      if (s.supersets && s.supersets.length) {
+        s.supersets.forEach((ss, si) => {
+          (ss.exerciseIndices || []).forEach(idx => { ssMap[idx] = { ...ss, _si: si }; });
+        });
+      }
+      let rows = '';
+      s.exercises.forEach((e, ei) => {
+        const idx = e._idx !== undefined ? e._idx : ei;
+        const esc = (e.n||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+        // Superset header — render once for the first exercise in each superset
+        if (ssMap[idx] && !ssRendered[ssMap[idx]._si]) {
+          ssRendered[ssMap[idx]._si] = true;
+          const ss = ssMap[idx];
+          const ssLabel = ss.type || 'Superset';
+          const ssDetails = [];
+          if (ss.rounds) ssDetails.push(ss.rounds + ' rounds');
+          if (ss.restBetweenEx) ssDetails.push('Rest between exercises: ' + ss.restBetweenEx);
+          if (ss.restBetweenRound) ssDetails.push('Rest between rounds: ' + ss.restBetweenRound);
+          rows += `<tr><td colspan="4" style="padding:10px 8px 6px;font-size:12px;font-weight:600;color:var(--ocean);border-bottom:1px solid rgba(74,157,200,0.15);background:rgba(74,157,200,0.04);border-radius:6px;">${ic('refresh','var(--ocean)',14)} ${ssLabel}${ssDetails.length ? ' — ' + ssDetails.join(' · ') : ''}${ss.notes ? '<div style="font-weight:400;font-size:11px;color:var(--text-dim);margin-top:2px;">' + ss.notes + '</div>' : ''}</td></tr>`;
+        }
+        // Indent exercises that are part of a superset
+        const inSuperset = !!ssMap[idx];
+        const nameStyle = inSuperset ? 'padding-left:16px;' : '';
+        rows += `<tr><td class="val" style="${nameStyle}"><span class="ex-clickable" onclick="openExModal('${esc}')">${e.n}${e.perSide ? ' <span style="font-size:10px;color:var(--text-dim);">(per side)</span>' : ''}</span></td><td>${e.sr}</td><td class="val">${e.w}</td><td>${e.rpe}</td></tr>`;
+        // Coach note
+        if (e.note) {
+          rows += `<tr><td colspan="4" style="padding:2px 8px 8px ${inSuperset ? '24' : '8'}px;font-size:11px;color:var(--text-dim);font-style:italic;border-bottom:none;">${ic('edit','var(--text-dim)',12)} ${e.note}</td></tr>`;
+        }
+      });
+      content = `<table><thead><tr><th>Exercise</th><th>Sets × Reps</th><th>Weight</th><th>RPE</th></tr></thead><tbody>${rows}</tbody></table>`;
     } else {
       content = `<p style="font-size:13px;color:var(--text-body);line-height:1.8;">${s.desc}</p>`;
     }
@@ -2329,9 +2366,24 @@ function _findExercise(name) {
   }
   return null;
 }
+function _findExDetailInProgramme(name) {
+  // Search current programme data for inline exercise details
+  const progWeeks = getClientProgrammeWeeks();
+  for (const wk of Object.values(progWeeks)) {
+    for (const s of (wk.sessions || [])) {
+      for (const e of (s.exercises || [])) {
+        if (e.n === name && e.exDetail) return e.exDetail;
+      }
+    }
+  }
+  return null;
+}
+
 function openExModal(name) {
   const match = _findExercise(name);
-  const ex = match ? match.data : null;
+  let ex = match ? match.data : null;
+  // If not in EXERCISE_DB, check inline programme data
+  if (!ex) ex = _findExDetailInProgramme(name);
   if (!ex) { alert('No details available for ' + name); return; }
   document.getElementById('exModalName').textContent = name;
   document.getElementById('exModalCat').textContent = ex.cat;
@@ -3104,11 +3156,34 @@ function renderCPWeeklySummary() {
   renderBarChartSimple('cpWkSleepChart', dayLabels, days.map(d => d.sleep), 'Sleep (hours)', '#9B8EC4');
 }
 
+function _getClientConversation() {
+  if (!loggedInUser) return null;
+  const cid = loggedInUser.clientId;
+  const clientRec = CLIENTS.find(c => c.id === cid);
+  if (!clientRec) return null;
+  // Find matching PT_CONVERSATIONS entry by client name or ID
+  let cv = PT_CONVERSATIONS.find(c => c.clientId === cid);
+  if (!cv) cv = PT_CONVERSATIONS.find(c => c.name === clientRec.name);
+  return cv;
+}
+
 function renderClientMessages() {
-  document.getElementById('clientMsgThread').innerHTML = `
-    <div style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:28px;height:28px;border-radius:8px;background:var(--ember-soft);color:var(--ember);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'Space Grotesk';">AH</div><span style="font-size:12px;font-weight:500;">Coach Adam</span><span style="font-size:10px;color:var(--text-dim);margin-left:auto;">Thu 27 Mar, 14:22</span></div><div style="background:var(--ember-soft);border:1px solid rgba(224,122,58,0.15);border-radius:0 12px 12px 12px;padding:12px 16px;margin-left:36px;font-size:13px;color:var(--text-body);line-height:1.6;">Great session today James. Squat numbers are looking strong — we'll push for 100kg next phase. How are the knees feeling after the increase?</div></div>
-    <div style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;justify-content:flex-end;"><span style="font-size:10px;color:var(--text-dim);">Thu 27 Mar, 15:10</span><span style="font-size:12px;font-weight:500;">You</span><div style="width:28px;height:28px;border-radius:8px;background:var(--ocean-soft);color:var(--ocean);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'Space Grotesk';">JW</div></div><div style="background:var(--ocean-soft);border:1px solid rgba(74,157,200,0.15);border-radius:12px 0 12px 12px;padding:12px 16px;margin-right:36px;margin-left:auto;max-width:80%;font-size:13px;color:var(--text-body);line-height:1.6;">Knees feel good! No issues at all. Really pleased with how the squats are progressing.</div></div>
-    <div style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:28px;height:28px;border-radius:8px;background:var(--ember-soft);color:var(--ember);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'Space Grotesk';">AH</div><span style="font-size:12px;font-weight:500;">Coach Adam</span><span style="font-size:10px;color:var(--text-dim);margin-left:auto;">Fri 28 Mar, 09:15</span></div><div style="background:var(--ember-soft);border:1px solid rgba(224,122,58,0.15);border-radius:0 12px 12px 12px;padding:12px 16px;margin-left:36px;font-size:13px;color:var(--text-body);line-height:1.6;">Good to hear. I've updated your programme — take a look and let me know if the volume feels right. Get that long run in this weekend.</div></div>`;
+  const thread = document.getElementById('clientMsgThread');
+  const cv = _getClientConversation();
+  if (!cv || !cv.messages || !cv.messages.length) {
+    thread.innerHTML = `<div style="text-align:center;padding:40px 20px;"><p style="color:var(--text-dim);font-size:13px;">No messages yet. Send your coach a message to get started.</p></div>`;
+    return;
+  }
+  const clientInitials = cv.initials || (loggedInUser.name || '').split(' ').map(w=>w[0]).join('').toUpperCase();
+  thread.innerHTML = cv.messages.map(m => {
+    const isPT = m.from === 'pt';
+    if (isPT) {
+      return `<div style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:28px;height:28px;border-radius:8px;background:var(--ember-soft);color:var(--ember);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'Space Grotesk';">AH</div><span style="font-size:12px;font-weight:500;">Coach Adam</span><span style="font-size:10px;color:var(--text-dim);margin-left:auto;">${m.time}</span></div><div style="background:var(--ember-soft);border:1px solid rgba(224,122,58,0.15);border-radius:0 12px 12px 12px;padding:12px 16px;margin-left:36px;font-size:13px;color:var(--text-body);line-height:1.6;">${m.text}</div></div>`;
+    } else {
+      return `<div style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;justify-content:flex-end;"><span style="font-size:10px;color:var(--text-dim);">${m.time}</span><span style="font-size:12px;font-weight:500;">You</span><div style="width:28px;height:28px;border-radius:8px;background:var(--ocean-soft);color:var(--ocean);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'Space Grotesk';">${clientInitials}</div></div><div style="background:var(--ocean-soft);border:1px solid rgba(74,157,200,0.15);border-radius:12px 0 12px 12px;padding:12px 16px;margin-right:36px;margin-left:auto;max-width:80%;font-size:13px;color:var(--text-body);line-height:1.6;">${m.text}</div></div>`;
+    }
+  }).join('');
+  thread.scrollTop = thread.scrollHeight;
 }
 
 function selectMood(btn) {
@@ -3123,12 +3198,38 @@ function submitWellbeing() {
 function sendClientMsg() {
   const input = document.getElementById('clientMsgInput');
   if (!input.value.trim()) return;
-  const thread = document.getElementById('clientMsgThread');
-  const time = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-  thread.innerHTML += `<div style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;justify-content:flex-end;"><span style="font-size:10px;color:var(--text-dim);">Just now, ${time}</span><span style="font-size:12px;font-weight:500;">You</span><div style="width:28px;height:28px;border-radius:8px;background:var(--ocean-soft);color:var(--ocean);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'Space Grotesk';">JW</div></div><div style="background:var(--ocean-soft);border:1px solid rgba(74,157,200,0.15);border-radius:12px 0 12px 12px;padding:12px 16px;margin-right:36px;margin-left:auto;max-width:80%;font-size:13px;color:var(--text-body);line-height:1.6;">${input.value}</div></div>`;
-  input.value = ''; thread.scrollTop = thread.scrollHeight;
-  // Trigger notification to PT (client sent a message)
-  triggerNewMessage(1, 'James Wilson', 'james.wilson@email.com', false);
+  const text = input.value.trim();
+  const timeStr = 'Just now';
+  // Add to PT_CONVERSATIONS if conversation exists, or create one
+  let cv = _getClientConversation();
+  const cid = loggedInUser ? loggedInUser.clientId : 1;
+  const clientRec = CLIENTS.find(c => c.id === cid);
+  const clientName = clientRec ? clientRec.name : 'Client';
+  const clientEmail = clientRec ? clientRec.email : '';
+  if (!cv) {
+    // Create a new conversation
+    const initials = clientName.split(' ').map(w=>w[0]).join('').toUpperCase();
+    cv = {
+      clientId: cid,
+      name: clientName,
+      initials: initials,
+      bg: 'var(--ocean-soft)',
+      colour: 'var(--ocean)',
+      preview: '',
+      time: 'Now',
+      unread: true,
+      messages: []
+    };
+    PT_CONVERSATIONS.push(cv);
+  }
+  cv.messages.push({ from: 'client', text: text, time: timeStr });
+  cv.preview = text.substring(0, 40) + (text.length > 40 ? '...' : '');
+  cv.time = 'Now';
+  cv.unread = true;
+  input.value = '';
+  renderClientMessages();
+  triggerNewMessage(cid, clientName, clientEmail, false);
+  scheduleSave();
 }
 
 // ═══════════════════════════════════════
@@ -4592,17 +4693,37 @@ function convertBuilderToClientFormat(builderProgramme, weekNumber) {
         }).join('. ');
         sessions.push({ day: abbr, type: 'cardio', name: sessionName, desc: desc });
       } else {
-        const exercises = sess.exercises.map(item => {
+        const exercises = sess.exercises.map((item, exIdx) => {
           const exName = item.resolvedName || item.exerciseId || '';
           const setsStr = item.sets ? (item.reps ? item.sets + ' \u00d7 ' + item.reps : item.sets + ' sets') : '';
-          return {
+          const entry = {
             n: exName,
             sr: setsStr,
             w: item.weight || '',
-            rpe: item.intensity ? parseInt(item.intensity.replace(/[^0-9]/g,'')) || '' : ''
+            rpe: item.intensity || '',
+            note: item.note || '',
+            perSide: item.perSide || false,
+            rest: item.rest || '',
+            _idx: exIdx
           };
+          if (item.exDetail) entry.exDetail = item.exDetail;
+          return entry;
         });
-        sessions.push({ day: abbr, type: 'strength', name: sessionName, exercises: exercises });
+        // Build superset info
+        const supersets = [];
+        if (sess.supersets && sess.supersets.length) {
+          sess.supersets.forEach(ss => {
+            supersets.push({
+              type: ss.type || 'Superset',
+              rounds: ss.rounds || '',
+              restBetweenEx: ss.restBetweenEx || '',
+              restBetweenRound: ss.restBetweenRound || '',
+              notes: ss.notes || '',
+              exerciseIndices: ss.exerciseIndices || []
+            });
+          });
+        }
+        sessions.push({ day: abbr, type: 'strength', name: sessionName, exercises: exercises, supersets: supersets });
       }
     });
   });
