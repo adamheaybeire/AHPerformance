@@ -322,6 +322,22 @@
 
     /* Messages */
     #clientMessages .card{max-height:calc(100vh - 200px) !important;}
+
+    /* Wellbeing page mobile */
+    #clientWellbeing .wellbeing-grid{grid-template-columns:1fr 1fr !important;gap:8px !important;}
+    #clientWellbeing .wb-metric select{font-size:12px !important;padding:8px !important;}
+    #clientWellbeing .mood-scale{gap:6px !important;}
+    #clientWellbeing .mood-btn{width:40px !important;height:40px !important;font-size:16px !important;}
+    #clientWellbeing .card{padding:14px !important;}
+    #clientWellbeing .symptom-grid{grid-template-columns:1fr 1fr !important;}
+    #clientWellbeing .slider-row{flex-direction:column;gap:4px;}
+    #clientWellbeing .slider-row label{font-size:12px !important;}
+    #clientWellbeing .truncated-table{font-size:11px !important;}
+    #clientWellbeing .truncated-table th,#clientWellbeing .truncated-table td{padding:6px 4px !important;}
+
+    /* Workout logger mobile */
+    .wl-overlay .wl-header{padding:12px 16px !important;}
+    .wl-overlay .wl-exercise{padding:12px !important;}
   }
 
   /* ─── WORKOUT LOGGER (Gym Mode) ─── */
@@ -1409,7 +1425,7 @@
         <div class="detail-info"><h2 id="detailName"></h2><p id="detailMeta"></p></div>
         <div style="margin-left:auto;display:flex;gap:8px;">
           <button class="btn btn-sm btn-secondary" onclick="showPTPage('ptMessages')">Message</button>
-          <button class="btn btn-sm btn-ember">Edit Programme</button>
+          <button class="btn btn-sm btn-ember" onclick="if(currentDetailClient) goToProgrammeBuilder(currentDetailClient.id)">Edit Programme</button>
         </div>
       </div>
       <div class="detail-tabs">
@@ -1926,7 +1942,7 @@ function buildSidebars() {
     <div class="sidebar-section">Dashboard</div>
     <div class="nav-item active" onclick="showPTPage('ptDash')"><span class="nav-ic">${ic('dashboard','currentColor')}</span><span>Overview</span></div>
     <div class="nav-item" onclick="showPTPage('ptClients')"><span class="nav-ic">${ic('clients','currentColor')}</span><span>Clients</span></div>
-    <div class="nav-item" onclick="showPTPage('ptMessages')"><span class="nav-ic">${ic('messages','currentColor')}</span><span>Messages</span><span class="badge">3</span></div>
+    <div class="nav-item" onclick="showPTPage('ptMessages')"><span class="nav-ic">${ic('messages','currentColor')}</span><span>Messages</span><span class="badge" id="ptMsgSidebarBadge">3</span></div>
     <div class="sidebar-section">Tools</div>
     <div class="nav-item" onclick="showPTPage('ptProgrammes')"><span class="nav-ic">${ic('programme','currentColor')}</span><span>Programmes</span></div>
     <div class="nav-item" onclick="showPTPage('ptNutrition')"><span class="nav-ic">${ic('nutrition','currentColor')}</span><span>Nutrition</span></div>
@@ -1968,8 +1984,8 @@ function login(role) {
   currentRole = role;
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('onboardingLanding').style.display = 'none';
-  if (role === 'client') { document.getElementById('clientApp').classList.add('active'); initClientApp(); }
-  else { document.getElementById('ptApp').classList.add('active'); initPTApp(); }
+  if (role === 'client') { document.getElementById('clientApp').classList.add('active'); initClientApp(); showClientPage('clientDash'); mobileNav('clientDash'); }
+  else { document.getElementById('ptApp').classList.add('active'); initPTApp(); showPTPage('ptDash'); }
 }
 
 function logout() {
@@ -2212,12 +2228,7 @@ function initClientApp() {
   moreEl('moreNutritionIc','nutrition','#8BB07E');
   moreEl('moreNotifIc','bell','#4A9DC8');
 
-  const moodLabels = {1:'Struggling',2:'Low',3:'Neutral',4:'Good',5:'Great'};
-  document.getElementById('wbHistoryBody').innerHTML =
-    WELLBEING_DATA.filter(w=>w.clientId===1).map(w=> `<tr><td class="val">${w.date}</td><td>${w.mood}/5 ${moodLabels[w.mood]}</td><td>${w.energy}</td><td>${w.sleep}</td><td>${w.soreness}</td><td>${w.stress}</td></tr>`).join('') +
-    `<tr><td class="val">26 Mar</td><td>5/5 Great</td><td>Very High</td><td>Excellent</td><td>None</td><td>Very Low</td></tr>
-     <tr><td class="val">24 Mar</td><td>3/5 Neutral</td><td>Moderate</td><td>Average</td><td>Moderate</td><td>Moderate</td></tr>
-     <tr><td class="val">21 Mar</td><td>4/5 Good</td><td>High</td><td>Good</td><td>Mild</td><td>Low</td></tr>`;
+  renderWellbeingHistory();
 }
 
 function renderDashStrChart() {
@@ -2340,9 +2351,12 @@ function renderProgrammeWeek() {
         const inSuperset = !!ssMap[idx];
         const nameStyle = inSuperset ? 'padding-left:16px;' : '';
         rows += `<tr><td class="val" style="${nameStyle}"><span class="ex-clickable" onclick="openExModal('${esc}')">${e.n}${e.perSide ? ' <span style="font-size:10px;color:var(--text-dim);">(per side)</span>' : ''}</span></td><td>${e.sr}</td><td class="val">${e.w}</td><td>${e.rpe}</td></tr>`;
-        // Coach note
-        if (e.note) {
-          rows += `<tr><td colspan="4" style="padding:2px 8px 8px ${inSuperset ? '24' : '8'}px;font-size:11px;color:var(--text-dim);font-style:italic;border-bottom:none;">${ic('edit','var(--text-dim)',12)} ${e.note}</td></tr>`;
+        // Rest time and coach note
+        const extras = [];
+        if (e.rest) extras.push('Rest: ' + e.rest);
+        if (e.note) extras.push(e.note);
+        if (extras.length) {
+          rows += `<tr><td colspan="4" style="padding:2px 8px 8px ${inSuperset ? '24' : '8'}px;font-size:11px;color:var(--text-dim);font-style:italic;border-bottom:none;">${e.rest ? ic('stopwatch','var(--text-dim)',12) : ic('edit','var(--text-dim)',12)} ${extras.join(' · ')}</td></tr>`;
         }
       });
       content = `<table><thead><tr><th>Exercise</th><th>Sets × Reps</th><th>Weight</th><th>RPE</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -3186,14 +3200,67 @@ function renderClientMessages() {
   thread.scrollTop = thread.scrollHeight;
 }
 
-function selectMood(btn) {
+let selectedMoodValue = null;
+function selectMood(btn, value) {
   document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
+  selectedMoodValue = value;
 }
 function submitWellbeing() {
-  const mood = document.querySelector('.mood-btn.selected');
-  if (!mood) { alert('Please select how you\'re feeling.'); return; }
+  if (!selectedMoodValue) { alert('Please select how you\'re feeling.'); return; }
+  const cid = loggedInUser ? loggedInUser.clientId : 1;
+  const energy = document.getElementById('wbEnergy').value || '';
+  const sleep = document.getElementById('wbSleep').value || '';
+  const soreness = document.getElementById('wbSoreness').value || '';
+  const stress = document.getElementById('wbStress').value || '';
+  const notes = document.getElementById('wbNotes').value || '';
+
+  const now = new Date();
+  const dateStr = now.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
+
+  WELLBEING_DATA.unshift({
+    clientId: cid,
+    date: dateStr,
+    mood: selectedMoodValue,
+    energy: energy,
+    sleep: sleep,
+    soreness: soreness,
+    stress: stress,
+    notes: notes,
+    timestamp: now.toISOString()
+  });
+
+  // Reset form
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+  selectedMoodValue = null;
+  document.getElementById('wbEnergy').value = '';
+  document.getElementById('wbSleep').value = '';
+  document.getElementById('wbSoreness').value = '';
+  document.getElementById('wbStress').value = '';
+  document.getElementById('wbNotes').value = '';
+
   document.getElementById('wbConfirm').classList.remove('hidden');
+  setTimeout(() => document.getElementById('wbConfirm').classList.add('hidden'), 3000);
+
+  // Re-render history
+  renderWellbeingHistory();
+
+  // Notify PT
+  const clientRec = CLIENTS.find(c => c.id === cid);
+  if (clientRec) {
+    addPTNotification('wellbeing', cid, clientRec.name, 'Submitted daily wellbeing check-in');
+  }
+
+  scheduleSave();
+}
+
+function renderWellbeingHistory() {
+  const cid = loggedInUser ? loggedInUser.clientId : 1;
+  const moodLabels = {1:'Struggling',2:'Low',3:'Neutral',4:'Good',5:'Great'};
+  const el = document.getElementById('wbHistoryBody');
+  if (!el) return;
+  const data = WELLBEING_DATA.filter(w => w.clientId === cid);
+  el.innerHTML = data.map(w => `<tr><td class="val">${w.date}</td><td>${w.mood}/5 ${moodLabels[w.mood] || ''}</td><td>${w.energy || '—'}</td><td>${w.sleep || '—'}</td><td>${w.soreness || '—'}</td><td>${w.stress || '—'}</td></tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:16px;">No check-ins yet. Submit one above.</td></tr>';
 }
 function sendClientMsg() {
   const input = document.getElementById('clientMsgInput');
@@ -4267,8 +4334,9 @@ function submitCheckin() {
   const ca = parseFloat(document.getElementById('ciCalf')?.value) || 0;
 
   // Determine week number (next after latest)
-  const logs = CHECKIN_LOG[1] || [];
-  const lastWeek = logs.length ? logs[0].week : 8;
+  const cid = loggedInUser ? loggedInUser.clientId : 1;
+  const logs = CHECKIN_LOG[cid] || [];
+  const lastWeek = logs.length ? logs[0].week : 0;
   const newWeek = lastWeek + 1;
 
   // Format today's date
@@ -4299,8 +4367,8 @@ function submitCheckin() {
   };
 
   // Add to beginning of array
-  if (!CHECKIN_LOG[1]) CHECKIN_LOG[1] = [];
-  CHECKIN_LOG[1].unshift(newCI);
+  if (!CHECKIN_LOG[cid]) CHECKIN_LOG[cid] = [];
+  CHECKIN_LOG[cid].unshift(newCI);
 
   // Update client check-in history
   renderCheckinHistory();
@@ -4316,7 +4384,11 @@ function submitCheckin() {
   if (banner) banner.classList.add('hidden');
 
   // Trigger notification to PT
-  triggerCheckinSubmitted(1, 'James Wilson', 'james.wilson@email.com', newWeek);
+  const clientRec = CLIENTS.find(c => c.id === cid);
+  const clientName = clientRec ? clientRec.name : 'Client';
+  const clientEmail = clientRec ? clientRec.email : '';
+  triggerCheckinSubmitted(cid, clientName, clientEmail, newWeek);
+  scheduleSave();
 }
 
 function resetCheckinWizard() {
@@ -4341,7 +4413,8 @@ function resetCheckinWizard() {
 function renderCheckinHistory() {
   const el = document.getElementById('checkinHistory');
   if (!el) return;
-  const logs = CHECKIN_LOG[1] || [];
+  const cid = loggedInUser ? loggedInUser.clientId : 1;
+  const logs = CHECKIN_LOG[cid] || [];
   if (!logs.length) { el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No check-ins submitted yet.</p>'; return; }
   el.innerHTML = logs.map(ci => renderCheckinCard(ci, false)).join('');
 }
@@ -4484,15 +4557,17 @@ function renderClientNotifs() {
     'achievement': {icon:'trophy', colour:'var(--ember)'},
     'milestone': {icon:'fire', colour:'var(--sage-text)'}
   };
+  const actionLabels = {'programme':'View','checkin-reviewed':'View','message':'Read','checkin-due':'Open','achievement':'View','milestone':'View'};
   listEl.innerHTML = notifs.map(n => {
     const ti = typeIcons[n.type] || {icon:'bell', colour:'var(--text-muted)'};
-    return `<div class="notif-item ${n.read?'':'unread'}" onclick="handleClientNotif('${n.id}','${n.type}')" style="display:flex;gap:10px;align-items:flex-start;">
-      <div style="flex-shrink:0;margin-top:2px;">${ic(ti.icon, ti.colour, 16)}</div>
+    const actionLabel = actionLabels[n.type] || 'View';
+    return `<div class="notif-item ${n.read?'':'unread'}" onclick="handleClientNotif('${n.id}','${n.type}')" style="display:flex;gap:10px;align-items:center;">
+      <div style="flex-shrink:0;">${ic(ti.icon, ti.colour, 16)}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:12px;font-weight:${n.read?'400':'600'};color:var(--text-bright);line-height:1.4;">${n.message}</div>
         <div style="font-size:10px;color:var(--text-dim);margin-top:2px;">${n.time}</div>
       </div>
-      ${n.read ? '' : '<div style="width:6px;height:6px;border-radius:50%;background:var(--ember);flex-shrink:0;margin-top:6px;"></div>'}
+      ${n.read ? '' : `<button style="flex-shrink:0;padding:4px 12px;border-radius:6px;border:1px solid var(--ember);background:transparent;color:var(--ember);font-size:11px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;">${actionLabel}</button>`}
     </div>`;
   }).join('');
 }
@@ -4684,8 +4759,8 @@ function convertBuilderToClientFormat(builderProgramme, weekNumber) {
       const allCardio = hasExercises && sess.exercises.every(item => (item.movementPattern || '').toLowerCase() === 'cardio');
       if (!hasExercises) {
         sessions.push({ day: abbr, type: 'cardio', name: sessionName, desc: sess.focus || '' });
-      } else if (allCardio) {
-        // Pure cardio session — build a description from the exercises
+      } else if (allCardio && !sess.exercises.some(item => item.sets || item.intensity || item.note || item.rest)) {
+        // Pure cardio session with no structured data — build a simple description
         const desc = sess.exercises.map(item => {
           const n = item.resolvedName || item.exerciseId || '';
           const sr = item.sets ? (item.reps ? item.sets + ' \u00d7 ' + item.reps : item.sets + ' sets') : '';
@@ -4915,20 +4990,45 @@ function showDetailProgrammeWeek(clientId, weekNum) {
     const colour = isCardio ? 'var(--ocean)' : 'var(--ember)';
     let content = '';
     if (s.exercises && s.exercises.length) {
+      // Build superset lookup
+      const ssMap = {}; const ssRendered = {};
+      if (s.supersets && s.supersets.length) {
+        s.supersets.forEach((ss, si) => { (ss.exerciseIndices || []).forEach(idx => { ssMap[idx] = { ...ss, _si: si }; }); });
+      }
+      let rows = '';
+      s.exercises.forEach((e, ei) => {
+        const idx = e._idx !== undefined ? e._idx : ei;
+        const esc = (e.n||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+        if (ssMap[idx] && !ssRendered[ssMap[idx]._si]) {
+          ssRendered[ssMap[idx]._si] = true;
+          const ss = ssMap[idx];
+          const ssDetails = [];
+          if (ss.rounds) ssDetails.push(ss.rounds + ' rounds');
+          if (ss.restBetweenEx) ssDetails.push('Rest between: ' + ss.restBetweenEx);
+          if (ss.restBetweenRound) ssDetails.push('Rest between rounds: ' + ss.restBetweenRound);
+          rows += `<tr><td colspan="4" style="padding:8px;font-size:12px;font-weight:600;color:var(--ocean);background:rgba(74,157,200,0.04);border-bottom:1px solid rgba(74,157,200,0.15);">${ss.type || 'Superset'}${ssDetails.length ? ' — ' + ssDetails.join(' · ') : ''}${ss.notes ? '<div style="font-weight:400;font-size:11px;color:var(--text-dim);margin-top:2px;">' + ss.notes + '</div>' : ''}</td></tr>`;
+        }
+        const inSS = !!ssMap[idx];
+        rows += `<tr style="border-bottom:1px solid var(--slate-border);">
+          <td style="padding:8px;font-weight:500;${inSS?'padding-left:20px;':''}"><span class="ex-clickable" onclick="openExModal('${esc}')">${e.n}</span></td>
+          <td style="padding:8px;color:var(--text-body);">${e.sr}</td>
+          <td style="padding:8px;color:var(--text-body);">${e.w}</td>
+          <td style="padding:8px;color:var(--text-body);">${e.rpe || ''}</td>
+        </tr>`;
+        const ptExtras = [];
+        if (e.rest) ptExtras.push('Rest: ' + e.rest);
+        if (e.note) ptExtras.push(e.note);
+        if (ptExtras.length) {
+          rows += `<tr><td colspan="4" style="padding:2px 8px 8px ${inSS?'28':'8'}px;font-size:11px;color:var(--text-dim);font-style:italic;border-bottom:none;">↳ ${ptExtras.join(' · ')}</td></tr>`;
+        }
+      });
       content = `<table style="width:100%;font-size:13px;border-collapse:collapse;">
         <thead><tr style="border-bottom:1px solid var(--slate-border);text-align:left;">
           <th style="padding:6px 8px;color:var(--text-muted);font-size:11px;font-weight:500;">Exercise</th>
           <th style="padding:6px 8px;color:var(--text-muted);font-size:11px;font-weight:500;">Sets × Reps</th>
           <th style="padding:6px 8px;color:var(--text-muted);font-size:11px;font-weight:500;">Weight</th>
           <th style="padding:6px 8px;color:var(--text-muted);font-size:11px;font-weight:500;">RPE</th>
-        </tr></thead><tbody>` +
-        s.exercises.map(e => { const esc = (e.n||'').replace(/'/g,"\\'").replace(/"/g,'&quot;'); return `<tr style="border-bottom:1px solid var(--slate-border);">
-          <td style="padding:8px;font-weight:500;"><span class="ex-clickable" onclick="openExModal('${esc}')">${e.n}</span></td>
-          <td style="padding:8px;color:var(--text-body);">${e.sr}</td>
-          <td style="padding:8px;color:var(--text-body);">${e.w}</td>
-          <td style="padding:8px;color:var(--text-body);">${e.rpe || ''}</td>
-        </tr>`; }).join('') +
-        `</tbody></table>`;
+        </tr></thead><tbody>${rows}</tbody></table>`;
     } else if (s.desc) {
       content = `<p style="font-size:13px;color:var(--text-body);line-height:1.8;padding:8px 0;">${s.desc}</p>`;
     }
@@ -5771,12 +5871,18 @@ let clientNotifCounter = (CLIENT_NOTIFICATIONS[loggedInUser && loggedInUser.clie
 
 function addPTNotification(type, clientId, clientName, message) {
   ptNotifCounter++;
+  // Resolve client name — look up from CLIENTS if not provided
+  let resolvedName = clientName;
+  if (!resolvedName || resolvedName === 'undefined') {
+    const c = clientId ? CLIENTS.find(x => x.id === clientId) : null;
+    resolvedName = c ? c.name : 'System';
+  }
   PT_NOTIFICATIONS.unshift({
     id: 'n' + ptNotifCounter,
     type: type,
     clientId: clientId,
-    client: clientName || 'System',
-    message: message,
+    client: resolvedName,
+    message: message || '',
     time: 'Just now',
     read: false
   });
@@ -5863,16 +5969,21 @@ function updateSidebarBadges() {
   const clientUnreadMsgs = clientNotifs.filter(n => !n.read && n.type === 'message').length;
   const clientMsgBadge = document.getElementById('clientMsgBadge');
   if (clientMsgBadge) {
-    const totalMsgs = 2 + clientUnreadMsgs; // 2 base messages + new notifications
-    clientMsgBadge.textContent = totalMsgs;
-    clientMsgBadge.classList.toggle('hidden', totalMsgs === 0);
+    // Count unread messages from PT_CONVERSATIONS for this client
+    const cv = typeof _getClientConversation === 'function' ? _getClientConversation() : null;
+    const unreadMsgs = cv && cv.messages ? cv.messages.filter(m => m.from === 'pt' && !m.read).length + clientUnreadMsgs : clientUnreadMsgs;
+    clientMsgBadge.textContent = unreadMsgs || '';
+    clientMsgBadge.classList.toggle('hidden', unreadMsgs === 0);
   }
 
   // PT side — update unread count on notification bell already handled by renderPTNotifications
-  // PT message badge
-  const ptUnreadMsgs = PT_NOTIFICATIONS.filter(n => !n.read && n.type === 'message').length;
-  const ptMsgBadge = document.querySelector('#ptApp .nav-item .badge');
-  // Note: PT message badge is hardcoded in sidebar build; dynamic update here
+  // PT message badge — count unread conversations
+  const ptUnreadMsgs = PT_CONVERSATIONS.filter(c => c.unread).length;
+  const ptMsgBadge = document.getElementById('ptMsgSidebarBadge');
+  if (ptMsgBadge) {
+    ptMsgBadge.textContent = ptUnreadMsgs;
+    ptMsgBadge.classList.toggle('hidden', ptUnreadMsgs === 0);
+  }
 }
 
 // ═══════════════════════════════════════

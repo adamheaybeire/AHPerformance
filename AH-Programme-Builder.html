@@ -491,9 +491,10 @@ function renderExerciseSlot(day, idx) {
         <button onclick="togglePerSide(${idx})" class="per-side-btn ${item.perSide ? 'active' : ''}" title="Toggle Left/Right per side">${item.perSide ? 'L / R' : 'Both'}</button>
       </div>` : '';
 
-  return `<div class="exercise-slot" data-idx="${idx}">
+  return `<div class="exercise-slot" data-idx="${idx}" draggable="true" ondragstart="dragStartReorder(event,${idx})" ondragover="dragOverReorder(event)" ondrop="dropReorder(event,${idx})" ondragend="dragEndReorder(event)" style="cursor:grab;">
     <div class="slot-top">
       <div class="slot-exercise-name">
+        <span style="cursor:grab;color:var(--text-dim);margin-right:6px;font-size:14px;" title="Drag to reorder">⠿</span>
         <span class="slot-badge lib-badge ${getBadgeClass(ex.movementPattern)}">${ex.movementPattern}</span>
         ${ex.name}${item.perSide ? ' <span style="color:var(--ocean);font-size:11px;font-weight:600;margin-left:6px">L / R</span>' : ''}
       </div>
@@ -660,6 +661,59 @@ function moveExercise(idx, dir) {
   });
 
   renderDay();
+}
+
+// ── Drag-to-reorder exercises ──
+let dragReorderIdx = null;
+function dragStartReorder(e, idx) {
+  dragReorderIdx = idx;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', 'reorder-' + idx);
+  e.target.closest('.exercise-slot').style.opacity = '0.4';
+}
+function dragOverReorder(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const slot = e.target.closest('.exercise-slot');
+  if (slot) {
+    document.querySelectorAll('.exercise-slot').forEach(s => s.style.borderTop = '');
+    slot.style.borderTop = '3px solid var(--primary)';
+  }
+}
+function dropReorder(e, targetIdx) {
+  e.preventDefault();
+  e.stopPropagation();
+  document.querySelectorAll('.exercise-slot').forEach(s => { s.style.borderTop = ''; s.style.opacity = '1'; });
+  if (dragReorderIdx === null || dragReorderIdx === targetIdx) return;
+  const sess = currentSession();
+  if (!sess) return;
+
+  // Tag exercises with superset membership
+  sess.exercises.forEach((ex, i) => { ex._ssTag = null; });
+  sess.supersets.forEach((ss, si) => {
+    ss.exerciseIndices.forEach(i => { if (sess.exercises[i]) sess.exercises[i]._ssTag = si; });
+  });
+
+  // Extract the dragged exercise and insert at target position
+  const [moved] = sess.exercises.splice(dragReorderIdx, 1);
+  const insertIdx = targetIdx > dragReorderIdx ? targetIdx - 1 : targetIdx;
+  sess.exercises.splice(insertIdx, 0, moved);
+
+  // Rebuild superset indices
+  sess.supersets.forEach(ss => { ss.exerciseIndices = []; });
+  sess.exercises.forEach((ex, i) => {
+    if (ex._ssTag !== null && sess.supersets[ex._ssTag]) {
+      sess.supersets[ex._ssTag].exerciseIndices.push(i);
+    }
+    delete ex._ssTag;
+  });
+
+  dragReorderIdx = null;
+  renderDay();
+}
+function dragEndReorder(e) {
+  document.querySelectorAll('.exercise-slot').forEach(s => { s.style.borderTop = ''; s.style.opacity = '1'; });
+  dragReorderIdx = null;
 }
 
 function updateField(idx, field, value) {
