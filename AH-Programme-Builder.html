@@ -581,16 +581,84 @@ function removeExercise(idx) {
 
 function moveExercise(idx, dir) {
   const sess = currentSession();
-  const newIdx = idx + dir;
-  if (newIdx < 0 || newIdx >= sess.exercises.length) return;
-  [sess.exercises[idx], sess.exercises[newIdx]] = [sess.exercises[newIdx], sess.exercises[idx]];
-  sess.supersets.forEach(ss => {
-    ss.exerciseIndices = ss.exerciseIndices.map(i => {
-      if (i === idx) return newIdx;
-      if (i === newIdx) return idx;
-      return i;
+  if (!sess || !sess.exercises) return;
+
+  // Tag each exercise with its superset membership
+  sess.exercises.forEach((ex, i) => { ex._ssTag = null; });
+  sess.supersets.forEach((ss, si) => {
+    ss.exerciseIndices.forEach(i => {
+      if (sess.exercises[i]) sess.exercises[i]._ssTag = si;
     });
   });
+
+  const parentSSIdx = sess.exercises[idx] ? sess.exercises[idx]._ssTag : null;
+
+  if (parentSSIdx !== null) {
+    // Exercise is in a superset — move the entire group
+    const ss = sess.supersets[parentSSIdx];
+    const groupIndices = [...ss.exerciseIndices].sort((a,b) => a - b);
+    const minIdx = groupIndices[0];
+    const maxIdx = groupIndices[groupIndices.length - 1];
+    const groupSize = groupIndices.length;
+
+    if (dir === -1) {
+      if (minIdx <= 0) return;
+      // Find what's above: could be a single exercise or another superset
+      const aboveTag = sess.exercises[minIdx - 1]._ssTag;
+      let blockStart = minIdx - 1;
+      if (aboveTag !== null) {
+        // Another superset above — find its start
+        const aboveIndices = sess.supersets[aboveTag].exerciseIndices.sort((a,b) => a - b);
+        blockStart = aboveIndices[0];
+      }
+      // Extract our group, insert before blockStart
+      const group = sess.exercises.splice(minIdx, groupSize);
+      sess.exercises.splice(blockStart, 0, ...group);
+    } else {
+      if (maxIdx >= sess.exercises.length - 1) return;
+      const belowTag = sess.exercises[maxIdx + 1]._ssTag;
+      let blockEnd = maxIdx + 1;
+      if (belowTag !== null) {
+        const belowIndices = sess.supersets[belowTag].exerciseIndices.sort((a,b) => a - b);
+        blockEnd = belowIndices[belowIndices.length - 1];
+      }
+      // Extract our group, insert after blockEnd
+      const group = sess.exercises.splice(minIdx, groupSize);
+      const insertAt = blockEnd - groupSize + 1;
+      sess.exercises.splice(insertAt, 0, ...group);
+    }
+  } else {
+    // Single exercise
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= sess.exercises.length) return;
+
+    const targetTag = sess.exercises[newIdx]._ssTag;
+    if (targetTag !== null) {
+      // Target is in a superset — skip over the entire group
+      const targetIndices = sess.supersets[targetTag].exerciseIndices.sort((a,b) => a - b);
+      const ex = sess.exercises.splice(idx, 1)[0];
+      if (dir === -1) {
+        sess.exercises.splice(targetIndices[0], 0, ex);
+      } else {
+        // After removing idx, the max index of the superset may have shifted
+        const adjustedMax = targetIndices[targetIndices.length - 1] - (idx < targetIndices[targetIndices.length - 1] ? 1 : 0);
+        sess.exercises.splice(adjustedMax + 1, 0, ex);
+      }
+    } else {
+      // Simple swap
+      [sess.exercises[idx], sess.exercises[newIdx]] = [sess.exercises[newIdx], sess.exercises[idx]];
+    }
+  }
+
+  // Rebuild all superset indices from _ssTag
+  sess.supersets.forEach(ss => { ss.exerciseIndices = []; });
+  sess.exercises.forEach((ex, i) => {
+    if (ex._ssTag !== null && sess.supersets[ex._ssTag]) {
+      sess.supersets[ex._ssTag].exerciseIndices.push(i);
+    }
+    delete ex._ssTag;
+  });
+
   renderDay();
 }
 
@@ -851,6 +919,16 @@ function assignToClient() {
         const ex = exercises.find(e => e.id === item.exerciseId);
         item.resolvedName = ex ? ex.name : item.exerciseId;
         item.movementPattern = ex ? ex.movementPattern : '';
+        // Include detail data for exercise modal on client side
+        if (ex) {
+          item.exDetail = {
+            cat: (ex.movementPattern || '') + (ex.primaryMuscles ? ' · ' + ex.primaryMuscles.split(',')[0].trim() : ''),
+            muscles: [ex.primaryMuscles, ex.secondaryMuscles].filter(Boolean).join(', '),
+            setup: ex.description || '',
+            cues: (ex.coachingCues || []).join('. '),
+            mistakes: (ex.commonMistakes || []).join('. ')
+          };
+        }
       });
     });
   });
