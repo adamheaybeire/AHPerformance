@@ -1,7 +1,7 @@
 // AH Performance — Service Worker
 // Enables offline access and "Add to Home Screen" as a real app
 
-const CACHE_NAME = 'ah-performance-v1';
+const CACHE_NAME = 'ah-performance-v2';
 const ASSETS_TO_CACHE = [
   '/AH-Performance-App.html',
   '/AH-Programme-Builder.html',
@@ -47,17 +47,30 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Static assets: try cache first, fall back to network, update cache
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      const networkFetch = fetch(event.request).then(response => {
-        // Update cache with fresh version
+  // HTML files: network-first (always get fresh version, fall back to cache offline)
+  if (url.pathname.endsWith('.html') || url.pathname === '/') {
+    event.respondWith(
+      fetch(event.request).then(response => {
         if (response.ok) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => cached);  // If network fails, return cached
+      }).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Other static assets (icons, manifest): cache-first with background update
+  event.respondWith(
+    caches.match(event.request).then(cached => {
+      const networkFetch = fetch(event.request).then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => cached);
 
       return cached || networkFetch;
     })
