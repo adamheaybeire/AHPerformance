@@ -343,55 +343,67 @@
     .wl-overlay .wl-exercise{padding:12px !important;}
   }
 
-  /* ─── WORKOUT LOGGER (Gym Mode) ─── */
+  /* ─── WORKOUT LOGGER (Gym Mode) — compact sizing ─── */
   .wl-overlay{position:fixed;inset:0;z-index:200;background:var(--slate-deep);display:none;flex-direction:column;overflow:hidden;}
   .wl-overlay.active{display:flex;}
-  .wl-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--slate-card);border-bottom:1px solid var(--slate-border);flex-shrink:0;}
-  .wl-header h2{font-size:16px;margin:0;font-family:'Space Grotesk',sans-serif;}
-  .wl-close{background:none;border:none;color:var(--text-muted);font-size:22px;cursor:pointer;padding:4px 8px;-webkit-tap-highlight-color:transparent;}
-  .wl-timer{font-family:'Space Grotesk',sans-serif;font-size:13px;color:var(--ocean);font-weight:600;letter-spacing:0.5px;}
-  .wl-body{flex:1;overflow-y:auto;padding:16px 16px 100px;-webkit-overflow-scrolling:touch;}
-  .wl-session-pick{display:flex;flex-direction:column;gap:10px;padding:8px 0;}
-  .wl-session-card{background:var(--slate-card);border:1px solid var(--slate-border);border-radius:14px;padding:18px 16px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:border-color 0.15s;position:relative;overflow:hidden;}
-  .wl-session-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;}
+  .wl-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--slate-card);border-bottom:1px solid var(--slate-border);flex-shrink:0;}
+  .wl-header h2{font-size:14px;margin:0;font-family:'Space Grotesk',sans-serif;}
+  .wl-close{background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;padding:4px 8px;-webkit-tap-highlight-color:transparent;}
+  .wl-body{flex:1;overflow-y:auto;padding:12px 12px 180px;-webkit-overflow-scrolling:touch;}
+  .wl-session-pick{display:flex;flex-direction:column;gap:8px;padding:6px 0;}
+  .wl-session-card{background:var(--slate-card);border:1px solid var(--slate-border);border-radius:12px;padding:14px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:border-color 0.15s;position:relative;overflow:hidden;}
+  .wl-session-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
   .wl-session-card.strength::before{background:var(--ember);}
   .wl-session-card.cardio::before{background:var(--ocean);}
   .wl-session-card:active{border-color:var(--ember);}
-  .wl-session-card h3{font-size:15px;margin:0 0 4px;font-family:'Space Grotesk',sans-serif;}
-  .wl-session-card p{font-size:12px;color:var(--text-dim);margin:0;}
-  .wl-exercise-block{background:var(--slate-card);border:1px solid var(--slate-border);border-radius:14px;margin-bottom:14px;overflow:hidden;}
-  .wl-ex-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
-  .wl-ex-header h3{font-size:14px;margin:0;color:var(--text-bright);font-weight:600;}
-  .wl-ex-header .wl-ex-tag{font-size:11px;color:var(--text-dim);font-family:'Space Grotesk',sans-serif;}
-  .wl-ex-detail{font-size:11px;color:var(--text-muted);margin-top:2px;}
-  .wl-ex-body{padding:0 12px 14px;}
-  .wl-set-row{display:grid;grid-template-columns:36px 1fr 1fr 52px;gap:8px;align-items:center;margin-bottom:8px;}
-  .wl-set-row.header{margin-bottom:4px;}
-  .wl-set-row.header span{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;font-family:'Space Grotesk',sans-serif;}
-  .wl-set-num{width:32px;height:32px;border-radius:50%;background:var(--slate-raised);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--text-muted);font-family:'Space Grotesk',sans-serif;}
+  .wl-session-card h3{font-size:13px;margin:0 0 2px;font-family:'Space Grotesk',sans-serif;}
+  .wl-session-card p{font-size:11px;color:var(--text-dim);margin:0;}
+  .wl-exercise-block{background:var(--slate-card);border:1px solid var(--slate-border);border-radius:12px;margin-bottom:10px;overflow:hidden;}
+  .wl-exercise-block.wl-superset{border-color:var(--ocean-border);border-left:3px solid var(--ocean);}
+  .wl-ss-header{padding:8px 12px;background:rgba(74,157,200,0.06);border-bottom:1px solid rgba(74,157,200,0.12);font-size:11px;font-weight:600;color:var(--ocean);font-family:'Space Grotesk',sans-serif;}
+  .wl-ss-header .wl-ss-detail{font-weight:400;color:var(--text-dim);font-size:10px;}
+  .wl-coach-note{padding:6px 12px;background:rgba(139,176,126,0.06);border-bottom:1px solid rgba(139,176,126,0.12);font-size:11px;color:var(--sage-text);font-style:italic;}
+  .wl-ex-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+  .wl-ex-header h3{font-size:13px;margin:0;color:var(--text-bright);font-weight:600;}
+  .wl-ex-header .wl-ex-tag{font-size:10px;color:var(--text-dim);font-family:'Space Grotesk',sans-serif;}
+  .wl-ex-detail{font-size:10px;color:var(--text-muted);margin-top:1px;}
+  .wl-ex-body{padding:0 10px 10px;}
+  .wl-set-row{display:grid;grid-template-columns:28px 1fr 1fr 40px;gap:6px;align-items:center;margin-bottom:6px;}
+  .wl-set-row.header{margin-bottom:2px;}
+  .wl-set-row.header span{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;font-family:'Space Grotesk',sans-serif;}
+  .wl-set-num{width:26px;height:26px;border-radius:50%;background:var(--slate-raised);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text-muted);font-family:'Space Grotesk',sans-serif;}
   .wl-set-num.done{background:var(--sage);color:white;}
-  .wl-set-input{width:100%;padding:10px 8px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:10px;color:var(--text-bright);font-size:16px;font-family:'Space Grotesk',sans-serif;text-align:center;-webkit-appearance:none;appearance:none;}
+  .wl-set-input{width:100%;padding:8px 6px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);font-size:14px;font-family:'Space Grotesk',sans-serif;text-align:center;-webkit-appearance:none;appearance:none;}
   .wl-set-input:focus{border-color:var(--ember);outline:none;}
-  .wl-set-input::placeholder{color:var(--text-dim);font-size:13px;}
-  .wl-check-btn{width:44px;height:44px;border-radius:12px;border:2px solid var(--slate-border);background:transparent;color:var(--text-dim);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:all 0.15s;}
+  .wl-set-input::placeholder{color:var(--text-dim);font-size:11px;}
+  .wl-check-btn{width:36px;height:36px;border-radius:10px;border:2px solid var(--slate-border);background:transparent;color:var(--text-dim);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:all 0.15s;}
   .wl-check-btn.checked{background:var(--sage);border-color:var(--sage);color:white;}
-  .wl-add-set{background:none;border:1px dashed var(--slate-border);border-radius:10px;padding:10px;width:100%;color:var(--text-dim);font-size:13px;cursor:pointer;margin-top:4px;-webkit-tap-highlight-color:transparent;}
+  .wl-add-set{background:none;border:1px dashed var(--slate-border);border-radius:8px;padding:8px;width:100%;color:var(--text-dim);font-size:11px;cursor:pointer;margin-top:4px;-webkit-tap-highlight-color:transparent;}
   .wl-add-set:active{background:var(--slate-raised);}
-  .wl-notes-input{width:100%;padding:10px 12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:10px;color:var(--text-body);font-size:13px;resize:none;min-height:40px;font-family:Inter,sans-serif;}
+  .wl-notes-input{width:100%;padding:8px 10px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-body);font-size:12px;resize:none;min-height:32px;font-family:Inter,sans-serif;}
   .wl-notes-input:focus{border-color:var(--ocean);outline:none;}
-  .wl-footer{position:fixed;bottom:0;left:0;right:0;padding:12px 16px env(safe-area-inset-bottom,12px);background:var(--slate-card);border-top:1px solid var(--slate-border);z-index:201;backdrop-filter:blur(20px);}
-  .wl-finish-btn{width:100%;padding:16px;border:none;border-radius:14px;background:var(--sage);color:white;font-size:16px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;letter-spacing:0.3px;-webkit-tap-highlight-color:transparent;transition:opacity 0.15s;}
+  /* Timer bar — fixed above footer */
+  .wl-timer-bar{position:fixed;bottom:62px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:0;padding:8px 16px;background:var(--slate-card);border-top:1px solid var(--slate-border);z-index:202;}
+  .wl-timer-section{display:flex;flex-direction:column;align-items:center;flex:1;}
+  .wl-timer-label{font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);font-family:'Space Grotesk',sans-serif;}
+  .wl-timer-value{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--ocean);letter-spacing:1px;}
+  .wl-rest-timer{color:var(--ember);}
+  .wl-rest-timer.counting{animation:pulse-rest 1s infinite;}
+  @keyframes pulse-rest{0%,100%{opacity:1;}50%{opacity:0.5;}}
+  .wl-timer-divider{width:1px;height:28px;background:var(--slate-border);}
+  .wl-footer{position:fixed;bottom:0;left:0;right:0;padding:8px 14px calc(8px + env(safe-area-inset-bottom,0px));background:var(--slate-card);border-top:1px solid var(--slate-border);z-index:201;backdrop-filter:blur(20px);}
+  .wl-finish-btn{width:100%;padding:14px;border:none;border-radius:12px;background:var(--sage);color:white;font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;letter-spacing:0.3px;-webkit-tap-highlight-color:transparent;transition:opacity 0.15s;}
   .wl-finish-btn:active{opacity:0.8;}
   .wl-finish-btn:disabled{opacity:0.4;cursor:not-allowed;}
-  .wl-summary{text-align:center;padding:40px 20px;}
-  .wl-summary h2{font-size:22px;margin-bottom:8px;font-family:'Space Grotesk',sans-serif;color:var(--text-bright);}
-  .wl-summary p{font-size:13px;color:var(--text-muted);margin-bottom:24px;}
-  .wl-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0;}
-  .wl-stat{background:var(--slate-card);border:1px solid var(--slate-border);border-radius:12px;padding:16px;}
-  .wl-stat-val{font-size:24px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--ember);}
-  .wl-stat-label{font-size:11px;color:var(--text-dim);margin-top:2px;}
-  .wl-rpe-row{display:flex;gap:6px;justify-content:center;margin:16px 0;}
-  .wl-rpe-btn{width:40px;height:40px;border-radius:50%;border:2px solid var(--slate-border);background:transparent;color:var(--text-muted);font-size:14px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;-webkit-tap-highlight-color:transparent;transition:all 0.15s;}
+  .wl-summary{text-align:center;padding:30px 16px;}
+  .wl-summary h2{font-size:20px;margin-bottom:6px;font-family:'Space Grotesk',sans-serif;color:var(--text-bright);}
+  .wl-summary p{font-size:12px;color:var(--text-muted);margin-bottom:20px;}
+  .wl-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0;}
+  .wl-stat{background:var(--slate-card);border:1px solid var(--slate-border);border-radius:10px;padding:12px;}
+  .wl-stat-val{font-size:20px;font-weight:700;font-family:'Space Grotesk',sans-serif;color:var(--ember);}
+  .wl-stat-label{font-size:10px;color:var(--text-dim);margin-top:2px;}
+  .wl-rpe-row{display:flex;gap:4px;justify-content:center;margin:12px 0;}
+  .wl-rpe-btn{width:34px;height:34px;border-radius:50%;border:2px solid var(--slate-border);background:transparent;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;-webkit-tap-highlight-color:transparent;transition:all 0.15s;}
   .wl-rpe-btn.selected{background:var(--ember);border-color:var(--ember);color:white;}
 
   /* ─── WEEKLY CHECK-IN WIZARD ─── */
@@ -1337,13 +1349,30 @@
   <div class="wl-header">
     <button class="wl-close" onclick="closeWorkoutLogger()">&larr;</button>
     <h2 id="wlTitle">Start Workout</h2>
-    <div class="wl-timer" id="wlTimer">00:00</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-sm btn-ghost" id="wlPauseBtn" onclick="pauseWorkout()" style="display:none;font-size:11px;padding:4px 10px;">Pause</button>
+    </div>
   </div>
   <div class="wl-body" id="wlBody">
     <!-- Session picker OR active workout rendered here by JS -->
   </div>
+  <!-- Timer bar — sits above footer during active workout -->
+  <div class="wl-timer-bar" id="wlTimerBar" style="display:none;">
+    <div class="wl-timer-section">
+      <span class="wl-timer-label">Workout</span>
+      <span class="wl-timer-value" id="wlTimer">00:00</span>
+    </div>
+    <div class="wl-timer-divider"></div>
+    <div class="wl-timer-section">
+      <span class="wl-timer-label">Rest</span>
+      <span class="wl-timer-value wl-rest-timer" id="wlRestTimer">00:00</span>
+    </div>
+  </div>
   <div class="wl-footer" id="wlFooter" style="display:none;">
-    <button class="wl-finish-btn" id="wlFinishBtn" onclick="finishWorkout()">Finish Workout</button>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" id="wlDiscardBtn" onclick="discardWorkout()" style="flex:0 0 auto;padding:16px;border:1px solid var(--danger);color:var(--danger);border-radius:14px;font-size:13px;font-weight:600;font-family:'Space Grotesk',sans-serif;">Discard</button>
+      <button class="wl-finish-btn" id="wlFinishBtn" onclick="finishWorkout()" style="flex:1;">Finish Workout</button>
+    </div>
   </div>
 </div>
 
@@ -2472,56 +2501,84 @@ function closeExModal() { document.getElementById('exModal').classList.remove('a
 //  WORKOUT LOGGER — GYM MODE
 // ═══════════════════════════════════════
 let wlActive = false;
+let wlPaused = false;
 let wlTimerInterval = null;
 let wlStartTime = null;
+let wlElapsedBeforePause = 0;  // accumulated seconds before last pause
 let wlCurrentSession = null;   // the session object from programme
 let wlSetData = {};            // { exerciseIndex: [ {weight, reps, done} ] }
 let wlNotes = {};              // { exerciseIndex: string }
 let wlSessionRPE = null;
+let wlRestInterval = null;
+let wlRestRemaining = 0;       // seconds remaining on rest timer
+let wlPausedSessionData = null; // saved state for resume
 
 function openWorkoutLogger() {
   const overlay = document.getElementById('workoutLogger');
   overlay.classList.add('active');
   document.getElementById('wlFooter').style.display = 'none';
+  document.getElementById('wlTimerBar').style.display = 'none';
+  document.getElementById('wlPauseBtn').style.display = 'none';
   wlActive = false;
+  wlPaused = false;
   wlCurrentSession = null;
   wlSetData = {};
   wlNotes = {};
   wlSessionRPE = null;
+  wlElapsedBeforePause = 0;
   if (wlTimerInterval) { clearInterval(wlTimerInterval); wlTimerInterval = null; }
+  if (wlRestInterval) { clearInterval(wlRestInterval); wlRestInterval = null; }
   document.getElementById('wlTimer').textContent = '00:00';
+  document.getElementById('wlRestTimer').textContent = '00:00';
   document.getElementById('wlTitle').textContent = 'Start Workout';
-  renderWLSessionPicker();
+  // Check for paused workout to resume
+  if (wlPausedSessionData) {
+    renderWLSessionPicker(true);
+  } else {
+    renderWLSessionPicker(false);
+  }
 }
 
 function closeWorkoutLogger() {
-  if (wlActive) {
+  if (wlActive && !wlPaused) {
     if (!confirm('End workout without saving?')) return;
   }
   const overlay = document.getElementById('workoutLogger');
   overlay.classList.remove('active');
   if (wlTimerInterval) { clearInterval(wlTimerInterval); wlTimerInterval = null; }
-  wlActive = false;
+  if (wlRestInterval) { clearInterval(wlRestInterval); wlRestInterval = null; }
+  if (!wlPaused) wlActive = false;
 }
 
-function renderWLSessionPicker() {
+function renderWLSessionPicker(showResume) {
   const body = document.getElementById('wlBody');
+  let html = '';
+  // Resume option if a workout was paused
+  if (showResume && wlPausedSessionData) {
+    html += `<div style="margin-bottom:16px;padding:14px;background:var(--ember-soft);border:1px solid rgba(224,122,58,0.2);border-radius:12px;">
+      <div style="font-size:13px;font-weight:600;color:var(--ember);margin-bottom:4px;">Paused Workout</div>
+      <div style="font-size:12px;color:var(--text-body);margin-bottom:10px;">${wlPausedSessionData.sessionName} — ${wlPausedSessionData.elapsed}</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm btn-ember" onclick="resumeWorkout()" style="flex:1;">Resume</button>
+        <button class="btn btn-sm btn-ghost" onclick="wlPausedSessionData=null;renderWLSessionPicker(false);" style="color:var(--danger);border-color:var(--danger);">Discard</button>
+      </div>
+    </div>`;
+  }
   const progWeeks = getClientProgrammeWeeks();
   const weekKeys = Object.keys(progWeeks).map(Number).sort();
   if (!weekKeys.length) {
-    body.innerHTML = `<div style="text-align:center;padding:60px 20px;"><div style="margin-bottom:16px;display:flex;justify-content:center;">${ic('programme','var(--text-dim)',48)}</div><h3 style="color:var(--text-bright);margin-bottom:8px;">No Programme Assigned</h3><p style="color:var(--text-dim);font-size:13px;">Your coach hasn't assigned a programme yet. Once they do, your sessions will appear here ready to log.</p></div>`;
+    html += `<div style="text-align:center;padding:40px 16px;"><div style="margin-bottom:12px;display:flex;justify-content:center;">${ic('programme','var(--text-dim)',40)}</div><h3 style="color:var(--text-bright);margin-bottom:6px;font-size:15px;">No Programme Assigned</h3><p style="color:var(--text-dim);font-size:12px;">Your coach hasn't assigned a programme yet.</p></div>`;
+    body.innerHTML = html;
     return;
   }
-  // Use latest week
   const latestKey = weekKeys[weekKeys.length - 1];
   const week = progWeeks[latestKey];
   const sessions = week.sessions || [];
-  // Check which sessions have already been logged today
   const today = new Date().toISOString().slice(0, 10);
   const cid = loggedInUser ? loggedInUser.clientId : null;
   const todaysLogs = cid && WORKOUT_LOG[cid] ? WORKOUT_LOG[cid].filter(w => w.date === today) : [];
 
-  let html = `<div style="margin-bottom:16px;"><h3 style="color:var(--text-bright);font-size:17px;margin-bottom:4px;">${week.label || 'Current Week'}</h3><p style="font-size:12px;color:var(--text-dim);">Tap a session to start logging</p></div>`;
+  html += `<div style="margin-bottom:12px;"><h3 style="color:var(--text-bright);font-size:15px;margin-bottom:2px;">${week.label || 'Current Week'}</h3><p style="font-size:11px;color:var(--text-dim);">Tap a session to start</p></div>`;
   html += '<div class="wl-session-pick">';
   sessions.forEach((s, i) => {
     const isCardio = s.type === 'cardio';
@@ -2532,13 +2589,12 @@ function renderWLSessionPicker() {
     html += `<div class="wl-session-card ${typeClass}" onclick="startWorkoutSession(${latestKey}, ${i})" ${logged ? 'style="opacity:0.5;"' : ''}>
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div><h3>${s.day} — ${s.name}</h3><p>${desc}</p></div>
-        ${logged ? '<span style="font-size:11px;color:var(--sage-text);font-weight:600;">LOGGED ✓</span>' : `<span style="color:var(--text-dim);font-size:18px;">→</span>`}
+        ${logged ? '<span style="font-size:10px;color:var(--sage-text);font-weight:600;">LOGGED ✓</span>' : '<span style="color:var(--text-dim);font-size:16px;">→</span>'}
       </div>
     </div>`;
   });
   html += '</div>';
-  // Also show quick-add option for unscheduled workout
-  html += `<div style="text-align:center;margin-top:20px;"><button onclick="startEmptyWorkout()" style="background:none;border:1px dashed var(--slate-border);border-radius:12px;padding:14px 24px;color:var(--text-muted);font-size:13px;cursor:pointer;width:100%;">+ Log an unscheduled workout</button></div>`;
+  html += `<div style="text-align:center;margin-top:14px;"><button onclick="startEmptyWorkout()" style="background:none;border:1px dashed var(--slate-border);border-radius:10px;padding:12px 20px;color:var(--text-muted);font-size:12px;cursor:pointer;width:100%;">+ Log an unscheduled workout</button></div>`;
   body.innerHTML = html;
 }
 
@@ -2550,16 +2606,22 @@ function startWorkoutSession(weekKey, sessionIdx) {
   wlCurrentSession._weekKey = weekKey;
   wlCurrentSession._sessionIdx = sessionIdx;
   wlActive = true;
+  wlPaused = false;
   wlSetData = {};
   wlNotes = {};
   wlSessionRPE = null;
+  wlElapsedBeforePause = 0;
+  wlPausedSessionData = null;
   // Start timer
   wlStartTime = Date.now();
   document.getElementById('wlTimer').textContent = '00:00';
+  document.getElementById('wlRestTimer').textContent = '00:00';
   if (wlTimerInterval) clearInterval(wlTimerInterval);
   wlTimerInterval = setInterval(updateWLTimer, 1000);
   document.getElementById('wlTitle').textContent = wlCurrentSession.name;
   document.getElementById('wlFooter').style.display = 'block';
+  document.getElementById('wlTimerBar').style.display = 'flex';
+  document.getElementById('wlPauseBtn').style.display = 'inline-block';
   // Pre-populate sets from programme prescription
   if (wlCurrentSession.exercises) {
     wlCurrentSession.exercises.forEach((ex, i) => {
@@ -2577,15 +2639,21 @@ function startWorkoutSession(weekKey, sessionIdx) {
 function startEmptyWorkout() {
   wlCurrentSession = { name: 'Free Workout', day: new Date().toLocaleDateString('en-GB',{weekday:'long'}), type: 'strength', exercises: [] };
   wlActive = true;
+  wlPaused = false;
   wlSetData = {};
   wlNotes = {};
   wlSessionRPE = null;
+  wlElapsedBeforePause = 0;
+  wlPausedSessionData = null;
   wlStartTime = Date.now();
   document.getElementById('wlTimer').textContent = '00:00';
+  document.getElementById('wlRestTimer').textContent = '00:00';
   if (wlTimerInterval) clearInterval(wlTimerInterval);
   wlTimerInterval = setInterval(updateWLTimer, 1000);
   document.getElementById('wlTitle').textContent = 'Free Workout';
   document.getElementById('wlFooter').style.display = 'block';
+  document.getElementById('wlTimerBar').style.display = 'flex';
+  document.getElementById('wlPauseBtn').style.display = 'inline-block';
   renderWLActiveSession();
 }
 
@@ -2599,10 +2667,90 @@ function parseSetRep(sr) {
 
 function updateWLTimer() {
   if (!wlStartTime) return;
-  const elapsed = Math.floor((Date.now() - wlStartTime) / 1000);
+  const rawElapsed = Math.floor((Date.now() - wlStartTime) / 1000);
+  const elapsed = rawElapsed + wlElapsedBeforePause;
   const m = Math.floor(elapsed / 60);
   const s = elapsed % 60;
   document.getElementById('wlTimer').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function pauseWorkout() {
+  if (!wlActive || wlPaused) return;
+  wlPaused = true;
+  // Calculate total elapsed so far
+  const rawElapsed = wlStartTime ? Math.floor((Date.now() - wlStartTime) / 1000) : 0;
+  const totalElapsed = rawElapsed + wlElapsedBeforePause;
+  const em = Math.floor(totalElapsed / 60);
+  const es = totalElapsed % 60;
+  const elapsedStr = `${String(em).padStart(2,'0')}:${String(es).padStart(2,'0')}`;
+  // Stop timers
+  if (wlTimerInterval) { clearInterval(wlTimerInterval); wlTimerInterval = null; }
+  if (wlRestInterval) { clearInterval(wlRestInterval); wlRestInterval = null; }
+  // Save session state for resume
+  wlPausedSessionData = {
+    session: JSON.parse(JSON.stringify(wlCurrentSession)),
+    setData: JSON.parse(JSON.stringify(wlSetData)),
+    notes: JSON.parse(JSON.stringify(wlNotes)),
+    rpe: wlSessionRPE,
+    totalElapsed: totalElapsed,
+    elapsed: elapsedStr,
+    sessionName: wlCurrentSession.name
+  };
+  // Close the overlay
+  wlActive = false;
+  document.getElementById('workoutLogger').classList.remove('active');
+  document.getElementById('wlTimerBar').style.display = 'none';
+  document.getElementById('wlPauseBtn').style.display = 'none';
+  document.getElementById('wlFooter').style.display = 'none';
+}
+
+function resumeWorkout() {
+  if (!wlPausedSessionData) return;
+  // Restore state
+  wlCurrentSession = wlPausedSessionData.session;
+  wlSetData = wlPausedSessionData.setData;
+  wlNotes = wlPausedSessionData.notes;
+  wlSessionRPE = wlPausedSessionData.rpe;
+  wlElapsedBeforePause = wlPausedSessionData.totalElapsed;
+  wlPausedSessionData = null;
+  wlActive = true;
+  wlPaused = false;
+  // Restart timers
+  wlStartTime = Date.now();
+  document.getElementById('wlTimer').textContent = '00:00';
+  document.getElementById('wlRestTimer').textContent = '00:00';
+  if (wlTimerInterval) clearInterval(wlTimerInterval);
+  wlTimerInterval = setInterval(updateWLTimer, 1000);
+  // Update immediately to show accumulated time
+  updateWLTimer();
+  // Show UI
+  document.getElementById('wlTitle').textContent = wlCurrentSession.name;
+  document.getElementById('wlFooter').style.display = 'block';
+  document.getElementById('wlTimerBar').style.display = 'flex';
+  document.getElementById('wlPauseBtn').style.display = 'inline-block';
+  document.getElementById('workoutLogger').classList.add('active');
+  renderWLActiveSession();
+}
+
+function discardWorkout() {
+  if (!confirm('Discard this workout? All progress will be lost.')) return;
+  // Clear everything
+  if (wlTimerInterval) { clearInterval(wlTimerInterval); wlTimerInterval = null; }
+  if (wlRestInterval) { clearInterval(wlRestInterval); wlRestInterval = null; }
+  wlActive = false;
+  wlPaused = false;
+  wlCurrentSession = null;
+  wlSetData = {};
+  wlNotes = {};
+  wlSessionRPE = null;
+  wlStartTime = null;
+  wlElapsedBeforePause = 0;
+  wlPausedSessionData = null;
+  wlRestRemaining = 0;
+  document.getElementById('wlTimerBar').style.display = 'none';
+  document.getElementById('wlPauseBtn').style.display = 'none';
+  document.getElementById('wlFooter').style.display = 'none';
+  document.getElementById('workoutLogger').classList.remove('active');
 }
 
 function renderWLActiveSession() {
@@ -2610,35 +2758,60 @@ function renderWLActiveSession() {
   if (!wlCurrentSession) return;
   const exercises = wlCurrentSession.exercises || [];
   if (wlCurrentSession.type === 'cardio' && !exercises.length) {
-    // Cardio session with description only
     body.innerHTML = `
-      <div style="padding:16px 0;">
-        <div style="background:var(--slate-card);border:1px solid var(--slate-border);border-radius:14px;padding:20px;">
-          <h3 style="color:var(--ocean);font-size:15px;margin-bottom:8px;">Cardio Session</h3>
-          <p style="font-size:13px;color:var(--text-body);line-height:1.7;">${wlCurrentSession.desc || 'Complete your cardio session'}</p>
+      <div style="padding:12px 0;">
+        <div style="background:var(--slate-card);border:1px solid var(--slate-border);border-radius:12px;padding:16px;">
+          <h3 style="color:var(--ocean);font-size:13px;margin-bottom:6px;">Cardio Session</h3>
+          <p style="font-size:12px;color:var(--text-body);line-height:1.6;">${wlCurrentSession.desc || 'Complete your cardio session'}</p>
         </div>
-        <div style="margin-top:16px;">
-          <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;">Session notes</label>
-          <textarea class="wl-notes-input" id="wlCardioNotes" placeholder="How did it feel? Distance, time, etc."></textarea>
-        </div>
+        <div style="margin-top:12px;"><textarea class="wl-notes-input" id="wlCardioNotes" placeholder="Distance, time, how it felt..."></textarea></div>
       </div>`;
     return;
   }
+  // Build superset map from session data
+  const ssMap = {};
+  const ssRendered = {};
+  if (wlCurrentSession.supersets && wlCurrentSession.supersets.length) {
+    wlCurrentSession.supersets.forEach((ss, si) => {
+      (ss.exerciseIndices || []).forEach(idx => { ssMap[idx] = { ...ss, _si: si }; });
+    });
+  }
   let html = '';
   exercises.forEach((ex, i) => {
+    const idx = ex._idx !== undefined ? ex._idx : i;
     const sets = wlSetData[i] || [];
     const doneSets = sets.filter(s => s.done).length;
     const totalSets = sets.length;
     const allDone = totalSets > 0 && doneSets === totalSets;
-    html += `<div class="wl-exercise-block" id="wlEx${i}">
+    const inSuperset = !!ssMap[idx];
+    const ssClass = inSuperset ? ' wl-superset' : '';
+    // Superset header — render once for first exercise in group
+    let ssHeader = '';
+    if (ssMap[idx] && !ssRendered[ssMap[idx]._si]) {
+      ssRendered[ssMap[idx]._si] = true;
+      const ss = ssMap[idx];
+      const ssLabel = ss.type || 'Superset';
+      const ssDetails = [];
+      if (ss.rounds) ssDetails.push(ss.rounds + ' rounds');
+      if (ss.restBetweenEx) ssDetails.push('Rest: ' + ss.restBetweenEx);
+      if (ss.restBetweenRound) ssDetails.push('Round rest: ' + ss.restBetweenRound);
+      ssHeader = `<div class="wl-ss-header">${ic('refresh','var(--ocean)',12)} ${ssLabel}${ssDetails.length ? ' <span class="wl-ss-detail">— ' + ssDetails.join(' · ') + '</span>' : ''}${ss.notes ? '<div class="wl-ss-detail" style="margin-top:2px;">' + ss.notes + '</div>' : ''}</div>`;
+    }
+    // Coach note for this exercise
+    let coachNote = '';
+    if (ex.note) {
+      coachNote = `<div class="wl-coach-note">${ic('edit','var(--sage-text)',10)} ${ex.note}</div>`;
+    }
+    html += `<div class="wl-exercise-block${ssClass}" id="wlEx${i}">
+      ${ssHeader}${coachNote}
       <div class="wl-ex-header" onclick="toggleWLExercise(${i})">
         <div>
-          <h3>${ex.n}</h3>
-          <div class="wl-ex-detail">${ex.sr || ''} ${ex.w && ex.w !== '—' ? '@ ' + ex.w : ''} ${ex.rpe && ex.rpe !== '—' ? '· RPE ' + ex.rpe : ''}</div>
+          <h3>${_shortenExName(ex.n)}</h3>
+          <div class="wl-ex-detail">${ex.sr || ''} ${ex.w && ex.w !== '—' ? '@ ' + ex.w : ''} ${ex.rpe && ex.rpe !== '—' ? '· RPE ' + ex.rpe : ''}${ex.rest ? ' · Rest ' + ex.rest : ''}${ex.perSide ? ' · per side' : ''}</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
+        <div style="display:flex;align-items:center;gap:6px;">
           <span class="wl-ex-tag">${doneSets}/${totalSets}</span>
-          ${allDone ? '<span style="color:var(--sage);font-size:16px;">✓</span>' : ''}
+          ${allDone ? '<span style="color:var(--sage);font-size:14px;">✓</span>' : ''}
         </div>
       </div>
       <div class="wl-ex-body" id="wlExBody${i}">
@@ -2646,21 +2819,20 @@ function renderWLActiveSession() {
     sets.forEach((set, si) => {
       html += `<div class="wl-set-row" id="wlSet${i}_${si}">
         <div class="wl-set-num ${set.done ? 'done' : ''}">${si + 1}</div>
-        <input type="number" class="wl-set-input" inputmode="decimal" placeholder="${set.weight || '—'}" value="${set.done && set.weight !== '' ? set.weight : ''}" onchange="wlUpdateSet(${i},${si},'weight',this.value)" ${set.done ? '' : ''}>
-        <input type="number" class="wl-set-input" inputmode="numeric" placeholder="${set.reps || '—'}" value="${set.done && set.reps !== '' ? set.reps : ''}" onchange="wlUpdateSet(${i},${si},'reps',this.value)" ${set.done ? '' : ''}>
-        <button class="wl-check-btn ${set.done ? 'checked' : ''}" onclick="wlToggleSet(${i},${si})">✓</button>
+        <input type="number" class="wl-set-input" inputmode="decimal" placeholder="${set.weight || '—'}" value="${set.done && set.weight !== '' ? set.weight : ''}" onchange="wlUpdateSet(${i},${si},'weight',this.value)">
+        <input type="number" class="wl-set-input" inputmode="numeric" placeholder="${set.reps || '—'}" value="${set.done && set.reps !== '' ? set.reps : ''}" onchange="wlUpdateSet(${i},${si},'reps',this.value)">
+        <button class="wl-check-btn ${set.done ? 'checked' : ''}" onclick="wlToggleSet(${i},${si})">\u2713</button>
       </div>`;
     });
     html += `<button class="wl-add-set" onclick="wlAddSet(${i})">+ Add Set</button>`;
-    html += `<div style="margin-top:10px;"><textarea class="wl-notes-input" placeholder="Notes for ${ex.n}..." oninput="wlNotes[${i}]=this.value" rows="1">${wlNotes[i] || ''}</textarea></div>`;
+    html += `<div style="margin-top:8px;"><textarea class="wl-notes-input" placeholder="Notes..." oninput="wlNotes[${i}]=this.value" rows="1">${wlNotes[i] || ''}</textarea></div>`;
     html += `</div></div>`;
   });
-  // Add exercise button for free workout
   if (wlCurrentSession.name === 'Free Workout') {
-    html += `<div style="margin-top:8px;">
-      <input type="text" id="wlFreeExName" class="wl-set-input" style="text-align:left;padding:14px 12px;font-size:14px;border-radius:12px;margin-bottom:8px;" placeholder="Exercise name..." list="wlExList">
+    html += `<div style="margin-top:6px;">
+      <input type="text" id="wlFreeExName" class="wl-set-input" style="text-align:left;padding:10px;font-size:13px;border-radius:10px;margin-bottom:6px;" placeholder="Exercise name..." list="wlExList">
       <datalist id="wlExList">${Object.keys(EXERCISE_DB).map(n => `<option value="${n}">`).join('')}</datalist>
-      <button onclick="wlAddFreeExercise()" style="width:100%;padding:14px;border:none;border-radius:12px;background:var(--slate-card);border:1px dashed var(--ember);color:var(--ember);font-size:14px;font-weight:600;cursor:pointer;">+ Add Exercise</button>
+      <button onclick="wlAddFreeExercise()" style="width:100%;padding:12px;border:none;border-radius:10px;background:var(--slate-card);border:1px dashed var(--ember);color:var(--ember);font-size:12px;font-weight:600;cursor:pointer;">+ Add Exercise</button>
     </div>`;
   }
   body.innerHTML = html;
@@ -2688,6 +2860,52 @@ function wlToggleSet(exIdx, setIdx) {
   }
   set.done = !set.done;
   renderWLActiveSession();
+  // Start rest countdown if set was marked done and exercise has a rest time
+  if (set.done && wlCurrentSession && wlCurrentSession.exercises && wlCurrentSession.exercises[exIdx]) {
+    const ex = wlCurrentSession.exercises[exIdx];
+    const restStr = ex.rest || '';
+    // Parse rest time — supports "60", "60s", "1:30", "90 sec", etc
+    let restSecs = 0;
+    if (restStr) {
+      const colonMatch = restStr.match(/(\d+):(\d+)/);
+      if (colonMatch) {
+        restSecs = parseInt(colonMatch[1]) * 60 + parseInt(colonMatch[2]);
+      } else {
+        const numMatch = restStr.match(/(\d+)/);
+        if (numMatch) restSecs = parseInt(numMatch[1]);
+      }
+    }
+    if (restSecs > 0) {
+      wlStartRestTimer(restSecs);
+    }
+  }
+}
+
+function wlStartRestTimer(seconds) {
+  // Clear any existing rest timer
+  if (wlRestInterval) { clearInterval(wlRestInterval); wlRestInterval = null; }
+  wlRestRemaining = seconds;
+  const el = document.getElementById('wlRestTimer');
+  if (!el) return;
+  // Update display immediately
+  const rm = Math.floor(wlRestRemaining / 60);
+  const rs = wlRestRemaining % 60;
+  el.textContent = `${String(rm).padStart(2,'0')}:${String(rs).padStart(2,'0')}`;
+  el.classList.add('counting');
+  wlRestInterval = setInterval(() => {
+    wlRestRemaining--;
+    if (wlRestRemaining <= 0) {
+      wlRestRemaining = 0;
+      clearInterval(wlRestInterval);
+      wlRestInterval = null;
+      el.textContent = '00:00';
+      el.classList.remove('counting');
+      return;
+    }
+    const m = Math.floor(wlRestRemaining / 60);
+    const s = wlRestRemaining % 60;
+    el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }, 1000);
 }
 
 function wlAddSet(exIdx) {
@@ -2726,8 +2944,13 @@ function finishWorkout() {
       }
     });
   });
-  const elapsed = wlStartTime ? Math.floor((Date.now() - wlStartTime) / 1000) : 0;
+  const rawElapsed = wlStartTime ? Math.floor((Date.now() - wlStartTime) / 1000) : 0;
+  const elapsed = rawElapsed + wlElapsedBeforePause;
   const duration = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
+  // Hide timer bar and rest timer, stop rest countdown
+  document.getElementById('wlTimerBar').style.display = 'none';
+  document.getElementById('wlPauseBtn').style.display = 'none';
+  if (wlRestInterval) { clearInterval(wlRestInterval); wlRestInterval = null; }
   // Show summary with RPE selector
   const body = document.getElementById('wlBody');
   body.innerHTML = `<div class="wl-summary">
@@ -2854,9 +3077,18 @@ function initClientProgress() {
     const est = cpE1RM(maxW,maxR);
     return est > best ? est : best;
   }, 0);
+  // Get weight: latest measurement, or onboarding weight as fallback
+  let currentWeight = pd.measurements[0]?.weight || null;
+  if (!currentWeight) {
+    const ob = ONBOARDING_SUBMISSIONS.find(s => s.personal && s.personal.email === (jw.email || ''));
+    if (ob && ob.personal.weight) currentWeight = ob.personal.weight;
+    else if (jw.startWeight) currentWeight = jw.startWeight;
+  }
+  const startWeight = pd.measurements.length > 1 ? pd.measurements[pd.measurements.length - 1].weight : currentWeight;
+  const weightChange = (currentWeight && startWeight) ? (startWeight - currentWeight).toFixed(1) : 0;
   document.getElementById('clientProgressKPIs').innerHTML = `
     <div class="kpi" style="border-top:3px solid var(--ember);"><div class="kpi-label">Total Sessions</div><div class="kpi-value text-ember">${pd.strength.length + pd.cardio.length}</div><div class="kpi-sub">Logged entries</div></div>
-    <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Body Weight</div><div class="kpi-value">${pd.measurements[0]?.weight||'—'}<span style="font-size:14px;color:var(--text-dim);">kg</span></div><div class="kpi-sub text-sage">▼ ${pd.measurements.length>1?((pd.measurements[pd.measurements.length-1].weight - pd.measurements[0].weight).toFixed(1)):0}kg</div></div>
+    <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Body Weight</div><div class="kpi-value">${currentWeight||'—'}<span style="font-size:14px;color:var(--text-dim);">kg</span></div><div class="kpi-sub text-sage">▼ ${weightChange}kg</div></div>
     <div class="kpi" style="border-top:3px solid var(--ocean);"><div class="kpi-label">Squat Est. 1RM</div><div class="kpi-value text-ocean">${Math.round(bestSquat)}<span style="font-size:14px;color:var(--text-dim);">kg</span></div><div class="kpi-sub">Best estimate</div></div>
     <div class="kpi"><div class="kpi-label">Resting HR</div><div class="kpi-value">${latestW?.rhr||'—'}<span style="font-size:14px;color:var(--text-dim);">bpm</span></div><div class="kpi-sub">Latest</div></div>`;
 
@@ -3402,23 +3634,45 @@ function initPTApp() {
   renderPTProgList();
   initExLibrary();
 
+  // Dynamic KPIs from real client data
+  const activeClients = CLIENTS.filter(c => c.status !== 'inactive');
+  const totalSessions = Object.values(WORKOUT_LOG).reduce((sum, logs) => sum + (logs ? logs.length : 0), 0);
+  const unreadNotifs = PT_NOTIFICATIONS.filter(n => !n.read).length;
+  const unreadMsgs = PT_CONVERSATIONS.filter(c => c.unread).length;
   document.getElementById('ptKPIs').innerHTML = `
-    <div class="kpi" style="border-top:3px solid var(--ember);"><div class="kpi-label">Active Clients</div><div class="kpi-value text-ember">8</div><div class="kpi-sub">+2 this month</div></div>
-    <div class="kpi" style="border-top:3px solid var(--ocean);"><div class="kpi-label">Sessions This Week</div><div class="kpi-value text-ocean">32</div><div class="kpi-sub">of 40 planned</div></div>
-    <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Avg Compliance</div><div class="kpi-value text-sage">89%</div><div class="kpi-sub">▲ 3% vs last month</div></div>
-    <div class="kpi"><div class="kpi-label">Needs Attention</div><div class="kpi-value text-warning">2</div><div class="kpi-sub">missed sessions / check-ins</div></div>`;
+    <div class="kpi" style="border-top:3px solid var(--ember);"><div class="kpi-label">Active Clients</div><div class="kpi-value text-ember">${activeClients.length}</div><div class="kpi-sub">${CLIENTS.length} total</div></div>
+    <div class="kpi" style="border-top:3px solid var(--ocean);"><div class="kpi-label">Sessions Logged</div><div class="kpi-value text-ocean">${totalSessions}</div><div class="kpi-sub">All clients</div></div>
+    <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Unread Messages</div><div class="kpi-value text-sage">${unreadMsgs}</div><div class="kpi-sub">${PT_CONVERSATIONS.length} conversations</div></div>
+    <div class="kpi"><div class="kpi-label">Notifications</div><div class="kpi-value text-warning">${unreadNotifs}</div><div class="kpi-sub">unread</div></div>`;
 
-  document.getElementById('ptAlerts').innerHTML = `
-    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--slate-border);"><div style="width:8px;height:8px;border-radius:50%;background:var(--warning);flex-shrink:0;"></div><div style="flex:1;"><div style="font-size:13px;">Sarah Mitchell hasn't logged in 5 days</div><div style="font-size:11px;color:var(--text-dim);">Last activity: Mon 24 Mar</div></div><button class="btn btn-sm btn-secondary" onclick="showPTPage('ptMessages')">Message</button></div>
-    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--slate-border);"><div style="width:8px;height:8px;border-radius:50%;background:var(--danger);flex-shrink:0;"></div><div style="flex:1;"><div style="font-size:13px;">Tom Richards — wellbeing flagged high stress</div><div style="font-size:11px;color:var(--text-dim);">Submitted today</div></div><button class="btn btn-sm btn-secondary" onclick="showPTPage('ptWellbeing')">Review</button></div>
-    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;"><div style="width:8px;height:8px;border-radius:50%;background:var(--ocean);flex-shrink:0;"></div><div style="flex:1;"><div style="font-size:13px;">Emily Chen — programme ends in 3 days</div><div style="font-size:11px;color:var(--text-dim);">Needs new programme assigned</div></div><button class="btn btn-sm btn-secondary" onclick="showPTPage('ptProgrammes')">Plan</button></div>`;
+  // Dynamic "Needs Your Attention" — check for high stress wellbeing, unread check-ins, clients without programmes
+  const alerts = [];
+  // Clients with high stress wellbeing in last 7 days
+  WELLBEING_DATA.filter(w => (w.stress === 'Very High' || w.stress === 'High')).slice(0, 2).forEach(w => {
+    const c = CLIENTS.find(cl => cl.id === w.clientId);
+    if (c) alerts.push({msg: `${c.name} — wellbeing flagged ${w.stress.toLowerCase()} stress`, sub: w.date, colour: 'var(--danger)', btn: 'Review', page: 'ptWellbeing'});
+  });
+  // Clients without a programme assigned
+  CLIENTS.filter(c => c.status !== 'inactive' && !c.programme).forEach(c => {
+    alerts.push({msg: `${c.name} — no programme assigned`, sub: 'Needs programme', colour: 'var(--ocean)', btn: 'Plan', page: 'ptProgrammes'});
+  });
+  // Unread check-in notifications
+  PT_NOTIFICATIONS.filter(n => !n.read && n.type === 'checkin').slice(0, 2).forEach(n => {
+    alerts.push({msg: `${n.client} — ${n.message}`, sub: n.time, colour: 'var(--warning)', btn: 'View', page: 'ptClients'});
+  });
+  document.getElementById('ptAlerts').innerHTML = alerts.length ? alerts.map((a, i) =>
+    `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;${i < alerts.length-1 ? 'border-bottom:1px solid var(--slate-border);':''}"><div style="width:8px;height:8px;border-radius:50%;background:${a.colour};flex-shrink:0;"></div><div style="flex:1;"><div style="font-size:13px;">${a.msg}</div><div style="font-size:11px;color:var(--text-dim);">${a.sub}</div></div><button class="btn btn-sm btn-secondary" onclick="showPTPage('${a.page}')">${a.btn}</button></div>`
+  ).join('') : '<p style="color:var(--text-dim);font-size:13px;padding:12px 0;">All clear — no urgent items right now.</p>';
 
-  document.getElementById('ptActivity').innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--slate-border);"><div style="width:28px;height:28px;border-radius:8px;background:var(--ember-soft);color:var(--ember);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'Space Grotesk';">JW</div><div style="flex:1;font-size:12px;"><strong>James Wilson</strong> completed Upper Body Strength</div><span style="font-size:10px;color:var(--text-dim);">2h ago</span></div>
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--slate-border);"><div style="width:28px;height:28px;border-radius:8px;background:var(--sage-soft);color:var(--sage-text);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'Space Grotesk';">EC</div><div style="flex:1;font-size:12px;"><strong>Emily Chen</strong> submitted wellbeing check-in</div><span style="font-size:10px;color:var(--text-dim);">4h ago</span></div>
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--slate-border);"><div style="width:28px;height:28px;border-radius:8px;background:var(--ocean-soft);color:var(--ocean);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'Space Grotesk';">TR</div><div style="flex:1;font-size:12px;"><strong>Tom Richards</strong> logged 10km run — 48:12</div><span style="font-size:10px;color:var(--text-dim);">6h ago</span></div>
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--slate-border);"><div style="width:28px;height:28px;border-radius:8px;background:rgba(155,142,196,0.1);color:#9B8EC4;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'Space Grotesk';">LJ</div><div style="flex:1;font-size:12px;"><strong>Laura James</strong> sent you a message</div><span style="font-size:10px;color:var(--text-dim);">Yesterday</span></div>
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;"><div style="width:28px;height:28px;border-radius:8px;background:var(--ember-soft);color:var(--ember);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'Space Grotesk';">DK</div><div style="flex:1;font-size:12px;"><strong>Dan Kim</strong> hit new Deadlift PR — 140kg</div><span style="font-size:10px;color:var(--text-dim);">Yesterday</span></div>`;
+  // Dynamic "Recent Activity" — from PT_NOTIFICATIONS (most recent 5)
+  const recentActivity = PT_NOTIFICATIONS.slice(0, 5);
+  document.getElementById('ptActivity').innerHTML = recentActivity.length ? recentActivity.map((n, i) => {
+    const initials = (n.client || 'SY').split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2);
+    const bgColours = ['var(--ember-soft)','var(--sage-soft)','var(--ocean-soft)','rgba(155,142,196,0.1)'];
+    const fgColours = ['var(--ember)','var(--sage-text)','var(--ocean)','#9B8EC4'];
+    const ci = i % bgColours.length;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;${i < recentActivity.length-1 ? 'border-bottom:1px solid var(--slate-border);':''}"><div style="width:28px;height:28px;border-radius:8px;background:${bgColours[ci]};color:${fgColours[ci]};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'Space Grotesk';">${initials}</div><div style="flex:1;font-size:12px;"><strong>${n.client || 'System'}</strong> ${n.message || ''}</div><span style="font-size:10px;color:var(--text-dim);">${n.time}</span></div>`;
+  }).join('') : '<p style="color:var(--text-dim);font-size:13px;padding:12px 0;">No recent activity yet.</p>';
 
   renderDashClientList();
 }
@@ -4990,14 +5244,10 @@ window.addEventListener('message', function(e) {
       Object.assign(PROGRAMME_WEEKS, converted);
     }
 
-    // Notify
-    PT_NOTIFICATIONS.unshift({
-      type: 'programme',
-      title: 'Programme Assigned',
-      text: programmeName + ' assigned to ' + clientName,
-      time: 'Just now',
-      unread: true
-    });
+    // Notify PT
+    addPTNotification('programme', clientId, clientName, 'Programme assigned: ' + programmeName);
+    // Notify client
+    triggerProgrammeUpdated(clientId, clientName, client.email || '', programmeName);
 
     // Queue email
     const emailAddr = client.email || (clientName.split(' ')[0].toLowerCase() + '@email.com');
@@ -6072,9 +6322,7 @@ function triggerWorkoutLogged(clientId, clientName, workoutName) {
 function triggerNewMessage(clientId, clientName, clientEmail, fromPT) {
   if (fromPT) {
     addClientNotification(clientId, 'message', 'New message from Coach Adam');
-    queueEmail(clientEmail, clientName, 'New message from Coach Adam',
-      'message',
-      `Hi ${clientName},\n\nCoach Adam has sent you a message. Log in to your AH Performance app to read and reply.\n\nAH Performance`);
+    // No email for messages — they're in-app only
   } else {
     addPTNotification('message', clientId, clientName, 'Sent you a message');
   }
