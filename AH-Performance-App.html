@@ -307,9 +307,12 @@
     .ql-label{font-size:11px !important;}
     .kpi-row{grid-template-columns:1fr 1fr !important;gap:10px !important;}
 
-    /* Programme tables scroll horizontally */
-    #clientProgramme table{display:block;overflow-x:auto;white-space:nowrap;font-size:12px;}
-    #clientProgramme .card{padding:12px !important;}
+    /* Programme tables — fit width on mobile, no horizontal scroll */
+    #clientProgramme table{width:100%;table-layout:fixed;font-size:12px;}
+    #clientProgramme table th:first-child,#clientProgramme table td:first-child{width:38%;overflow:hidden;text-overflow:ellipsis;}
+    #clientProgramme table th,#clientProgramme table td{padding:6px 4px !important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    #clientProgramme table td:first-child{white-space:normal;word-break:break-word;}
+    #clientProgramme .card{padding:12px !important;overflow:hidden;}
 
     /* Greeting */
     .greeting h2{font-size:20px !important;}
@@ -1598,7 +1601,7 @@
         <div class="card card-sage">
           <div class="flex-between mb-12">
             <h3 style="margin-bottom:0;">Client Goals</h3>
-            <button class="btn btn-sm btn-sage" onclick="alert('Goal editor would open here.')">+ Add Goal</button>
+            <button class="btn btn-sm btn-sage" onclick="addClientGoal()">+ Add Goal</button>
           </div>
           <div id="detailGoals"></div>
         </div>
@@ -1810,6 +1813,7 @@ let currentRole = null;
 let charts = {};
 let currentProgrammeWeek = 1;
 let currentDetailClient = null;
+let _lastAppliedSavedAt = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Register PWA Service Worker
@@ -1818,6 +1822,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   await loadAppState();
   buildSidebars();
+  // Auto-sync from server every 30 seconds to pick up changes from other devices
+  setInterval(async () => {
+    try {
+      const res = await fetch('/api/state');
+      if (res.ok) {
+        const state = await res.json();
+        if (state && state.savedAt && state.savedAt > (_lastAppliedSavedAt || 0)) {
+          _applyState(state);
+          _lastAppliedSavedAt = state.savedAt;
+          // Re-render current view
+          if (currentRole === 'client') {
+            renderClientMessages(); renderClientNotifs(); renderWellbeingHistory(); updateSidebarBadges();
+          } else {
+            renderPTNotifications(); renderPTMessages(); updateSidebarBadges();
+          }
+        }
+      }
+    } catch(e) {}
+  }, 30000);
 });
 
 // ═══════════════════════════════════════
@@ -1871,6 +1894,19 @@ function _applyState(state) {
   if (state.onboardingSubmissions && state.onboardingSubmissions.length) { ONBOARDING_SUBMISSIONS.length = 0; state.onboardingSubmissions.forEach(s => ONBOARDING_SUBMISSIONS.push(s)); }
   if (state.clientProgrammes && typeof CLIENT_PROGRAMMES !== 'undefined') Object.assign(CLIENT_PROGRAMMES, state.clientProgrammes);
   if (state.ptProgrammes && typeof PT_PROGRAMMES !== 'undefined') { PT_PROGRAMMES.length = 0; state.ptProgrammes.forEach(p => PT_PROGRAMMES.push(p)); }
+  // Clean up: fix any "undefined" client names in PT notifications
+  PT_NOTIFICATIONS.forEach(n => {
+    if (!n.client || n.client === 'undefined' || n.client === 'null') {
+      const c = n.clientId ? CLIENTS.find(x => x.id === n.clientId) : null;
+      n.client = c ? c.name : 'System';
+    }
+  });
+  // Remove completely broken notifications (no message and no client)
+  for (let i = PT_NOTIFICATIONS.length - 1; i >= 0; i--) {
+    const n = PT_NOTIFICATIONS[i];
+    if ((!n.client || n.client === 'undefined') && !n.message) PT_NOTIFICATIONS.splice(i, 1);
+  }
+  _lastAppliedSavedAt = state.savedAt;
 }
 
 function saveAppState() {
@@ -2021,6 +2057,21 @@ function showClientPage(id) {
   if (id === 'clientCheckin') resetCheckinWizard();
   if (id === 'clientNotifications') renderClientNotifFullList();
   if (id === 'clientOnboarding') renderClientOnboardingForm();
+  if (id === 'clientMessages') {
+    renderClientMessages();
+    // Mark message notifications as read and clear badge
+    const cid = loggedInUser ? loggedInUser.clientId : 1;
+    const notifs = CLIENT_NOTIFICATIONS[cid] || [];
+    notifs.filter(n => (n.type === 'message' || n.type === 'coach_message') && !n.read).forEach(n => { n.read = true; });
+    // Mark conversation as read from PT side
+    const cv = _getClientConversation();
+    if (cv && cv.messages) { cv.messages.forEach(m => { if (m.from === 'pt') m.read = true; }); }
+    // Update badge
+    const badge = document.getElementById('clientMsgBadge');
+    if (badge) { badge.textContent = ''; badge.classList.add('hidden'); }
+    renderClientNotifs();
+    scheduleSave();
+  }
 }
 
 // Mobile bottom tab bar navigation
@@ -2198,20 +2249,8 @@ function initClientApp() {
   const cycleTitleEl = document.getElementById('cycleTitleIcon');
   if (cycleTitleEl) cycleTitleEl.innerHTML = ic('cycle','#C47A9B',20);
 
-  // Wellbeing goals & history
-  document.getElementById('clientGoals').innerHTML = `
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--wb-border);">
-      <div style="width:40px;height:40px;border-radius:10px;background:rgba(139,176,126,0.08);display:flex;align-items:center;justify-content:center;">${ic('target','#E07A3A')}</div>
-      <div style="flex:1;"><div style="font-size:13px;font-weight:500;">Complete HYROX race under 90 minutes</div><div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Target: June 2026</div></div>
-      <span class="status-pill status-active">On Track</span></div>
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--wb-border);">
-      <div style="width:40px;height:40px;border-radius:10px;background:rgba(74,157,200,0.08);display:flex;align-items:center;justify-content:center;">${ic('dumbbell','#4A9DC8')}</div>
-      <div style="flex:1;"><div style="font-size:13px;font-weight:500;">Squat 120kg (1RM)</div><div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Current: 114kg est. — 95% there</div></div>
-      <span class="status-pill status-active">On Track</span></div>
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;">
-      <div style="width:40px;height:40px;border-radius:10px;background:rgba(139,176,126,0.08);display:flex;align-items:center;justify-content:center;">${ic('trending','#8BB07E')}</div>
-      <div style="flex:1;"><div style="font-size:13px;font-weight:500;">Reach 82kg body weight</div><div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Current: 83.2kg — 1.2kg to go</div></div>
-      <span class="status-pill status-attention">Close</span></div>`;
+  // Wellbeing goals — dynamic from client data
+  renderClientGoals();
 
   // Mobile tab bar icons
   const mtEl = (id, name, col) => { const el = document.getElementById(id); if (el) el.innerHTML = ic(name, col, 22); };
@@ -2306,6 +2345,24 @@ function renderProgrammeSummary() {
     </div></div>`;
 }
 
+// Shorten long exercise names for mobile display
+function _shortenExName(name) {
+  if (!name) return '';
+  let s = name;
+  // Strip common prefixes
+  s = s.replace(/^HYROX\s+/i, '');
+  s = s.replace(/^Barbell\s+/i, 'BB ');
+  s = s.replace(/^Dumbbell\s+/i, 'DB ');
+  s = s.replace(/^Cable\s+/i, 'Cable ');
+  // Strip common suffixes
+  s = s.replace(/\s*\(Race Standard\)/i, '');
+  s = s.replace(/\s*\(Standard\)/i, '');
+  s = s.replace(/\s*\(Each Arm\)/i, '');
+  s = s.replace(/\s*\(Each Leg\)/i, '');
+  s = s.replace(/\s*\(Bodyweight\)/i, ' BW');
+  return s.trim();
+}
+
 function renderProgrammeWeek() {
   renderProgrammeSummary();
   const progWeeks = getClientProgrammeWeeks();
@@ -2319,6 +2376,7 @@ function renderProgrammeWeek() {
   document.getElementById('progWeekLabel').textContent = week.label;
   const el = document.getElementById('programmeContent');
   el.innerHTML = '';
+  const isMobile = window.innerWidth <= 768;
   week.sessions.forEach(s => {
     const isCardio = s.type === 'cardio';
     const colour = isCardio ? 'var(--ocean)' : 'var(--ember)';
@@ -2336,6 +2394,7 @@ function renderProgrammeWeek() {
       s.exercises.forEach((e, ei) => {
         const idx = e._idx !== undefined ? e._idx : ei;
         const esc = (e.n||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+        const displayName = isMobile ? _shortenExName(e.n) : e.n;
         // Superset header — render once for the first exercise in each superset
         if (ssMap[idx] && !ssRendered[ssMap[idx]._si]) {
           ssRendered[ssMap[idx]._si] = true;
@@ -2350,7 +2409,7 @@ function renderProgrammeWeek() {
         // Indent exercises that are part of a superset
         const inSuperset = !!ssMap[idx];
         const nameStyle = inSuperset ? 'padding-left:16px;' : '';
-        rows += `<tr><td class="val" style="${nameStyle}"><span class="ex-clickable" onclick="openExModal('${esc}')">${e.n}${e.perSide ? ' <span style="font-size:10px;color:var(--text-dim);">(per side)</span>' : ''}</span></td><td>${e.sr}</td><td class="val">${e.w}</td><td>${e.rpe}</td></tr>`;
+        rows += `<tr><td class="val" style="${nameStyle}"><span class="ex-clickable" onclick="openExModal('${esc}')">${displayName}${e.perSide ? ' <span style="font-size:10px;color:var(--text-dim);">(per side)</span>' : ''}</span></td><td>${e.sr}</td><td class="val">${e.w}</td><td>${e.rpe}</td></tr>`;
         // Rest time and coach note
         const extras = [];
         if (e.rest) extras.push('Rest: ' + e.rest);
@@ -3262,6 +3321,33 @@ function renderWellbeingHistory() {
   const data = WELLBEING_DATA.filter(w => w.clientId === cid);
   el.innerHTML = data.map(w => `<tr><td class="val">${w.date}</td><td>${w.mood}/5 ${moodLabels[w.mood] || ''}</td><td>${w.energy || '—'}</td><td>${w.sleep || '—'}</td><td>${w.soreness || '—'}</td><td>${w.stress || '—'}</td></tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:16px;">No check-ins yet. Submit one above.</td></tr>';
 }
+// ── CLIENT GOALS (dynamic, coach-editable) ──
+function renderClientGoals() {
+  const el = document.getElementById('clientGoals');
+  if (!el) return;
+  const cid = loggedInUser ? loggedInUser.clientId : 1;
+  const client = CLIENTS.find(c => c.id === cid);
+  const goals = (client && client.goals) ? client.goals : [];
+  if (!goals.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--text-dim);padding:12px 0;">No goals set yet. Your coach will add your goals during onboarding or check-ins.</p>';
+    return;
+  }
+  const goalIcons = ['target','dumbbell','trending','fire','bolt','heart'];
+  const goalColours = ['#E07A3A','#4A9DC8','#8BB07E','#E07A3A','#9B8EC4','#D45B5B'];
+  const statusMap = {'on-track':'status-active','close':'status-attention','behind':'status-danger','achieved':'status-active'};
+  el.innerHTML = goals.map((g, i) => {
+    const icon = goalIcons[i % goalIcons.length];
+    const colour = goalColours[i % goalColours.length];
+    const statusClass = statusMap[g.status] || 'status-active';
+    const statusLabel = g.status ? g.status.charAt(0).toUpperCase() + g.status.slice(1).replace('-',' ') : 'Active';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i < goals.length -1 ? 'border-bottom:1px solid var(--wb-border);':''}">
+      <div style="width:40px;height:40px;border-radius:10px;background:${colour}15;display:flex;align-items:center;justify-content:center;">${ic(icon,colour)}</div>
+      <div style="flex:1;"><div style="font-size:13px;font-weight:500;">${g.title}</div>${g.detail ? '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">' + g.detail + '</div>' : ''}</div>
+      <span class="status-pill ${statusClass}">${statusLabel}</span>
+    </div>`;
+  }).join('');
+}
+
 function sendClientMsg() {
   const input = document.getElementById('clientMsgInput');
   if (!input.value.trim()) return;
@@ -3893,15 +3979,56 @@ let activePTConvo = null;
 
 function renderPTMessages() {
   const list = document.getElementById('ptMsgList'); list.innerHTML = '';
+  // "New Conversation" button with client selector
+  const clientsWithoutConvo = CLIENTS.filter(c => !PT_CONVERSATIONS.some(cv => cv.clientId === c.id || cv.name === c.name));
+  if (clientsWithoutConvo.length) {
+    list.innerHTML += `<div style="padding:8px 10px 12px;border-bottom:1px solid var(--slate-border);margin-bottom:8px;">
+      <select id="newConvoSelect" style="width:100%;padding:8px 10px;font-size:12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-body);margin-bottom:6px;">
+        <option value="">Select a client...</option>
+        ${clientsWithoutConvo.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+      </select>
+      <button class="btn btn-sm btn-ember" style="width:100%;" onclick="startNewPTConversation()">+ New Conversation</button>
+    </div>`;
+  } else {
+    list.innerHTML += `<div style="padding:6px 10px 10px;"><button class="btn btn-sm btn-ember" style="width:100%;opacity:0.5;" disabled title="All clients have conversations">+ New Conversation</button></div>`;
+  }
   PT_CONVERSATIONS.forEach((cv, idx) => {
     list.innerHTML += `<div onclick="openPTConversation(${idx})" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;${activePTConvo===idx?'background:var(--slate-hover);border-left:2px solid var(--ember);':cv.unread?'background:var(--slate-raised);':''}transition:background 0.15s;" onmouseover="if(${activePTConvo}!==${idx})this.style.background='var(--slate-hover)'" onmouseout="if(${activePTConvo}!==${idx})this.style.background='${cv.unread?'var(--slate-raised)':'transparent'}'"><div style="width:32px;height:32px;border-radius:8px;background:${cv.bg};color:${cv.colour};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'Space Grotesk';">${cv.initials}</div><div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:${cv.unread?'600':'400'};">${cv.name}</div><div style="font-size:11px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${cv.preview}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;"><div style="font-size:10px;color:var(--text-dim);">${cv.time}</div>${cv.unread?'<div style="width:6px;height:6px;border-radius:50%;background:var(--ember);"></div>':''}</div></div>`;
   });
+}
+
+function startNewPTConversation() {
+  const sel = document.getElementById('newConvoSelect');
+  if (!sel || !sel.value) { alert('Please select a client.'); return; }
+  const clientId = parseInt(sel.value);
+  const client = CLIENTS.find(c => c.id === clientId);
+  if (!client) return;
+  const initials = (client.initials || client.name.split(' ').map(w=>w[0]).join('')).toUpperCase();
+  const bgOptions = ['var(--ocean-soft)','var(--sage-soft)','var(--ember-soft)','rgba(155,142,196,0.12)'];
+  const colOptions = ['var(--ocean)','var(--sage-text)','var(--ember)','#9B8EC4'];
+  const ci = PT_CONVERSATIONS.length % bgOptions.length;
+  PT_CONVERSATIONS.unshift({
+    clientId: clientId,
+    name: client.name,
+    initials: initials,
+    bg: bgOptions[ci],
+    colour: colOptions[ci],
+    preview: '',
+    time: 'Now',
+    unread: false,
+    messages: []
+  });
+  activePTConvo = 0;
+  renderPTMessages();
+  openPTConversation(0);
+  scheduleSave();
 }
 
 function openPTConversation(idx) {
   activePTConvo = idx;
   const cv = PT_CONVERSATIONS[idx];
   cv.unread = false;
+  updateSidebarBadges();
   renderPTMessages();
   const thread = document.getElementById('ptMsgThread');
   if (!thread) return;
@@ -3931,7 +4058,7 @@ function sendPTMessage() {
   const cv = PT_CONVERSATIONS[activePTConvo];
   const text = input.value.trim();
   const now = new Date();
-  const timeStr = 'Just now';
+  const timeStr = now.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
   cv.messages.push({from:'pt', text, time:timeStr});
   cv.preview = text.substring(0, 40) + (text.length > 40 ? '...' : '');
   cv.time = 'Now';
@@ -3943,6 +4070,7 @@ function sendPTMessage() {
     const email = cv.name.split(' ')[0].toLowerCase() + '.' + (cv.name.split(' ')[1]||'').toLowerCase() + '@email.com';
     triggerNewMessage(matchedClient.id, cv.name, email, true);
   }
+  scheduleSave();
 }
 
 function renderPTAnalytics() {
@@ -4586,13 +4714,15 @@ function markAllClientNotifsRead() {
 
 function handleClientNotif(nId, type) {
   const notifs = CLIENT_NOTIFICATIONS[loggedInUser && loggedInUser.clientId ? loggedInUser.clientId : 1] || [];
-  const n = notifs.find(x => x.id === nId);
+  const n = notifs.find(x => String(x.id) === String(nId));
   if (n) n.read = true;
   renderClientNotifs();
+  renderClientNotifFullList();
   toggleClientNotifs();
+  scheduleSave();
   if (type === 'programme') showClientPage('clientProgramme');
   else if (type === 'checkin-reviewed' || type === 'checkin-due') showClientPage('clientCheckin');
-  else if (type === 'message') showClientPage('clientMessages');
+  else if (type === 'message') { showClientPage('clientMessages'); renderClientMessages(); }
   else if (type === 'achievement' || type === 'milestone') showClientPage('clientProgress');
 }
 
@@ -4607,31 +4737,35 @@ function renderClientNotifFullList() {
     'message': {icon:'messages', colour:'var(--ocean)', label:'Message'},
     'checkin-due': {icon:'checkin', colour:'var(--ember)', label:'Check-in'},
     'achievement': {icon:'trophy', colour:'var(--ember)', label:'Achievement'},
-    'milestone': {icon:'fire', colour:'var(--sage-text)', label:'Milestone'}
+    'milestone': {icon:'fire', colour:'var(--sage-text)', label:'Milestone'},
+    'coach_message': {icon:'messages', colour:'var(--ember)', label:'Coach Message'}
   };
+  const actionLabels = {'programme':'View Programme','checkin-reviewed':'View Check-in','message':'Read Message','checkin-due':'Open Check-in','achievement':'View','milestone':'View','coach_message':'Read Message'};
   el.innerHTML = notifs.map(n => {
     const ti = typeIcons[n.type] || {icon:'bell', colour:'var(--text-muted)', label:'Notification'};
-    return `<div style="display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--slate-border);${n.read?'opacity:0.7;':''}">
+    const actionLabel = actionLabels[n.type] || 'View';
+    return `<div style="display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--slate-border);${n.read?'opacity:0.7;':''}cursor:pointer;" onclick="handleClientNotif('${n.id}','${n.type || 'message'}')">
       <div style="width:36px;height:36px;border-radius:10px;background:var(--slate-raised);display:flex;align-items:center;justify-content:center;flex-shrink:0;">${ic(ti.icon, ti.colour, 18)}</div>
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
           <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:${ti.colour};">${ti.label}</span>
           ${n.read ? '' : '<span style="width:6px;height:6px;border-radius:50%;background:var(--ember);display:inline-block;"></span>'}
         </div>
-        <div style="font-size:13px;font-weight:${n.read?'400':'600'};color:var(--text-bright);line-height:1.5;">${n.message}</div>
+        <div style="font-size:13px;font-weight:${n.read?'400':'600'};color:var(--text-bright);line-height:1.5;">${n.message || n.text || ''}</div>
         <div style="font-size:11px;color:var(--text-dim);margin-top:3px;">${n.time}</div>
       </div>
-      ${n.read ? '' : `<button class="btn btn-sm btn-ghost" onclick="markSingleClientNotifRead('${n.id}')" style="font-size:10px;flex-shrink:0;">Mark read</button>`}
+      ${n.read ? '' : `<button style="flex-shrink:0;padding:6px 14px;border-radius:8px;border:1px solid var(--ember);background:var(--ember-soft);color:var(--ember);font-size:11px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;white-space:nowrap;" onclick="event.stopPropagation();handleClientNotif('${n.id}','${n.type || 'message'}')">${actionLabel}</button>`}
     </div>`;
   }).join('');
 }
 
 function markSingleClientNotifRead(nId) {
   const notifs = CLIENT_NOTIFICATIONS[loggedInUser && loggedInUser.clientId ? loggedInUser.clientId : 1] || [];
-  const n = notifs.find(x => x.id === nId);
+  const n = notifs.find(x => String(x.id) === String(nId));
   if (n) n.read = true;
   renderClientNotifs();
   renderClientNotifFullList();
+  scheduleSave();
 }
 
 // Close client notification dropdown when clicking outside
@@ -6041,21 +6175,79 @@ function markCheckinReviewed(ciId) {
 function renderDetailGoals(client) {
   const el = document.getElementById('detailGoals');
   if (!el) return;
-  if (!client.goals || !client.goals.length) {
-    el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No goals set yet. Add goals during onboarding or a check-in.</p>';
+  const c = client || currentDetailClient;
+  if (!c) return;
+  if (!c.goals || !c.goals.length) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No goals set yet. Click "+ Add Goal" above to set client goals.</p>';
     return;
   }
   const statusMap = {'on-track':'status-active','close':'status-attention','behind':'status-attention','achieved':'status-new'};
-  const statusLabel = {'on-track':'On Track','close':'Close','behind':'Behind','achieved':'Achieved'};
-  el.innerHTML = client.goals.map(g => `
+  const statusLabels = {'on-track':'On Track','close':'Close','behind':'Behind','achieved':'Achieved'};
+  el.innerHTML = c.goals.map((g, i) => `
     <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--slate-border);">
       <div style="flex:1;">
-        <div style="font-size:13px;font-weight:500;">${g.text}</div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">Target: ${g.target}</div>
+        <div style="font-size:13px;font-weight:500;">${g.title || g.text || ''}</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">${g.detail || (g.target ? 'Target: '+g.target : '')}</div>
       </div>
-      <span class="status-pill ${statusMap[g.status]||'status-active'}">${statusLabel[g.status]||g.status}</span>
-      <button class="btn btn-sm btn-ghost" onclick="alert('Goal editor: ${g.text.replace(/'/g,'')}')">Edit</button>
+      <select onchange="updateGoalStatus(${i},this.value)" style="width:100px;padding:4px 6px;font-size:11px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:6px;color:var(--text-body);">
+        <option value="on-track" ${g.status==='on-track'?'selected':''}>On Track</option>
+        <option value="close" ${g.status==='close'?'selected':''}>Close</option>
+        <option value="behind" ${g.status==='behind'?'selected':''}>Behind</option>
+        <option value="achieved" ${g.status==='achieved'?'selected':''}>Achieved</option>
+      </select>
+      <button class="btn btn-sm btn-ghost" onclick="removeGoal(${i})" style="color:var(--danger);font-size:10px;">Remove</button>
     </div>`).join('');
+}
+
+function addClientGoal() {
+  if (!currentDetailClient) return;
+  const title = prompt('Goal title (e.g. "Squat 120kg"):');
+  if (!title || !title.trim()) return;
+  const detail = prompt('Detail / target (optional, e.g. "Target: June 2026"):') || '';
+  if (!currentDetailClient.goals) currentDetailClient.goals = [];
+  currentDetailClient.goals.push({ title: title.trim(), detail: detail.trim(), status: 'on-track' });
+  renderDetailGoals(currentDetailClient);
+  scheduleSave();
+}
+
+function updateGoalStatus(idx, status) {
+  if (!currentDetailClient || !currentDetailClient.goals) return;
+  currentDetailClient.goals[idx].status = status;
+  scheduleSave();
+}
+
+function removeGoal(idx) {
+  if (!currentDetailClient || !currentDetailClient.goals) return;
+  currentDetailClient.goals.splice(idx, 1);
+  renderDetailGoals(currentDetailClient);
+  scheduleSave();
+}
+
+// Client-side goal rendering
+function renderClientGoals() {
+  const el = document.getElementById('clientGoals');
+  if (!el) return;
+  const cid = loggedInUser ? loggedInUser.clientId : 1;
+  const client = CLIENTS.find(c => c.id === cid);
+  const goals = (client && client.goals) ? client.goals : [];
+  if (!goals.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--text-dim);padding:12px 0;">No goals set yet. Your coach will add your goals during onboarding or check-ins.</p>';
+    return;
+  }
+  const goalIcons = ['target','dumbbell','trending','fire','bolt','heart'];
+  const goalColours = ['#E07A3A','#4A9DC8','#8BB07E','#E07A3A','#9B8EC4','#D45B5B'];
+  const statusMap = {'on-track':'status-active','close':'status-attention','behind':'status-danger','achieved':'status-active'};
+  el.innerHTML = goals.map((g, i) => {
+    const icon = goalIcons[i % goalIcons.length];
+    const colour = goalColours[i % goalColours.length];
+    const statusClass = statusMap[g.status] || 'status-active';
+    const statusLabel = g.status ? g.status.charAt(0).toUpperCase() + g.status.slice(1).replace('-',' ') : 'Active';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i < goals.length -1 ? 'border-bottom:1px solid var(--wb-border);':''}">
+      <div style="width:40px;height:40px;border-radius:10px;background:${colour}15;display:flex;align-items:center;justify-content:center;">${ic(icon,colour)}</div>
+      <div style="flex:1;"><div style="font-size:13px;font-weight:500;">${g.title || g.text || ''}</div>${(g.detail || g.target) ? '<div style="font-size:11px;color:var(--text-dim);margin-top:2px;">' + (g.detail || g.target) + '</div>' : ''}</div>
+      <span class="status-pill ${statusClass}">${statusLabel}</span>
+    </div>`;
+  }).join('');
 }
 </script>
 </body>
