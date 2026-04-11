@@ -341,6 +341,54 @@
     /* Workout logger mobile */
     .wl-overlay .wl-header{padding:12px 16px !important;}
     .wl-overlay .wl-exercise{padding:12px !important;}
+
+    /* ─── MY PROGRESS — mobile optimisation ─── */
+    /* Sub-tabs: horizontal scroll, no wrapping */
+    .prog-sub-tabs{display:flex !important;flex-wrap:nowrap !important;overflow-x:auto !important;-webkit-overflow-scrolling:touch;gap:2px !important;padding:3px !important;scroll-snap-type:x mandatory;scrollbar-width:none;-ms-overflow-style:none;}
+    .prog-sub-tabs::-webkit-scrollbar{display:none;}
+    .prog-sub-tab{flex:0 0 auto !important;padding:7px 10px !important;font-size:11px !important;white-space:nowrap !important;scroll-snap-align:start;min-width:fit-content;}
+
+    /* Progress form — stack columns on mobile */
+    .prog-form{padding:14px !important;}
+    .prog-form h3{font-size:14px !important;margin-bottom:10px !important;}
+    .prog-form .form-row,.prog-form .form-row.three,.prog-form .form-row.four,.prog-form .form-row.five{grid-template-columns:1fr 1fr !important;gap:8px !important;}
+    .prog-form .form-row.full{grid-template-columns:1fr !important;}
+    .prog-form .form-label{font-size:9px !important;}
+    .prog-form input,.prog-form select,.prog-form textarea{padding:7px 8px !important;font-size:12px !important;}
+    .prog-form .btn-row{flex-wrap:wrap;gap:6px !important;}
+    .prog-form .btn-row .btn{font-size:12px !important;padding:8px 12px !important;}
+
+    /* Progress tables — compact */
+    #clientProgress .prog-table{font-size:11px !important;}
+    #clientProgress .prog-table th,#clientProgress .prog-table td{padding:5px 3px !important;}
+    #clientProgress .card{padding:12px !important;overflow-x:auto;}
+    #clientProgress .chart-container{height:180px !important;min-height:120px !important;}
+
+    /* Progress page header */
+    #clientProgress .page-header h1{font-size:18px !important;}
+    #clientProgress .page-header p{font-size:11px !important;}
+
+    /* Start Workout button */
+    #clientProgress .page-header + .kpi-row + div button{font-size:14px !important;padding:12px !important;}
+
+    /* KPIs on progress page */
+    #clientProgress .kpi-row{grid-template-columns:1fr 1fr !important;gap:8px !important;}
+    #clientProgress .kpi .kpi-value{font-size:20px !important;}
+    #clientProgress .kpi .kpi-label{font-size:10px !important;}
+
+    /* Weekly summary mobile */
+    .summary-grid{grid-template-columns:1fr 1fr !important;gap:8px !important;}
+    .summary-stat .stat-main{font-size:18px !important;}
+    .summary-stat .stat-label{font-size:10px !important;}
+    .summary-stat .stat-detail{font-size:9px !important;}
+    .week-nav button{font-size:14px !important;padding:6px 10px !important;}
+    .week-label{font-size:12px !important;}
+
+    /* Ensure tables fit */
+    .truncated-table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+
+    /* Mobile tab labels smaller for 6 tabs */
+    .mobile-tab .tab-label{font-size:9px !important;}
   }
 
   /* ─── WORKOUT LOGGER (Gym Mode) — compact sizing ─── */
@@ -690,10 +738,10 @@
     <div class="tab-row">
       <div class="mobile-tab active" onclick="mobileNav('clientDash')"><div class="tab-ic" id="mtHome"></div><span class="tab-label">Home</span></div>
       <div class="mobile-tab" onclick="mobileNav('clientProgramme')"><div class="tab-ic" id="mtProg"></div><span class="tab-label">Programme</span></div>
+      <div class="mobile-tab" onclick="mobileNav('clientProgress')"><div class="tab-ic" id="mtProgress"></div><span class="tab-label">Progress</span></div>
       <div class="mobile-tab" onclick="mobileNav('clientWellbeing')"><div class="tab-ic" id="mtWellbeing"></div><span class="tab-label">Wellbeing</span></div>
       <div class="mobile-tab" onclick="mobileNav('clientCheckin')"><div class="tab-ic" id="mtCheckin"></div><span class="tab-label">Check In</span></div>
       <div class="mobile-tab" onclick="mobileNav('clientMessages')"><div class="tab-ic" id="mtMsg"></div><span class="tab-label">Chat</span></div>
-      <div class="mobile-tab" onclick="mobileNav('clientMore')"><div class="tab-ic" id="mtMore"></div><span class="tab-label">More</span></div>
     </div>
   </div>
   <div class="main">
@@ -2124,7 +2172,7 @@ function mobileNav(pageId) {
   // Update mobile tab active states
   document.querySelectorAll('#clientMobileNav .mobile-tab').forEach(t => t.classList.remove('active'));
   const tabs = document.querySelectorAll('#clientMobileNav .mobile-tab');
-  const tabMap = {'clientDash':0,'clientProgramme':1,'clientWellbeing':2,'clientCheckin':3,'clientMessages':4,'clientMore':5};
+  const tabMap = {'clientDash':0,'clientProgramme':1,'clientProgress':2,'clientWellbeing':3,'clientCheckin':4,'clientMessages':5};
   const idx = tabMap[pageId];
   if (idx !== undefined && tabs[idx]) tabs[idx].classList.add('active');
   // Scroll to top on navigation
@@ -2324,13 +2372,13 @@ function initClientApp() {
   renderClientGoals();
 
   // Mobile tab bar icons
-  const mtEl = (id, name, col) => { const el = document.getElementById(id); if (el) el.innerHTML = ic(name, col, 22); };
+  const mtEl = (id, name, col) => { const el = document.getElementById(id); if (el) el.innerHTML = ic(name, col, 20); };
   mtEl('mtHome','dashboard','currentColor');
   mtEl('mtProg','programme','currentColor');
+  mtEl('mtProgress','target','currentColor');
   mtEl('mtWellbeing','heart','currentColor');
   mtEl('mtCheckin','checkin','currentColor');
   mtEl('mtMsg','messages','currentColor');
-  mtEl('mtMore','settings','currentColor');
 
   // More page icons
   const moreEl = (id, name, col) => { const el = document.getElementById(id); if (el) el.innerHTML = ic(name, col, 22); };
@@ -2795,6 +2843,28 @@ function discardWorkout() {
   document.getElementById('workoutLogger').classList.remove('active');
 }
 
+function _updateClientCompliance(clientId) {
+  const client = CLIENTS.find(c => c.id === clientId);
+  if (!client) return;
+  const workouts = WORKOUT_LOG[clientId] || [];
+  // Get programme sessions count for the current week
+  const pw = CLIENT_PROGRAMMES && CLIENT_PROGRAMMES[clientId] ? CLIENT_PROGRAMMES[clientId] : null;
+  let totalProgrammeSessions = 0;
+  if (pw && pw.weeks) {
+    const latestWeekKey = Object.keys(pw.weeks).map(Number).sort().pop();
+    if (latestWeekKey !== undefined && pw.weeks[latestWeekKey]) {
+      totalProgrammeSessions = (pw.weeks[latestWeekKey].sessions || []).length;
+    }
+  }
+  if (!totalProgrammeSessions) totalProgrammeSessions = 4; // default assumption
+  // Count workouts in last 7 days
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const thisWeek = workouts.filter(w => w.date && new Date(w.date) >= weekAgo).length;
+  client.compliance = Math.min(100, Math.round((thisWeek / totalProgrammeSessions) * 100));
+  client.lastActivity = workouts.length ? workouts[0].date : client.lastActivity;
+}
+
 function _isCardioExercise(name) {
   if (!name) return false;
   const n = name.toLowerCase();
@@ -3188,6 +3258,8 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
   const exNames = exerciseLogs.map(e => e.name).slice(0, 3).join(', ');
   const clientName = loggedInUser ? loggedInUser.name : 'Client';
   triggerWorkoutLogged(cid, clientName, exNames + ' (' + totalSets + ' sets)');
+  // Update client compliance based on workouts this week vs programme sessions
+  _updateClientCompliance(cid);
   scheduleSave();
   // Stop timers
   if (wlTimerInterval) { clearInterval(wlTimerInterval); wlTimerInterval = null; }
@@ -3292,8 +3364,8 @@ function initClientProgress() {
   const strFilter = document.getElementById('cpStrHistoryFilter');
   strFilter.innerHTML = '<option value="">All Exercises</option>' + exes.map(e => `<option value="${e}">${e}</option>`).join('');
 
-  // Cardio selectors
-  const acts = [...new Set(pd.cardio.map(e=>e.activity))];
+  // Cardio selectors — handle both 'activity' (manual log) and 'exercise' (workout logger) field names
+  const acts = [...new Set(pd.cardio.map(e => e.activity || e.exercise || '—').filter(a => a && a !== '—'))];
   const cardSel = document.getElementById('cpCardActivity');
   cardSel.innerHTML = acts.map(a => `<option value="${a}">${a}</option>`).join('');
   const cardFilter = document.getElementById('cpCardHistoryFilter');
@@ -3349,7 +3421,7 @@ function saveCPStrength() {
     if (r > 0) sets.push({weight:w, reps:r});
   });
   if (!sets.length) return alert('Log at least one set.');
-  const pd = PROGRESS_DATA[1];
+  const _cpCid = loggedInUser ? loggedInUser.clientId : 1; const pd = PROGRESS_DATA[_cpCid];
   pd.strength.unshift({date, exercise, sets, rpe});
   pd.strength.sort((a,b) => b.date.localeCompare(a.date));
   // Reset form
@@ -3363,11 +3435,14 @@ function saveCPStrength() {
   document.getElementById('cpStrHistoryFilter').innerHTML = '<option value="">All Exercises</option>' + exes.map(e => `<option value="${e}">${e}</option>`).join('');
   renderCPStrChart(); renderCPStrHistory();
   // Trigger notification to PT
-  triggerWorkoutLogged(1, 'James Wilson', exercise + ' (' + sets.length + ' sets)');
+  const _strCid = loggedInUser ? loggedInUser.clientId : 1;
+  const _strName = loggedInUser ? loggedInUser.name : 'Client';
+  triggerWorkoutLogged(_strCid, _strName, exercise + ' (' + sets.length + ' sets)');
+  scheduleSave();
 }
 
 function renderCPStrChart() {
-  const pd = PROGRESS_DATA[1]; if (!pd) return;
+  const _cpCid = loggedInUser ? loggedInUser.clientId : 1; const pd = PROGRESS_DATA[_cpCid]; if (!pd) return;
   const ex = document.getElementById('cpStrExercise').value;
   const met = document.getElementById('cpStrMetric').value;
   const entries = pd.strength.filter(e => e.exercise === ex).reverse();
@@ -3391,7 +3466,7 @@ function renderCPStrChart() {
 }
 
 function renderCPStrHistory() {
-  const pd = PROGRESS_DATA[1]; if (!pd) return;
+  const _cpCid = loggedInUser ? loggedInUser.clientId : 1; const pd = PROGRESS_DATA[_cpCid]; if (!pd) return;
   const filter = document.getElementById('cpStrHistoryFilter').value;
   const groupBy = document.getElementById('cpStrGroupBy').value;
   const entries = filter ? pd.strength.filter(e => e.exercise === filter) : pd.strength;
@@ -3434,9 +3509,13 @@ function saveCPCardio() {
   const rpe = parseInt(document.getElementById('cpCardRPE').value) || null;
   const notes = document.getElementById('cpCardNotes').value;
   if (!date || !time) return alert('Enter date and time.');
-  const pd = PROGRESS_DATA[1];
+  const cid = loggedInUser ? loggedInUser.clientId : null;
+  if (!cid) return;
+  if (!PROGRESS_DATA[cid]) PROGRESS_DATA[cid] = { strength: [], cardio: [], measurements: [], wearable: [], weekly: [] };
+  const pd = PROGRESS_DATA[cid];
   pd.cardio.unshift({date, activity, distance, unit, time, avgHR, maxHR, rpe, notes});
   pd.cardio.sort((a,b) => b.date.localeCompare(a.date));
+  scheduleSave();
   // Reset
   document.getElementById('cpCardDistance').value = '';
   document.getElementById('cpCardTime').value = '';
@@ -3445,17 +3524,19 @@ function saveCPCardio() {
   document.getElementById('cpCardRPE').value = '';
   document.getElementById('cpCardNotes').value = '';
   // Update selectors
-  const acts = [...new Set(pd.cardio.map(e=>e.activity))];
+  const acts = [...new Set(pd.cardio.map(e => e.activity || e.exercise || '—'))];
   document.getElementById('cpCardActivity').innerHTML = acts.map(a => `<option value="${a}">${a}</option>`).join('');
   document.getElementById('cpCardHistoryFilter').innerHTML = '<option value="">All Activities</option>' + acts.map(a => `<option value="${a}">${a}</option>`).join('');
   renderCPCardChart(); renderCPCardHistory();
 }
 
 function renderCPCardChart() {
-  const pd = PROGRESS_DATA[1]; if (!pd) return;
+  const cid = loggedInUser ? loggedInUser.clientId : null;
+  const pd = cid ? PROGRESS_DATA[cid] : (PROGRESS_DATA[1] || null);
+  if (!pd || !pd.cardio) return;
   const act = document.getElementById('cpCardActivity').value;
   const met = document.getElementById('cpCardMetric').value;
-  const entries = pd.cardio.filter(e => e.activity === act).reverse();
+  const entries = pd.cardio.filter(e => (e.activity || e.exercise) === act).reverse();
   const labels = entries.map(e => cpFormatDate(e.date));
   let data, label, colour;
   if (met === 'time') {
@@ -3472,12 +3553,15 @@ function renderCPCardChart() {
 }
 
 function renderCPCardHistory() {
-  const pd = PROGRESS_DATA[1]; if (!pd) return;
+  const cid = loggedInUser ? loggedInUser.clientId : null;
+  const pd = cid ? PROGRESS_DATA[cid] : (PROGRESS_DATA[1] || null);
+  if (!pd || !pd.cardio) return;
   const filter = document.getElementById('cpCardHistoryFilter').value;
-  const entries = filter ? pd.cardio.filter(e => e.activity === filter) : pd.cardio;
+  const entries = filter ? pd.cardio.filter(e => (e.activity || e.exercise) === filter) : pd.cardio;
   document.getElementById('cpCardHistory').innerHTML = entries.map(e => {
-    const distStr = e.distance ? `${e.distance} ${e.unit}` : '—';
-    return `<tr><td class="val">${cpFormatDate(e.date)}</td><td class="val">${e.activity}</td><td>${distStr}</td><td class="val">${e.time||'—'}</td><td>${e.avgHR?e.avgHR+' bpm':'—'}</td><td>${e.rpe||'—'}</td></tr>`;
+    const actName = e.activity || e.exercise || '—';
+    const distStr = e.distance ? `${e.distance} ${e.unit || ''}` : '—';
+    return `<tr><td class="val">${cpFormatDate(e.date)}</td><td class="val">${actName}</td><td>${distStr}</td><td class="val">${e.time||'—'}</td><td>${e.avgHR?e.avgHR+' bpm':'—'}</td><td>${e.rpe||'—'}</td></tr>`;
   }).join('');
 }
 
@@ -3495,7 +3579,7 @@ function saveCPMeasurement() {
     thigh: parseFloat(document.getElementById('cpMeasThigh').value)||null,
     calf: parseFloat(document.getElementById('cpMeasCalf').value)||null
   };
-  const pd = PROGRESS_DATA[1];
+  const _cpCid = loggedInUser ? loggedInUser.clientId : 1; const pd = PROGRESS_DATA[_cpCid];
   pd.measurements.unshift(m);
   pd.measurements.sort((a,b) => b.date.localeCompare(a.date));
   // Reset
@@ -3504,7 +3588,7 @@ function saveCPMeasurement() {
 }
 
 function renderCPMeasChart() {
-  const pd = PROGRESS_DATA[1]; if (!pd) return;
+  const _cpCid = loggedInUser ? loggedInUser.clientId : 1; const pd = PROGRESS_DATA[_cpCid]; if (!pd) return;
   const met = document.getElementById('cpMeasMetric').value;
   const entries = pd.measurements.filter(m => m[met] != null).reverse();
   const labels = entries.map(m => cpFormatDate(m.date));
@@ -3514,7 +3598,7 @@ function renderCPMeasChart() {
 }
 
 function renderCPMeasHistory() {
-  const pd = PROGRESS_DATA[1]; if (!pd) return;
+  const _cpCid = loggedInUser ? loggedInUser.clientId : 1; const pd = PROGRESS_DATA[_cpCid]; if (!pd) return;
   document.getElementById('cpMeasHistory').innerHTML = pd.measurements.map(m =>
     `<tr><td class="val">${cpFormatDate(m.date)}</td><td class="val">${m.weight||'—'}kg</td><td>${m.chest||'—'}</td><td>${m.waist||'—'}</td><td>${m.hips||'—'}</td><td>${m.glutes||'—'}</td><td>${m.arm||'—'}</td><td>${m.thigh||'—'}</td><td>${m.calf||'—'}</td></tr>`
   ).join('');
@@ -3545,7 +3629,7 @@ function saveCPWearable() {
     strain: parseFloat(document.getElementById('cpWearStrain').value)||null,
     steps: parseInt(document.getElementById('cpWearSteps').value)||null
   };
-  const pd = PROGRESS_DATA[1];
+  const _cpCid = loggedInUser ? loggedInUser.clientId : 1; const pd = PROGRESS_DATA[_cpCid];
   pd.wearable.unshift(entry);
   pd.wearable.sort((a,b) => b.date.localeCompare(a.date));
   ['cpWearRHR','cpWearHRV','cpWearVO2','cpWearRecovery','cpWearSleep','cpWearStrain','cpWearSteps'].forEach(id => document.getElementById(id).value = '');
@@ -3560,7 +3644,7 @@ function setCPWearTab(tab, btn) {
 }
 
 function renderCPWearChart() {
-  const pd = PROGRESS_DATA[1]; if (!pd) return;
+  const _cpCid = loggedInUser ? loggedInUser.clientId : 1; const pd = PROGRESS_DATA[_cpCid]; if (!pd) return;
   const entries = pd.wearable.slice().reverse();
   const labels = entries.map(e => cpFormatDate(e.date));
   const metricMap = {rhr:{key:'rhr',label:'Resting HR (bpm)',color:'#D45B5B'},hrv:{key:'hrv',label:'HRV (ms)',color:'#4A9DC8'},vo2:{key:'vo2',label:'VO2 Max',color:'#8BB07E'},recovery:{key:'recovery',label:'Recovery (%)',color:'#9B8EC4'},sleep:{key:'sleep',label:'Sleep (hours)',color:'#4A9DC8'},strain:{key:'strain',label:'Strain (0-21)',color:'#E07A3A'},steps:{key:'steps',label:'Steps',color:'#8BB07E'}};
@@ -3570,7 +3654,7 @@ function renderCPWearChart() {
 }
 
 function renderCPWearHistory() {
-  const pd = PROGRESS_DATA[1]; if (!pd) return;
+  const _cpCid = loggedInUser ? loggedInUser.clientId : 1; const pd = PROGRESS_DATA[_cpCid]; if (!pd) return;
   document.getElementById('cpWearHistory').innerHTML = pd.wearable.map(e =>
     `<tr><td class="val">${cpFormatDate(e.date)}</td><td>${e.rhr||'—'}</td><td>${e.hrv||'—'}</td><td>${e.vo2||'—'}</td><td>${e.recovery?e.recovery+'%':'—'}</td><td>${e.sleep?e.sleep+'h':'—'}</td><td>${e.strain||'—'}</td><td>${e.steps?e.steps.toLocaleString():'—'}</td></tr>`
   ).join('');
@@ -3729,17 +3813,18 @@ function _buildWeekFromWorkoutLog() {
     const dayWorkouts = workouts.filter(w => w.date === dateStr);
     let strength = 0, running = 0, otherCardio = 0;
     dayWorkouts.forEach(w => {
-      // Parse duration to hours
+      // Parse duration "mm:ss" to hours (e.g. "45:30" = 0.758h)
       const dParts = (w.duration || '0:00').split(':');
-      const hours = (parseInt(dParts[0]) || 0) / 60 + (parseInt(dParts[1]) || 0) / 3600;
-      const durH = parseFloat(((parseInt(dParts[0]) || 0) + (parseInt(dParts[1]) || 0) / 60).toFixed(2));
-      const isCardioSession = w.type === 'cardio';
+      const mins = parseInt(dParts[0]) || 0;
+      const secs = parseInt(dParts[1]) || 0;
+      const durH = parseFloat(((mins + secs / 60) / 60).toFixed(3));
       const hasRunning = (w.exercises || []).some(e => {
-        const n = e.name.toLowerCase();
+        const n = (e.name || '').toLowerCase();
         return n.includes('run') || n.includes('jog') || n.includes('sprint');
       });
+      const hasCardio = w.type === 'cardio' || (w.exercises || []).some(e => _isCardioExercise(e.name));
       if (hasRunning) running += durH;
-      else if (isCardioSession) otherCardio += durH;
+      else if (hasCardio) otherCardio += durH;
       else strength += durH;
     });
     return { day: name, strength, running, otherCardio, runKm: 0, steps: 0, sleep: 0 };
@@ -4365,6 +4450,8 @@ function renderDTWeeklySummary() {
 function updateCheckinDay() {
   if (!currentDetailClient) return;
   currentDetailClient.checkinDay = document.getElementById('detailCheckinDay').value;
+  currentDetailClient.nextCheckin = currentDetailClient.checkinDay;
+  scheduleSave();
 }
 
 function showDetailTab(tabId) {
@@ -5427,11 +5514,12 @@ function toggleNotifications() {
 function markAllPTNotifsRead() {
   PT_NOTIFICATIONS.forEach(n => n.read = true);
   renderPTNotifications();
+  scheduleSave();
 }
 
 function handleNotification(nId, clientId, type) {
   const n = PT_NOTIFICATIONS.find(x => x.id === nId);
-  if (n) n.read = true;
+  if (n) { n.read = true; scheduleSave(); }
   renderPTNotifications();
   toggleNotifications();
   if (type === 'checkin') {
