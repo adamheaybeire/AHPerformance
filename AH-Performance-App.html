@@ -351,7 +351,10 @@
     /* Progress form — stack columns on mobile */
     .prog-form{padding:14px !important;}
     .prog-form h3{font-size:14px !important;margin-bottom:10px !important;}
-    .prog-form .form-row,.prog-form .form-row.three,.prog-form .form-row.four,.prog-form .form-row.five{grid-template-columns:1fr 1fr !important;gap:8px !important;}
+    .prog-form .form-row,.prog-form .form-row.three,.prog-form .form-row.four{grid-template-columns:1fr 1fr !important;gap:8px !important;}
+    .prog-form .form-row.five{grid-template-columns:30px 1fr 1fr 60px 30px !important;gap:4px !important;}
+    .prog-form .form-row.five .form-group{gap:2px !important;}
+    .prog-form .form-row.five input,.prog-form .form-row.five select{padding:6px 4px !important;font-size:11px !important;}
     .prog-form .form-row.full{grid-template-columns:1fr !important;}
     .prog-form .form-label{font-size:9px !important;}
     .prog-form input,.prog-form select,.prog-form textarea{padding:7px 8px !important;font-size:12px !important;}
@@ -394,10 +397,10 @@
   /* ─── WORKOUT LOGGER (Gym Mode) — compact sizing ─── */
   .wl-overlay{position:fixed;inset:0;z-index:200;background:var(--slate-deep);display:none;flex-direction:column;overflow:hidden;}
   .wl-overlay.active{display:flex;}
-  .wl-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--slate-card);border-bottom:1px solid var(--slate-border);flex-shrink:0;}
+  .wl-header{display:flex;align-items:center;justify-content:space-between;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;background:var(--slate-card);border-bottom:1px solid var(--slate-border);flex-shrink:0;}
   .wl-header h2{font-size:14px;margin:0;font-family:'Space Grotesk',sans-serif;}
   .wl-close{background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;padding:4px 8px;-webkit-tap-highlight-color:transparent;}
-  .wl-body{flex:1;overflow-y:auto;padding:12px 12px 180px;-webkit-overflow-scrolling:touch;}
+  .wl-body{flex:1;overflow-y:auto;padding:12px 12px 20px;-webkit-overflow-scrolling:touch;}
   .wl-session-pick{display:flex;flex-direction:column;gap:8px;padding:6px 0;}
   .wl-session-card{background:var(--slate-card);border:1px solid var(--slate-border);border-radius:12px;padding:14px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:border-color 0.15s;position:relative;overflow:hidden;}
   .wl-session-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
@@ -431,8 +434,8 @@
   .wl-add-set:active{background:var(--slate-raised);}
   .wl-notes-input{width:100%;padding:8px 10px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-body);font-size:12px;resize:none;min-height:32px;font-family:Inter,sans-serif;}
   .wl-notes-input:focus{border-color:var(--ocean);outline:none;}
-  /* Timer bar — fixed above footer */
-  .wl-timer-bar{position:fixed;bottom:62px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:0;padding:8px 16px;background:var(--slate-card);border-top:1px solid var(--slate-border);z-index:202;}
+  /* Timer bar — flexbox child above footer */
+  .wl-timer-bar{display:flex;align-items:center;justify-content:center;gap:0;padding:8px 16px;background:var(--slate-card);border-top:1px solid var(--slate-border);flex-shrink:0;}
   .wl-timer-section{display:flex;flex-direction:column;align-items:center;flex:1;}
   .wl-timer-label{font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);font-family:'Space Grotesk',sans-serif;}
   .wl-timer-value{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--ocean);letter-spacing:1px;}
@@ -441,7 +444,7 @@
   @keyframes pulse-rest{0%,100%{opacity:1;}50%{opacity:0.5;}}
   @keyframes wl-pulse-next{0%,100%{outline-color:rgba(224,122,58,0.3);}50%{outline-color:rgba(224,122,58,0.7);}}
   .wl-timer-divider{width:1px;height:28px;background:var(--slate-border);}
-  .wl-footer{position:fixed;bottom:0;left:0;right:0;padding:8px 14px calc(8px + env(safe-area-inset-bottom,0px));background:var(--slate-card);border-top:1px solid var(--slate-border);z-index:201;backdrop-filter:blur(20px);}
+  .wl-footer{padding:8px 14px calc(8px + env(safe-area-inset-bottom,0px));background:var(--slate-card);border-top:1px solid var(--slate-border);flex-shrink:0;}
   .wl-finish-btn{width:100%;padding:14px;border:none;border-radius:12px;background:var(--sage);color:white;font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;letter-spacing:0.3px;-webkit-tap-highlight-color:transparent;transition:opacity 0.15s;}
   .wl-finish-btn:active{opacity:0.8;}
   .wl-finish-btn:disabled{opacity:0.4;cursor:not-allowed;}
@@ -1854,20 +1857,37 @@ function ic(name, colour, size) { return ICONS[name] ? ICONS[name](colour, size)
 // ═══════════════════════════════════════
 //  DEMO DATA
 // ═══════════════════════════════════════
-const CLIENTS = [];
+const CLIENTS = [
+  {
+    id: 1, name: 'Demo Client', initials: 'DC', bg: 'var(--ocean-soft)', colour: 'var(--ocean)',
+    email: 'demo@ahperformance.co.uk',
+    programme: 'No programme', week: 0, goal: 'General fitness',
+    status: 'active', compliance: 0, lastActivity: 'Just now',
+    nextCheckin: 'Monday', checkinDay: 'Monday',
+    joined: 'Apr 2026',
+    squat: [], bench: [], deadlift: [],
+    weight: [83], height: '178',
+    startWeight: 83,
+    runs: [], goals: [],
+    onboarding: {
+      personal: { firstName: 'Demo', lastName: 'Client', email: 'demo@ahperformance.co.uk', phone: '07700000000', dob: '1990-01-15', gender: 'Male', weight: '83', height: '178' },
+      goals: { mainGoals: ['Build strength', 'Improve fitness'], targetWeight: '', timeline: '3 months' }
+    }
+  }
+];
 
 const WELLBEING_DATA = [];
 
 const CYCLE_LOG = {};
 
 // Workout session log (per-client)
-const WORKOUT_LOG = {};
+const WORKOUT_LOG = { 1: [] };
 
-const CHECKIN_LOG = {};
+const CHECKIN_LOG = { 1: [] };
 
 const PT_NOTIFICATIONS = [];
 
-const CLIENT_NOTIFICATIONS = {};
+const CLIENT_NOTIFICATIONS = { 1: [] };
 
 // ═══════════════════════════════════════
 //  EMAIL QUEUE (simulated — SendGrid ready)
@@ -1895,7 +1915,7 @@ const EXERCISE_DB = {
 // ═══════════════════════════════════════
 //  PROGRESS DATA (per-client)
 // ═══════════════════════════════════════
-const PROGRESS_DATA = {};
+const PROGRESS_DATA = { 1: { strength: [], cardio: [], measurements: [], wearable: [], weekly: [] } };
 
 // ═══════════════════════════════════════
 //  INIT AND NAVIGATION
@@ -2088,7 +2108,8 @@ function buildSidebars() {
 //  AUTHENTICATION SYSTEM
 // ═══════════════════════════════════════
 const USERS = [
-  { email: 'adam@ahperformance.co.uk', password: 'coach2026', role: 'pt', name: 'Adam Heayberd' }
+  { email: 'adam@ahperformance.co.uk', password: 'coach2026', role: 'pt', name: 'Adam Heayberd' },
+  { email: 'demo@ahperformance.co.uk', password: 'demo2026', role: 'client', name: 'Demo Client', clientId: 1 }
 ];
 let loggedInUser = null;
 
@@ -2209,7 +2230,9 @@ function initClientApp() {
   document.getElementById('clientDateLine').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
   const cid = clientUser ? clientUser.clientId : null;
-  const clientData = cid ? CLIENTS.find(c => c.id === cid) : null;
+  let clientData = cid ? CLIENTS.find(c => c.id === cid) : null;
+  // Fallback: match by email if clientId lookup fails
+  if (!clientData && clientUser?.email) clientData = CLIENTS.find(c => c.email === clientUser.email);
   const workouts = cid ? (WORKOUT_LOG[cid] || []) : [];
   const progWeeks = getClientProgrammeWeeks();
   const progKeys = Object.keys(progWeeks).map(Number).sort();
@@ -2243,7 +2266,7 @@ function initClientApp() {
   }
 
   // ─── CHECK-IN TILE ───
-  const checkinDay = clientData?.checkinDay || clientData?.nextCheckin || 'Sunday';
+  const checkinDay = clientData?.checkinDay || clientData?.nextCheckin || 'Monday';
   document.getElementById('dashCheckinTile').innerHTML = `<div style="background:var(--ember-soft);border:1px solid rgba(224,122,58,0.15);border-radius:14px;padding:16px 18px;">
     <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--ember);margin-bottom:6px;font-family:'Space Grotesk',sans-serif;">Check-in Due</div>
     <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:500;color:var(--text-bright);">${checkinDay} by 8pm</div>
@@ -3142,15 +3165,20 @@ function wlAddFreeExercise() {
 
 function finishWorkout() {
   if (!wlActive) return;
-  // Count completed sets
+  // Count completed sets — only include weight-based exercises in volume
   let totalDone = 0, totalVolume = 0;
+  const exercises = wlCurrentSession?.exercises || [];
   Object.keys(wlSetData).forEach(exIdx => {
+    const ex = exercises[parseInt(exIdx)];
+    const isCardio = ex ? _isCardioExercise(ex.n) : false;
     wlSetData[exIdx].forEach(set => {
       if (set.done) {
         totalDone++;
-        const w = parseFloat(set.weight) || 0;
-        const r = parseInt(set.reps) || 0;
-        totalVolume += w * r;
+        if (!isCardio) {
+          const w = parseFloat(set.weight) || 0;
+          const r = parseInt(set.reps) || 0;
+          totalVolume += w * r;
+        }
       }
     });
   });
