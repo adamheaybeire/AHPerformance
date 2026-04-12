@@ -277,6 +277,7 @@
   .toggle-rows:hover{color:var(--ocean);}
 
   /* ─── MOBILE BOTTOM TAB BAR (Client App) ─── */
+  .mobile-only-card{display:none;}
   .mobile-tab-bar{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--slate-deep);border-top:1px solid var(--slate-border);z-index:100;padding:6px 0 env(safe-area-inset-bottom,6px);backdrop-filter:blur(20px);}
   .mobile-tab-bar .tab-row{display:flex;justify-content:space-around;align-items:center;}
   .mobile-tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;cursor:pointer;color:var(--text-dim);transition:color 0.15s;-webkit-tap-highlight-color:transparent;min-width:52px;}
@@ -351,7 +352,8 @@
     /* Progress form — stack columns on mobile */
     .prog-form{padding:14px !important;}
     .prog-form h3{font-size:14px !important;margin-bottom:10px !important;}
-    .prog-form .form-row,.prog-form .form-row.three,.prog-form .form-row.four{grid-template-columns:1fr 1fr !important;gap:8px !important;}
+    .prog-form .form-row,.prog-form .form-row.four{grid-template-columns:1fr 1fr !important;gap:8px !important;}
+    .prog-form .form-row.three{grid-template-columns:1fr !important;gap:8px !important;}
     .prog-form .form-row.five{grid-template-columns:30px 1fr 1fr 60px 30px !important;gap:4px !important;}
     .prog-form .form-row.five .form-group{gap:2px !important;}
     .prog-form .form-row.five input,.prog-form .form-row.five select{padding:6px 4px !important;font-size:11px !important;}
@@ -361,9 +363,21 @@
     .prog-form .btn-row{flex-wrap:wrap;gap:6px !important;}
     .prog-form .btn-row .btn{font-size:12px !important;padding:8px 12px !important;}
 
+    /* Hide manual log forms on mobile — data comes from workout logger */
+    #cpStrForm,#cpCardForm,#cpWearForm,#cpMeasForm{display:none !important;}
+    /* Hide Body tab button on mobile */
+    #progSubTabs .prog-sub-tab[onclick*="progBody"]{display:none !important;}
+    /* Show bodyweight trend on check-in tab (mobile only) */
+    .mobile-only-card{display:block !important;}
+
     /* Progress tables — compact */
-    #clientProgress .prog-table{font-size:11px !important;}
-    #clientProgress .prog-table th,#clientProgress .prog-table td{padding:5px 3px !important;}
+    #clientProgress .prog-table{font-size:10px !important;word-break:break-word;}
+    #clientProgress .prog-table th,#clientProgress .prog-table td{padding:4px 2px !important;font-size:10px !important;line-height:1.3;}
+    #clientProgress .prog-table th{font-size:9px !important;text-transform:uppercase;letter-spacing:0.3px;}
+    #clientProgress .card h3{font-size:13px !important;}
+    #clientProgress .flex-between{flex-wrap:wrap;gap:6px;}
+    #clientProgress .flex-between select{font-size:10px !important;padding:4px 6px !important;max-width:100px;}
+    #clientProgress .card .val{font-size:10px !important;}
     #clientProgress .card{padding:12px !important;overflow-x:auto;}
     #clientProgress .chart-container{height:180px !important;min-height:120px !important;}
 
@@ -825,16 +839,16 @@
 
       <!-- 5 Sub-tabs -->
       <div class="prog-sub-tabs" id="progSubTabs">
-        <button class="prog-sub-tab active" onclick="showProgSection('progStrength')">Strength</button>
+        <button class="prog-sub-tab active" onclick="showProgSection('progWeekly')">Weekly Summary</button>
+        <button class="prog-sub-tab" onclick="showProgSection('progHistory')">History</button>
+        <button class="prog-sub-tab" onclick="showProgSection('progStrength')">Strength</button>
         <button class="prog-sub-tab" onclick="showProgSection('progCardio')">Cardio</button>
         <button class="prog-sub-tab" onclick="showProgSection('progBody')">Body</button>
         <button class="prog-sub-tab" onclick="showProgSection('progWearable')">Wearable</button>
-        <button class="prog-sub-tab" onclick="showProgSection('progWeekly')">Weekly Summary</button>
-        <button class="prog-sub-tab" onclick="showProgSection('progHistory')">History</button>
       </div>
 
       <!-- ═══ STRENGTH ═══ -->
-      <div class="prog-section active" id="progStrength">
+      <div class="prog-section" id="progStrength">
         <div class="prog-form" id="cpStrForm">
           <h3>Log Strength Entry</h3>
           <div class="form-row three">
@@ -1028,7 +1042,7 @@
       </div>
 
       <!-- ═══ WEEKLY SUMMARY ═══ -->
-      <div class="prog-section" id="progWeekly">
+      <div class="prog-section active" id="progWeekly">
         <div class="week-nav">
           <button onclick="changeCPWeek(-1)">&larr;</button>
           <div class="week-label" id="cpWeekLabel">—</div>
@@ -1376,6 +1390,12 @@
         <h3 style="margin-bottom:16px;">Check-In History</h3>
         <div id="checkinHistory"></div>
       </div>
+
+      <!-- Body Weight Trend (shown on mobile, hidden on desktop) -->
+      <div class="card mobile-only-card" id="ciWeightTrendCard" style="margin-top:16px;">
+        <h3 style="margin-bottom:12px;">Body Weight Trend</h3>
+        <div class="chart-container"><canvas id="ciWeightTrendChart"></canvas></div>
+      </div>
     </div>
 
     <!-- CLIENT: Notifications Centre -->
@@ -1547,15 +1567,15 @@
       <div class="tab-content" id="detailProgress">
         <!-- PT Progress sub-tabs -->
         <div class="prog-sub-tabs" id="dtProgSubTabs" style="margin-bottom:16px;">
-          <button class="prog-sub-tab active" onclick="showDTProgSection('dtProgStr')">Strength</button>
+          <button class="prog-sub-tab active" onclick="showDTProgSection('dtProgWeekly')">Weekly Summary</button>
+          <button class="prog-sub-tab" onclick="showDTProgSection('dtProgStr')">Strength</button>
           <button class="prog-sub-tab" onclick="showDTProgSection('dtProgCard')">Cardio</button>
           <button class="prog-sub-tab" onclick="showDTProgSection('dtProgBody')">Body</button>
           <button class="prog-sub-tab" onclick="showDTProgSection('dtProgWear')">Wearable</button>
-          <button class="prog-sub-tab" onclick="showDTProgSection('dtProgWeekly')">Weekly Summary</button>
         </div>
 
         <!-- Strength -->
-        <div class="prog-section active" id="dtProgStr">
+        <div class="prog-section" id="dtProgStr">
           <div class="card card-ember">
             <div class="flex-between mb-12"><h3 style="margin-bottom:0;">Strength Progress</h3>
               <div style="display:flex;gap:8px;">
@@ -1655,7 +1675,7 @@
         </div>
 
         <!-- Weekly Summary -->
-        <div class="prog-section" id="dtProgWeekly">
+        <div class="prog-section active" id="dtProgWeekly">
           <div class="week-nav">
             <button onclick="changeDTWeek(-1)">&larr;</button>
             <div class="week-label" id="dtWeekLabel">—</div>
@@ -1944,7 +1964,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           _lastAppliedSavedAt = state.savedAt;
           // Re-render current view
           if (currentRole === 'client') {
-            renderClientMessages(); renderClientNotifs(); renderWellbeingHistory(); updateSidebarBadges();
+            initClientApp(); renderClientMessages(); renderClientNotifs(); renderWellbeingHistory(); updateSidebarBadges();
           } else {
             renderPTNotifications(); renderPTMessages(); updateSidebarBadges();
           }
@@ -2739,9 +2759,10 @@ function startWorkoutSession(weekKey, sessionIdx) {
   if (wlCurrentSession.exercises) {
     wlCurrentSession.exercises.forEach((ex, i) => {
       const prescribed = parseSetRep(ex.sr);
+      const isCardio = _isCardioExercise(ex.n);
       const sets = [];
       for (let s = 0; s < prescribed.sets; s++) {
-        sets.push({ weight: ex.w && ex.w !== '—' ? parseFloat(ex.w) || '' : '', reps: prescribed.reps || '', done: false });
+        sets.push({ weight: (!isCardio && ex.w && ex.w !== '—') ? parseFloat(ex.w) || '' : '', reps: prescribed.reps || '', done: false });
       }
       wlSetData[i] = sets;
     });
@@ -2967,7 +2988,7 @@ function renderWLActiveSession() {
       if (isCardioEx) {
         html += `<div class="wl-set-row" id="wlSet${i}_${si}">
           <div class="wl-set-num ${set.done ? 'done' : ''}">${si + 1}</div>
-          <input type="text" class="wl-set-input" inputmode="text" placeholder="${set.weight || 'mm:ss'}" value="${set.done && set.weight !== '' ? set.weight : ''}" onchange="wlUpdateSet(${i},${si},'weight',this.value)">
+          <input type="text" class="wl-set-input" inputmode="numeric" placeholder="${set.weight || 'mm:ss'}" value="${set.done && set.weight !== '' ? set.weight : ''}" onblur="wlFormatTimeInput(this)" onchange="wlUpdateSet(${i},${si},'weight',this.value)">
           <input type="text" class="wl-set-input" inputmode="text" placeholder="${set.reps || 'dist/cal'}" value="${set.done && set.reps !== '' ? set.reps : ''}" onchange="wlUpdateSet(${i},${si},'reps',this.value)">
           <button class="wl-check-btn ${set.done ? 'checked' : ''}" onclick="wlToggleSet(${i},${si})">\u2713</button>
         </div>`;
@@ -2999,6 +3020,21 @@ function toggleWLExercise(idx) {
   if (body) body.style.display = body.style.display === 'none' ? 'block' : 'none';
 }
 
+/* Auto-format numeric input to mm:ss for cardio time fields */
+function wlFormatTimeInput(el) {
+  let v = el.value.trim();
+  if (!v || v.includes(':')) return;           // already formatted or empty
+  v = v.replace(/[^0-9]/g, '');               // digits only
+  if (!v) return;
+  v = v.padStart(4, '0');                      // "835" → "0835", "45" → "0045", "5" → "0005"
+  const mm = v.slice(0, -2);                   // everything except last 2
+  const ss = v.slice(-2);                      // last 2 digits = seconds
+  const formatted = mm.padStart(2, '0') + ':' + ss;
+  el.value = formatted;
+  // Fire change so wlUpdateSet picks up the formatted value
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
 function wlUpdateSet(exIdx, setIdx, field, value) {
   if (!wlSetData[exIdx] || !wlSetData[exIdx][setIdx]) return;
   wlSetData[exIdx][setIdx][field] = value;
@@ -3022,11 +3058,21 @@ function wlUpdateSet(exIdx, setIdx, field, value) {
 function wlToggleSet(exIdx, setIdx) {
   if (!wlSetData[exIdx] || !wlSetData[exIdx][setIdx]) return;
   const set = wlSetData[exIdx][setIdx];
+  const ex = wlCurrentSession?.exercises?.[exIdx];
+  const isCardio = ex ? _isCardioExercise(ex.n) : false;
   // Read current input values before toggling
   const row = document.getElementById(`wlSet${exIdx}_${setIdx}`);
   if (row) {
     const inputs = row.querySelectorAll('.wl-set-input');
-    if (inputs[0]) set.weight = inputs[0].value || set.weight;
+    if (inputs[0]) {
+      let wVal = inputs[0].value || set.weight;
+      // Auto-format time for cardio exercises
+      if (isCardio && wVal && !String(wVal).includes(':')) {
+        let v = String(wVal).replace(/[^0-9]/g, '');
+        if (v) { v = v.padStart(4, '0'); wVal = v.slice(0, -2).padStart(2, '0') + ':' + v.slice(-2); }
+      }
+      set.weight = wVal;
+    }
     if (inputs[1]) set.reps = inputs[1].value || set.reps;
   }
   set.done = !set.done;
@@ -3282,6 +3328,9 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
       });
     }
   });
+  // Keep progress data sorted descending by date (charts .reverse() to ascending)
+  PROGRESS_DATA[cid].strength.sort((a,b) => b.date.localeCompare(a.date));
+  PROGRESS_DATA[cid].cardio.sort((a,b) => b.date.localeCompare(a.date));
   // Send notification to PT
   const exNames = exerciseLogs.map(e => e.name).slice(0, 3).join(', ');
   const clientName = loggedInUser ? loggedInUser.name : 'Client';
@@ -3411,6 +3460,7 @@ function initClientProgress() {
 
   cpWeekIdx = 0;
   renderCPWeeklySummary();
+  renderWorkoutHistory();
 }
 
 function showProgSection(sectionId) {
@@ -5264,6 +5314,28 @@ function renderCheckinHistory() {
   const logs = CHECKIN_LOG[cid] || [];
   if (!logs.length) { el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No check-ins submitted yet.</p>'; return; }
   el.innerHTML = logs.map(ci => renderCheckinCard(ci, false)).join('');
+  // Render bodyweight trend chart (for mobile check-in tab)
+  renderCIWeightTrend(cid);
+}
+
+function renderCIWeightTrend(cid) {
+  const canvas = document.getElementById('ciWeightTrendChart');
+  if (!canvas) return;
+  const pd = PROGRESS_DATA[cid];
+  // Try measurements first, fall back to client weight array
+  let labels, data;
+  if (pd && pd.measurements && pd.measurements.length) {
+    const entries = pd.measurements.filter(m => m.weight != null).slice().sort((a,b) => a.date.localeCompare(b.date));
+    labels = entries.map(m => cpFormatDate(m.date));
+    data = entries.map(m => m.weight);
+  } else {
+    const client = CLIENTS.find(c => c.id === cid);
+    if (!client || !client.weight || !client.weight.length) { canvas.parentElement.parentElement.style.display = 'none'; return; }
+    labels = client.weight.map((_,i) => 'Wk '+(i+1));
+    data = client.weight;
+  }
+  if (!data.length) { canvas.parentElement.parentElement.style.display = 'none'; return; }
+  renderChart('ciWeightTrendChart', labels, data, 'Weight (kg)', '#8BB07E');
 }
 
 function renderCheckinCard(ci, ptView) {
