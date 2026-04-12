@@ -729,12 +729,41 @@
         <input type="password" id="loginPassword" placeholder="Enter your password" onkeydown="if(event.key==='Enter')attemptLogin()">
       </div>
       <button class="login-btn" onclick="attemptLogin()">Sign In</button>
+      <a class="login-forgot" onclick="showForgotPassword()" style="display:block;text-align:center;margin-top:10px;font-size:12px;color:var(--ocean);cursor:pointer;">Forgot password?</a>
       <div class="login-divider">or</div>
       <a class="login-new-client" onclick="startNewClientOnboarding()">New client? Complete your onboarding</a>
       <div class="login-demo-hint">
         <div class="demo-title">Trainer Login</div>
         <div class="demo-row"><span>Email:</span><span class="demo-val">adam@ahperformance.co.uk</span></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Forgot Password Overlay -->
+<div class="login-screen" id="forgotPasswordScreen" style="display:none;">
+  <div class="login-box fade-in" style="max-width:380px;">
+    <div class="login-logo">
+      <div class="mark">AH</div>
+      <div><div class="wordmark">AH Performance</div><div class="tag">Reset Password</div></div>
+    </div>
+    <p class="login-subtitle">Enter your email and new password below.</p>
+    <div class="login-form">
+      <div class="login-error" id="forgotError" style="display:none;">No account found with that email.</div>
+      <div class="login-field">
+        <label>Email</label>
+        <input type="email" id="forgotEmail" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('forgotNewPw').focus()">
+      </div>
+      <div class="login-field">
+        <label>New Password</label>
+        <input type="password" id="forgotNewPw" placeholder="Enter new password" onkeydown="if(event.key==='Enter')resetClientPassword()">
+      </div>
+      <div class="login-field">
+        <label>Confirm Password</label>
+        <input type="password" id="forgotConfirmPw" placeholder="Confirm new password" onkeydown="if(event.key==='Enter')resetClientPassword()">
+      </div>
+      <button class="login-btn" onclick="resetClientPassword()">Reset Password</button>
+      <a style="display:block;text-align:center;margin-top:12px;font-size:12px;color:var(--ocean);cursor:pointer;" onclick="hideForgotPassword()">Back to login</a>
     </div>
   </div>
 </div>
@@ -756,9 +785,8 @@
       <div class="mobile-tab active" onclick="mobileNav('clientDash')"><div class="tab-ic" id="mtHome"></div><span class="tab-label">Home</span></div>
       <div class="mobile-tab" onclick="mobileNav('clientProgramme')"><div class="tab-ic" id="mtProg"></div><span class="tab-label">Programme</span></div>
       <div class="mobile-tab" onclick="mobileNav('clientProgress')"><div class="tab-ic" id="mtProgress"></div><span class="tab-label">Progress</span></div>
-      <div class="mobile-tab" onclick="mobileNav('clientWellbeing')"><div class="tab-ic" id="mtWellbeing"></div><span class="tab-label">Wellbeing</span></div>
       <div class="mobile-tab" onclick="mobileNav('clientCheckin')"><div class="tab-ic" id="mtCheckin"></div><span class="tab-label">Check In</span></div>
-      <div class="mobile-tab" onclick="mobileNav('clientMessages')"><div class="tab-ic" id="mtMsg"></div><span class="tab-label">Chat</span></div>
+      <div class="mobile-tab" onclick="mobileNav('clientMore')"><div class="tab-ic" id="mtMore"></div><span class="tab-label">More</span></div>
     </div>
   </div>
   <div class="main">
@@ -1007,7 +1035,6 @@
             <div class="form-group"><label class="form-label">VO2 Max</label><input type="number" id="cpWearVO2" placeholder="48" step="0.1"></div>
           </div>
           <div class="form-row four">
-            <div class="form-group"><label class="form-label">Recovery Score (%)</label><input type="number" id="cpWearRecovery" placeholder="78" min="0" max="100"></div>
             <div class="form-group"><label class="form-label">Sleep (hours)</label><input type="number" id="cpWearSleep" placeholder="7.5" step="0.1"></div>
             <div class="form-group"><label class="form-label">Strain (0-21)</label><input type="number" id="cpWearStrain" placeholder="14.5" step="0.1" min="0" max="21"></div>
             <div class="form-group"><label class="form-label">Steps <span class="sync-badge">auto-sync</span></label><input type="number" id="cpWearSteps" placeholder="8500"></div>
@@ -1026,7 +1053,6 @@
             <button class="wear-sub-tab active" onclick="setCPWearTab('rhr',this)">RHR</button>
             <button class="wear-sub-tab" onclick="setCPWearTab('hrv',this)">HRV</button>
             <button class="wear-sub-tab" onclick="setCPWearTab('vo2',this)">VO2</button>
-            <button class="wear-sub-tab" onclick="setCPWearTab('recovery',this)">Recovery</button>
             <button class="wear-sub-tab" onclick="setCPWearTab('sleep',this)">Sleep</button>
             <button class="wear-sub-tab" onclick="setCPWearTab('strain',this)">Strain</button>
             <button class="wear-sub-tab" onclick="setCPWearTab('steps',this)">Steps</button>
@@ -1035,7 +1061,7 @@
         </div>
         <div class="card">
           <h3>Wearable History</h3>
-          <table class="prog-table truncated-table" id="cpWearTable"><thead><tr><th>Date</th><th>RHR</th><th>HRV</th><th>VO2</th><th>Recovery</th><th>Sleep</th><th>Strain</th><th>Steps</th></tr></thead>
+          <table class="prog-table truncated-table" id="cpWearTable"><thead><tr><th>Date</th><th>RHR</th><th>HRV</th><th>VO2</th><th>Sleep</th><th>Strain</th><th>Steps</th></tr></thead>
           <tbody id="cpWearHistory"></tbody></table>
           <span class="toggle-rows" onclick="toggleTableRows('cpWearTable',this)">Show more</span>
         </div>
@@ -1419,10 +1445,11 @@
     <div class="page" id="clientMore">
       <div class="page-header"><h1>More</h1></div>
       <div style="display:flex;flex-direction:column;gap:4px;" id="moreMenuItems">
-
+        <div class="card" style="cursor:pointer;padding:16px;" onclick="showClientPage('clientMessages')"><div style="display:flex;align-items:center;gap:14px;"><span id="moreChatIc"></span><div><div style="font-size:14px;font-weight:500;">Chat</div><div style="font-size:12px;color:var(--text-dim);">Message Coach Adam</div></div></div></div>
+        <div class="card" style="cursor:pointer;padding:16px;" onclick="showClientPage('clientWellbeing')"><div style="display:flex;align-items:center;gap:14px;"><span id="moreWellbeingIc"></span><div><div style="font-size:14px;font-weight:500;">Wellbeing</div><div style="font-size:12px;color:var(--text-dim);">Mood, energy, sleep & cycle tracking</div></div></div></div>
         <div class="card" style="cursor:pointer;padding:16px;" onclick="showClientPage('clientNutrition')"><div style="display:flex;align-items:center;gap:14px;"><span id="moreNutritionIc"></span><div><div style="font-size:14px;font-weight:500;">Nutrition</div><div style="font-size:12px;color:var(--text-dim);">Meal plan and guidance</div></div></div></div>
         <div class="card" style="cursor:pointer;padding:16px;" onclick="showClientPage('clientNotifications')"><div style="display:flex;align-items:center;gap:14px;"><span id="moreNotifIc"></span><div><div style="font-size:14px;font-weight:500;">Notifications</div><div style="font-size:12px;color:var(--text-dim);">Updates and alerts</div></div></div></div>
-        <div class="card" style="cursor:pointer;padding:16px;margin-top:12px;border-color:var(--ember);" onclick="logout()"><div style="display:flex;align-items:center;gap:14px;"><span style="font-size:20px;">↩</span><div><div style="font-size:14px;font-weight:500;color:var(--ember);">Log Out</div></div></div></div>
+        <div class="card" style="cursor:pointer;padding:16px;margin-top:12px;border-color:var(--ember);" onclick="logout()"><div style="display:flex;align-items:center;gap:14px;"><span style="font-size:20px;">\u21A9</span><div><div style="font-size:14px;font-weight:500;color:var(--ember);">Log Out</div></div></div></div>
       </div>
     </div>
 
@@ -1540,9 +1567,10 @@
       <div class="detail-header">
         <div class="detail-avatar" id="detailAvatar"></div>
         <div class="detail-info"><h2 id="detailName"></h2><p id="detailMeta"></p></div>
-        <div style="margin-left:auto;display:flex;gap:8px;">
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
           <button class="btn btn-sm btn-secondary" onclick="showPTPage('ptMessages')">Message</button>
           <button class="btn btn-sm btn-ember" onclick="if(currentDetailClient) goToProgrammeBuilder(currentDetailClient.id)">Edit Programme</button>
+          <button class="btn btn-sm" style="background:none;border:1px solid var(--danger);color:var(--danger);font-size:11px;" onclick="removeClient()">Remove Client</button>
         </div>
       </div>
       <div class="detail-tabs">
@@ -1659,7 +1687,6 @@
               <button class="wear-sub-tab active" onclick="setDTWearTab('rhr',this)">RHR</button>
               <button class="wear-sub-tab" onclick="setDTWearTab('hrv',this)">HRV</button>
               <button class="wear-sub-tab" onclick="setDTWearTab('vo2',this)">VO2</button>
-              <button class="wear-sub-tab" onclick="setDTWearTab('recovery',this)">Recovery</button>
               <button class="wear-sub-tab" onclick="setDTWearTab('sleep',this)">Sleep</button>
               <button class="wear-sub-tab" onclick="setDTWearTab('strain',this)">Strain</button>
               <button class="wear-sub-tab" onclick="setDTWearTab('steps',this)">Steps</button>
@@ -1668,7 +1695,7 @@
           </div>
           <div class="card">
             <h3>Wearable History</h3>
-            <table class="prog-table truncated-table" id="dtWearTable"><thead><tr><th>Date</th><th>RHR</th><th>HRV</th><th>VO2</th><th>Recovery</th><th>Sleep</th><th>Strain</th><th>Steps</th></tr></thead>
+            <table class="prog-table truncated-table" id="dtWearTable"><thead><tr><th>Date</th><th>RHR</th><th>HRV</th><th>VO2</th><th>Sleep</th><th>Strain</th><th>Steps</th></tr></thead>
             <tbody id="dtWearHistory"></tbody></table>
             <span class="toggle-rows" onclick="toggleTableRows('dtWearTable',this)">Show more</span>
           </div>
@@ -1996,6 +2023,7 @@ function _buildState() {
     ptConversations: PT_CONVERSATIONS,
     onboardingSubmissions: ONBOARDING_SUBMISSIONS,
     ptProgrammes: typeof PT_PROGRAMMES !== 'undefined' ? PT_PROGRAMMES : [],
+    cycleLog: CYCLE_LOG,
     savedAt: Date.now()
   };
 }
@@ -2025,6 +2053,7 @@ function _applyState(state) {
   if (state.onboardingSubmissions && state.onboardingSubmissions.length) { ONBOARDING_SUBMISSIONS.length = 0; state.onboardingSubmissions.forEach(s => ONBOARDING_SUBMISSIONS.push(s)); }
   if (state.clientProgrammes && typeof CLIENT_PROGRAMMES !== 'undefined') Object.assign(CLIENT_PROGRAMMES, state.clientProgrammes);
   if (state.ptProgrammes && typeof PT_PROGRAMMES !== 'undefined') { PT_PROGRAMMES.length = 0; state.ptProgrammes.forEach(p => PT_PROGRAMMES.push(p)); }
+  if (state.cycleLog) Object.assign(CYCLE_LOG, state.cycleLog);
   // Clean up: fix any "undefined" client names in PT notifications
   PT_NOTIFICATIONS.forEach(n => {
     if (!n.client || n.client === 'undefined' || n.client === 'null') {
@@ -2148,6 +2177,40 @@ function attemptLogin() {
   login(user.role);
 }
 
+function showForgotPassword() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('forgotPasswordScreen').style.display = 'flex';
+  document.getElementById('forgotError').style.display = 'none';
+  document.getElementById('forgotEmail').value = '';
+  document.getElementById('forgotNewPw').value = '';
+  document.getElementById('forgotConfirmPw').value = '';
+}
+
+function hideForgotPassword() {
+  document.getElementById('forgotPasswordScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+function resetClientPassword() {
+  const email = document.getElementById('forgotEmail').value.trim().toLowerCase();
+  const newPw = document.getElementById('forgotNewPw').value;
+  const confirmPw = document.getElementById('forgotConfirmPw').value;
+  const errEl = document.getElementById('forgotError');
+
+  if (!email || !newPw) { errEl.textContent = 'Please fill in all fields.'; errEl.style.display = 'block'; return; }
+  if (newPw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
+  if (newPw !== confirmPw) { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
+
+  const user = USERS.find(u => u.email === email);
+  if (!user) { errEl.textContent = 'No account found with that email.'; errEl.style.display = 'block'; return; }
+
+  user.password = newPw;
+  scheduleSave();
+  errEl.style.display = 'none';
+  alert('Password reset successfully. You can now log in with your new password.');
+  hideForgotPassword();
+}
+
 function login(role) {
   currentRole = role;
   document.getElementById('loginScreen').style.display = 'none';
@@ -2213,7 +2276,7 @@ function mobileNav(pageId) {
   // Update mobile tab active states
   document.querySelectorAll('#clientMobileNav .mobile-tab').forEach(t => t.classList.remove('active'));
   const tabs = document.querySelectorAll('#clientMobileNav .mobile-tab');
-  const tabMap = {'clientDash':0,'clientProgramme':1,'clientProgress':2,'clientWellbeing':3,'clientCheckin':4,'clientMessages':5};
+  const tabMap = {'clientDash':0,'clientProgramme':1,'clientProgress':2,'clientCheckin':3,'clientMore':4};
   const idx = tabMap[pageId];
   if (idx !== undefined && tabs[idx]) tabs[idx].classList.add('active');
   // Scroll to top on navigation
@@ -2419,17 +2482,30 @@ function initClientApp() {
   mtEl('mtHome','dashboard','currentColor');
   mtEl('mtProg','programme','currentColor');
   mtEl('mtProgress','target','currentColor');
-  mtEl('mtWellbeing','heart','currentColor');
   mtEl('mtCheckin','checkin','currentColor');
-  mtEl('mtMsg','messages','currentColor');
+  mtEl('mtMore','settings','currentColor');
 
   // More page icons
   const moreEl = (id, name, col) => { const el = document.getElementById(id); if (el) el.innerHTML = ic(name, col, 22); };
-  // Wellbeing removed from More — now in main tab bar
+  moreEl('moreChatIc','messages','#4A9DC8');
+  moreEl('moreWellbeingIc','heart','#9B8EC4');
   moreEl('moreNutritionIc','nutrition','#8BB07E');
   moreEl('moreNotifIc','bell','#4A9DC8');
 
   renderWellbeingHistory();
+
+  // Restore cycle tracking toggle state
+  const ccid = loggedInUser ? loggedInUser.clientId : null;
+  if (ccid && CYCLE_LOG[ccid] && CYCLE_LOG[ccid].enabled) {
+    const toggle = document.getElementById('cycleToggle');
+    const content = document.getElementById('cycleContent');
+    if (toggle && !toggle.classList.contains('active')) {
+      toggle.classList.add('active');
+      if (content) content.classList.remove('hidden');
+    }
+    renderCycleCalendar();
+    renderCycleInsights();
+  }
 }
 
 function renderDashStrChart() {
@@ -2980,28 +3056,34 @@ function renderWLActiveSession() {
       <div class="wl-ex-body" id="wlExBody${i}">`;
     const isCardioEx = _isCardioExercise(ex.n);
     if (isCardioEx) {
-      html += `<div class="wl-set-row header"><span>Set</span><span>Time</span><span>Dist/Cal</span><span></span></div>`;
+      // Cardio: single Time + Distance entry (no sets)
+      const set0 = sets[0] || { weight: '', reps: '', done: false };
+      if (!wlSetData[i] || !wlSetData[i].length) wlSetData[i] = [{ weight: '', reps: '', done: false }];
+      html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px 0;" id="wlSet${i}_0">
+        <div>
+          <label style="font-size:10px;text-transform:uppercase;color:var(--text-dim);letter-spacing:0.5px;display:block;margin-bottom:4px;">Time (mm:ss)</label>
+          <input type="text" class="wl-set-input" inputmode="numeric" placeholder="mm:ss" style="width:100%;padding:10px;font-size:14px;" value="${set0.done && set0.weight !== '' ? set0.weight : ''}" onblur="wlFormatTimeInput(this)" onchange="wlUpdateSet(${i},0,'weight',this.value)">
+        </div>
+        <div>
+          <label style="font-size:10px;text-transform:uppercase;color:var(--text-dim);letter-spacing:0.5px;display:block;margin-bottom:4px;">Distance</label>
+          <input type="text" class="wl-set-input" inputmode="decimal" placeholder="e.g. 5km" style="width:100%;padding:10px;font-size:14px;" value="${set0.done && set0.reps !== '' ? set0.reps : ''}" onchange="wlUpdateSet(${i},0,'reps',this.value)">
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;padding:4px 0;">
+        <button class="wl-check-btn ${set0.done ? 'checked' : ''}" onclick="wlToggleSet(${i},0)" style="width:44px;height:44px;font-size:18px;">\u2713</button>
+      </div>`;
     } else {
       html += `<div class="wl-set-row header"><span>Set</span><span>kg</span><span>Reps</span><span></span></div>`;
-    }
-    sets.forEach((set, si) => {
-      if (isCardioEx) {
-        html += `<div class="wl-set-row" id="wlSet${i}_${si}">
-          <div class="wl-set-num ${set.done ? 'done' : ''}">${si + 1}</div>
-          <input type="text" class="wl-set-input" inputmode="numeric" placeholder="${set.weight || 'mm:ss'}" value="${set.done && set.weight !== '' ? set.weight : ''}" onblur="wlFormatTimeInput(this)" onchange="wlUpdateSet(${i},${si},'weight',this.value)">
-          <input type="text" class="wl-set-input" inputmode="text" placeholder="${set.reps || 'dist/cal'}" value="${set.done && set.reps !== '' ? set.reps : ''}" onchange="wlUpdateSet(${i},${si},'reps',this.value)">
-          <button class="wl-check-btn ${set.done ? 'checked' : ''}" onclick="wlToggleSet(${i},${si})">\u2713</button>
-        </div>`;
-      } else {
+      sets.forEach((set, si) => {
         html += `<div class="wl-set-row" id="wlSet${i}_${si}">
           <div class="wl-set-num ${set.done ? 'done' : ''}">${si + 1}</div>
           <input type="number" class="wl-set-input" inputmode="decimal" placeholder="${set.weight || '—'}" value="${set.done && set.weight !== '' ? set.weight : ''}" onchange="wlUpdateSet(${i},${si},'weight',this.value)">
           <input type="number" class="wl-set-input" inputmode="numeric" placeholder="${set.reps || '—'}" value="${set.done && set.reps !== '' ? set.reps : ''}" onchange="wlUpdateSet(${i},${si},'reps',this.value)">
           <button class="wl-check-btn ${set.done ? 'checked' : ''}" onclick="wlToggleSet(${i},${si})">\u2713</button>
         </div>`;
-      }
-    });
-    html += `<button class="wl-add-set" onclick="wlAddSet(${i})">+ Add Set</button>`;
+      });
+      html += `<button class="wl-add-set" onclick="wlAddSet(${i})">+ Add Set</button>`;
+    }
     html += `<div style="margin-top:8px;"><textarea class="wl-notes-input" placeholder="Notes..." oninput="wlNotes[${i}]=this.value" rows="1">${wlNotes[i] || ''}</textarea></div>`;
     html += `</div></div>`;
   });
@@ -3702,7 +3784,6 @@ function saveCPWearable() {
     rhr: parseInt(document.getElementById('cpWearRHR').value)||null,
     hrv: parseInt(document.getElementById('cpWearHRV').value)||null,
     vo2: parseFloat(document.getElementById('cpWearVO2').value)||null,
-    recovery: parseInt(document.getElementById('cpWearRecovery').value)||null,
     sleep: parseFloat(document.getElementById('cpWearSleep').value)||null,
     strain: parseFloat(document.getElementById('cpWearStrain').value)||null,
     steps: parseInt(document.getElementById('cpWearSteps').value)||null
@@ -3710,7 +3791,7 @@ function saveCPWearable() {
   const _cpCid = loggedInUser ? loggedInUser.clientId : 1; const pd = PROGRESS_DATA[_cpCid];
   pd.wearable.unshift(entry);
   pd.wearable.sort((a,b) => b.date.localeCompare(a.date));
-  ['cpWearRHR','cpWearHRV','cpWearVO2','cpWearRecovery','cpWearSleep','cpWearStrain','cpWearSteps'].forEach(id => document.getElementById(id).value = '');
+  ['cpWearRHR','cpWearHRV','cpWearVO2','cpWearSleep','cpWearStrain','cpWearSteps'].forEach(id => document.getElementById(id).value = '');
   renderCPWearChart(); renderCPWearHistory();
 }
 
@@ -3734,7 +3815,7 @@ function renderCPWearChart() {
 function renderCPWearHistory() {
   const _cpCid = loggedInUser ? loggedInUser.clientId : 1; const pd = PROGRESS_DATA[_cpCid]; if (!pd) return;
   document.getElementById('cpWearHistory').innerHTML = pd.wearable.map(e =>
-    `<tr><td class="val">${cpFormatDate(e.date)}</td><td>${e.rhr||'—'}</td><td>${e.hrv||'—'}</td><td>${e.vo2||'—'}</td><td>${e.recovery?e.recovery+'%':'—'}</td><td>${e.sleep?e.sleep+'h':'—'}</td><td>${e.strain||'—'}</td><td>${e.steps?e.steps.toLocaleString():'—'}</td></tr>`
+    `<tr><td class="val">${cpFormatDate(e.date)}</td><td>${e.rhr||'—'}</td><td>${e.hrv||'—'}</td><td>${e.vo2||'—'}</td><td>${e.sleep?e.sleep+'h':'—'}</td><td>${e.strain||'—'}</td><td>${e.steps?e.steps.toLocaleString():'—'}</td></tr>`
   ).join('');
 }
 
@@ -3882,30 +3963,49 @@ function _buildWeekFromWorkoutLog() {
   const monday = new Date(now);
   monday.setDate(now.getDate() - dayOfWeek + 1);
   monday.setHours(0,0,0,0);
-  const weekStart = monday.toISOString().slice(0,10);
+  // Use local date strings to avoid UTC timezone shift
+  const pad = n => String(n).padStart(2,'0');
+  const localDateStr = d => d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  const weekStart = localDateStr(monday);
   const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const days = dayNames.map((name, di) => {
     const dayDate = new Date(monday);
     dayDate.setDate(monday.getDate() + di);
-    const dateStr = dayDate.toISOString().slice(0,10);
+    const dateStr = localDateStr(dayDate);
     const dayWorkouts = workouts.filter(w => w.date === dateStr);
     let strength = 0, running = 0, otherCardio = 0;
+    let dayRunKm = 0;
     dayWorkouts.forEach(w => {
       // Parse duration "mm:ss" to hours (e.g. "45:30" = 0.758h)
       const dParts = (w.duration || '0:00').split(':');
       const mins = parseInt(dParts[0]) || 0;
       const secs = parseInt(dParts[1]) || 0;
       const durH = parseFloat(((mins + secs / 60) / 60).toFixed(3));
-      const hasRunning = (w.exercises || []).some(e => {
+      const runExercises = (w.exercises || []).filter(e => {
         const n = (e.name || '').toLowerCase();
         return n.includes('run') || n.includes('jog') || n.includes('sprint');
       });
+      const hasRunning = runExercises.length > 0;
       const hasCardio = w.type === 'cardio' || (w.exercises || []).some(e => _isCardioExercise(e.name));
       if (hasRunning) running += durH;
       else if (hasCardio) otherCardio += durH;
       else strength += durH;
+      // Extract run distance from exercise sets (reps field holds distance string for cardio)
+      runExercises.forEach(e => {
+        (e.sets || []).forEach(s => {
+          const distStr = String(s.reps || s.weight || '');
+          const numMatch = distStr.match(/([\d.]+)/);
+          if (numMatch) {
+            let km = parseFloat(numMatch[1]);
+            const lower = distStr.toLowerCase();
+            if (lower.includes('mi')) km *= 1.60934;
+            else if (lower.includes('m') && !lower.includes('km')) km /= 1000;
+            dayRunKm += km;
+          }
+        });
+      });
     });
-    return { day: name, strength, running, otherCardio, runKm: 0, steps: 0, sleep: 0 };
+    return { day: name, strength, running, otherCardio, runKm: Math.round(dayRunKm * 100) / 100, steps: 0, sleep: 0 };
   });
   return { weekStart, days };
 }
@@ -4477,7 +4577,7 @@ function renderDetailWearHistory(clientId) {
   const pd = PROGRESS_DATA[clientId || currentDetailClient?.id];
   if (!pd) return;
   document.getElementById('dtWearHistory').innerHTML = pd.wearable.map(e =>
-    `<tr><td class="val">${cpFormatDate(e.date)}</td><td>${e.rhr||'—'}</td><td>${e.hrv||'—'}</td><td>${e.vo2||'—'}</td><td>${e.recovery?e.recovery+'%':'—'}</td><td>${e.sleep?e.sleep+'h':'—'}</td><td>${e.strain||'—'}</td><td>${e.steps?e.steps.toLocaleString():'—'}</td></tr>`
+    `<tr><td class="val">${cpFormatDate(e.date)}</td><td>${e.rhr||'—'}</td><td>${e.hrv||'—'}</td><td>${e.vo2||'—'}</td><td>${e.sleep?e.sleep+'h':'—'}</td><td>${e.strain||'—'}</td><td>${e.steps?e.steps.toLocaleString():'—'}</td></tr>`
   ).join('');
 }
 
@@ -4489,11 +4589,48 @@ function changeDTWeek(dir) {
   renderDTWeeklySummary();
 }
 
+function _buildWeekFromWorkoutLogForClient(clientId) {
+  const workouts = WORKOUT_LOG[clientId] || [];
+  if (!workouts.length) return null;
+  const now = new Date();
+  const dayOfWeek = now.getDay() || 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - dayOfWeek + 1);
+  monday.setHours(0,0,0,0);
+  const pad = n => String(n).padStart(2,'0');
+  const localDateStr = d => d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  const weekStart = localDateStr(monday);
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const days = dayNames.map((name, di) => {
+    const dayDate = new Date(monday); dayDate.setDate(monday.getDate() + di);
+    const dateStr = localDateStr(dayDate);
+    const dayWorkouts = workouts.filter(w => w.date === dateStr);
+    let strength = 0, running = 0, otherCardio = 0, dayRunKm = 0;
+    dayWorkouts.forEach(w => {
+      const dParts = (w.duration || '0:00').split(':');
+      const mins = parseInt(dParts[0]) || 0; const secs = parseInt(dParts[1]) || 0;
+      const durH = parseFloat(((mins + secs / 60) / 60).toFixed(3));
+      const runExercises = (w.exercises || []).filter(e => { const n = (e.name||'').toLowerCase(); return n.includes('run') || n.includes('jog') || n.includes('sprint'); });
+      const hasRunning = runExercises.length > 0;
+      const hasCardio = w.type === 'cardio' || (w.exercises || []).some(e => _isCardioExercise(e.name));
+      if (hasRunning) running += durH; else if (hasCardio) otherCardio += durH; else strength += durH;
+      runExercises.forEach(e => { (e.sets || []).forEach(s => { const distStr = String(s.reps || s.weight || ''); const numMatch = distStr.match(/([\d.]+)/); if (numMatch) { let km = parseFloat(numMatch[1]); const lower = distStr.toLowerCase(); if (lower.includes('mi')) km *= 1.60934; else if (lower.includes('m') && !lower.includes('km')) km /= 1000; dayRunKm += km; } }); });
+    });
+    return { day: name, strength, running, otherCardio, runKm: Math.round(dayRunKm*100)/100, steps: 0, sleep: 0 };
+  });
+  return { weekStart, days };
+}
+
 function renderDTWeeklySummary() {
   if (!currentDetailClient) return;
   const pd = PROGRESS_DATA[currentDetailClient.id];
-  if (!pd || !pd.weekly.length) return;
-  const week = pd.weekly[dtWeekIdx];
+  let week;
+  if (pd && pd.weekly && pd.weekly.length) {
+    week = pd.weekly[dtWeekIdx];
+  } else {
+    week = _buildWeekFromWorkoutLogForClient(currentDetailClient.id);
+    dtWeekIdx = 0;
+  }
   if (!week) return;
   const ws = new Date(week.weekStart); const we = new Date(ws); we.setDate(we.getDate()+6);
   const fmt = d => d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
@@ -4530,6 +4667,39 @@ function updateCheckinDay() {
   currentDetailClient.checkinDay = document.getElementById('detailCheckinDay').value;
   currentDetailClient.nextCheckin = currentDetailClient.checkinDay;
   scheduleSave();
+}
+
+function removeClient() {
+  if (!currentDetailClient) return;
+  const name = currentDetailClient.name;
+  if (!confirm(`Are you sure you want to permanently remove ${name} from the system?\n\nThis will delete all their data including workouts, progress, check-ins, and messages. This cannot be undone.`)) return;
+  if (!confirm(`Final confirmation: Remove ${name} and all associated data?`)) return;
+  const cid = currentDetailClient.id;
+  // Remove from CLIENTS
+  const idx = CLIENTS.findIndex(c => c.id === cid);
+  if (idx >= 0) CLIENTS.splice(idx, 1);
+  // Remove from USERS
+  const uidx = USERS.findIndex(u => u.clientId === cid);
+  if (uidx >= 0) USERS.splice(uidx, 1);
+  // Remove all associated data
+  delete WORKOUT_LOG[cid];
+  delete CHECKIN_LOG[cid];
+  delete PROGRESS_DATA[cid];
+  delete CLIENT_NOTIFICATIONS[cid];
+  if (typeof CLIENT_PROGRAMMES !== 'undefined') delete CLIENT_PROGRAMMES[cid];
+  delete PROGRAMME_WEEKS[cid];
+  delete CYCLE_LOG[cid];
+  // Remove PT notifications about this client
+  for (let i = PT_NOTIFICATIONS.length - 1; i >= 0; i--) {
+    if (PT_NOTIFICATIONS[i].clientId === cid) PT_NOTIFICATIONS.splice(i, 1);
+  }
+  // Remove conversations
+  for (let i = PT_CONVERSATIONS.length - 1; i >= 0; i--) {
+    if (PT_CONVERSATIONS[i].clientId === cid) PT_CONVERSATIONS.splice(i, 1);
+  }
+  currentDetailClient = null;
+  scheduleSave();
+  showPTPage('ptClients');
 }
 
 function showDetailTab(tabId) {
@@ -4896,12 +5066,22 @@ function toggleCycleTracking() {
   const toggle = document.getElementById('cycleToggle');
   const content = document.getElementById('cycleContent');
   toggle.classList.toggle('active');
+  const cid = loggedInUser ? loggedInUser.clientId : null;
+  if (!cid) return;
   if (toggle.classList.contains('active')) {
     content.classList.remove('hidden');
+    // Initialize CYCLE_LOG for this client if needed
+    if (!CYCLE_LOG[cid]) {
+      CYCLE_LOG[cid] = { enabled: true, profile: { type: 'Natural', cycleLength: 28, bleedLength: 5 }, log: [], patterns: [] };
+    }
+    CYCLE_LOG[cid].enabled = true;
+    scheduleSave();
     renderCycleCalendar();
     renderCycleInsights();
   } else {
     content.classList.add('hidden');
+    if (CYCLE_LOG[cid]) CYCLE_LOG[cid].enabled = false;
+    scheduleSave();
   }
 }
 
@@ -4929,15 +5109,85 @@ function selectPerf(btn, val) {
 }
 
 function submitCycleLog() {
+  const cid = loggedInUser ? loggedInUser.clientId : null;
+  if (!cid) return;
+  if (!CYCLE_LOG[cid]) {
+    CYCLE_LOG[cid] = { enabled: true, profile: { type: 'Natural', cycleLength: 28, bleedLength: 5 }, log: [], patterns: [] };
+  }
+
+  // Read form values
+  const bleedingBtn = document.querySelector('#cycleContent .flow-btn.selected');
+  const bleeding = bleedingBtn ? (bleedingBtn.textContent === 'No' ? 'no' : bleedingBtn.textContent === 'Spotting' ? 'spotting' : 'yes') : 'no';
+  let flow = 'none';
+  if (bleeding === 'yes') {
+    const flowBtn = document.querySelector('#flowSection .flow-btn.selected');
+    flow = flowBtn ? flowBtn.textContent.toLowerCase().replace(' ', '-') : 'moderate';
+  }
+  const pain = parseInt(document.getElementById('cyclePain').value) || 0;
+  const energy = parseInt(document.getElementById('cycleEnergy').value) || 3;
+  const mood = parseInt(document.getElementById('cycleMood').value) || 3;
+  const recovery = parseInt(document.getElementById('cycleRecovery').value) || 3;
+  // Impact
+  let impact = 'none';
+  const impactBtns = document.querySelectorAll('#cycleContent [onclick*="selectImpact"] .flow-btn.selected, #cycleContent .flow-btn.selected');
+  // More targeted: find the impact section
+  document.querySelectorAll('#cycleContent div').forEach(div => {
+    if (div.textContent.includes('affect today')) {
+      const sel = div.parentElement.querySelector('.flow-btn.selected');
+      if (sel) impact = sel.textContent.toLowerCase().replace('no impact','none');
+    }
+  });
+  // Symptoms
+  const symptoms = [...document.querySelectorAll('.symptom-chip.selected')].map(c => c.textContent);
+
+  // Calculate cycle day (increment from last entry or start at 1)
+  const lastEntry = CYCLE_LOG[cid].log[CYCLE_LOG[cid].log.length - 1];
+  let cd = 1;
+  if (lastEntry) {
+    const lastDate = new Date(lastEntry.date);
+    const today = new Date();
+    const daysDiff = Math.round((today - lastDate) / (1000*60*60*24));
+    if (daysDiff <= 1) cd = lastEntry.cd; // Same day update
+    else cd = lastEntry.cd + daysDiff;
+    // Reset cycle day if past expected length and bleeding starts
+    if (cd > CYCLE_LOG[cid].profile.cycleLength && bleeding === 'yes') cd = 1;
+  }
+
+  const entry = {
+    date: new Date().toISOString().slice(0,10),
+    cd, bleeding, flow, pain, energy, mood, recovery, impact, symptoms
+  };
+
+  // Remove duplicate for same date
+  const todayStr = entry.date;
+  CYCLE_LOG[cid].log = CYCLE_LOG[cid].log.filter(l => l.date !== todayStr);
+  CYCLE_LOG[cid].log.push(entry);
+
+  // Generate basic patterns
+  const log = CYCLE_LOG[cid].log;
+  const patterns = [];
+  const highPainDays = log.filter(l => l.pain >= 7).length;
+  const lowEnergyDays = log.filter(l => l.energy <= 2).length;
+  if (highPainDays >= 3) patterns.push(`Severe pain (7+/10) on ${highPainDays} days — worth discussing with healthcare provider if persistent.`);
+  if (lowEnergyDays >= 3) patterns.push(`Low energy reported on ${lowEnergyDays} days. Consider adjusting session intensity during these phases.`);
+  const bleedDays = log.filter(l => l.bleeding === 'yes').length;
+  if (bleedDays > 0) patterns.push(`${bleedDays} active bleeding day${bleedDays>1?'s':''} recorded. Average pain on these days: ${(log.filter(l=>l.bleeding==='yes').reduce((s,l)=>s+l.pain,0)/bleedDays).toFixed(1)}/10.`);
+  if (!patterns.length) patterns.push('Not enough data yet to identify patterns. Keep logging to build your profile.');
+  CYCLE_LOG[cid].patterns = patterns;
+
+  scheduleSave();
   document.getElementById('cycleConfirm').classList.remove('hidden');
   setTimeout(() => { document.getElementById('cycleConfirm').classList.add('hidden'); }, 4000);
+  renderCycleCalendar();
+  renderCycleInsights();
 }
 
 function renderCycleCalendar() {
   // Demo: show Emily Chen's cycle data as a 30-day strip
   const el = document.getElementById('cycleCalendar');
   if (!el) return;
-  const data = CYCLE_LOG[2];
+  const cid = loggedInUser ? loggedInUser.clientId : null;
+  const data = cid ? CYCLE_LOG[cid] : null;
   if (!data) { el.innerHTML = '<p style="font-size:12px;color:var(--text-dim);">No cycle data yet.</p>'; return; }
 
   // Build a 30-day calendar row
@@ -4967,7 +5217,8 @@ function renderCycleCalendar() {
 function renderCycleInsights() {
   const el = document.getElementById('cycleInsights');
   if (!el) return;
-  const data = CYCLE_LOG[2];
+  const cid = loggedInUser ? loggedInUser.clientId : null;
+  const data = cid ? CYCLE_LOG[cid] : null;
   if (!data || !data.patterns.length) { el.innerHTML = ''; return; }
 
   let html = '<div style="font-size:12px;font-weight:500;color:var(--cycle-text);margin-bottom:8px;">Your Patterns</div>';
