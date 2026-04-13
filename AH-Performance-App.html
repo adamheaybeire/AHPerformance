@@ -280,7 +280,7 @@
   .mobile-only-card{display:none;}
   .mobile-tab-bar{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--slate-deep);border-top:1px solid var(--slate-border);z-index:100;padding:6px 0 env(safe-area-inset-bottom,6px);backdrop-filter:blur(20px);}
   .mobile-tab-bar .tab-row{display:flex;justify-content:space-around;align-items:center;}
-  .mobile-tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;cursor:pointer;color:var(--text-dim);transition:color 0.15s;-webkit-tap-highlight-color:transparent;min-width:52px;}
+  .mobile-tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;cursor:pointer;color:var(--text-dim);transition:color 0.15s;-webkit-tap-highlight-color:transparent;min-width:0;flex:1;}
   .mobile-tab.active{color:var(--ember);}
   .mobile-tab .tab-label{font-size:10px;font-family:'Space Grotesk',sans-serif;font-weight:500;letter-spacing:0.2px;}
   .mobile-tab .tab-badge{position:absolute;top:-2px;right:-4px;background:var(--ember);color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;font-family:'Space Grotesk';}
@@ -786,6 +786,7 @@
       <div class="mobile-tab" onclick="mobileNav('clientProgramme')"><div class="tab-ic" id="mtProg"></div><span class="tab-label">Programme</span></div>
       <div class="mobile-tab" onclick="mobileNav('clientProgress')"><div class="tab-ic" id="mtProgress"></div><span class="tab-label">Progress</span></div>
       <div class="mobile-tab" onclick="mobileNav('clientCheckin')"><div class="tab-ic" id="mtCheckin"></div><span class="tab-label">Check In</span></div>
+      <div class="mobile-tab" onclick="mobileNav('clientMessages')"><div class="tab-ic" id="mtChat"></div><span class="tab-label">Chat</span></div>
       <div class="mobile-tab" onclick="mobileNav('clientMore')"><div class="tab-ic" id="mtMore"></div><span class="tab-label">More</span></div>
     </div>
   </div>
@@ -1445,11 +1446,10 @@
     <div class="page" id="clientMore">
       <div class="page-header"><h1>More</h1></div>
       <div style="display:flex;flex-direction:column;gap:4px;" id="moreMenuItems">
-        <div class="card" style="cursor:pointer;padding:16px;" onclick="showClientPage('clientMessages')"><div style="display:flex;align-items:center;gap:14px;"><span id="moreChatIc"></span><div><div style="font-size:14px;font-weight:500;">Chat</div><div style="font-size:12px;color:var(--text-dim);">Message Coach Adam</div></div></div></div>
         <div class="card" style="cursor:pointer;padding:16px;" onclick="showClientPage('clientWellbeing')"><div style="display:flex;align-items:center;gap:14px;"><span id="moreWellbeingIc"></span><div><div style="font-size:14px;font-weight:500;">Wellbeing</div><div style="font-size:12px;color:var(--text-dim);">Mood, energy, sleep & cycle tracking</div></div></div></div>
         <div class="card" style="cursor:pointer;padding:16px;" onclick="showClientPage('clientNutrition')"><div style="display:flex;align-items:center;gap:14px;"><span id="moreNutritionIc"></span><div><div style="font-size:14px;font-weight:500;">Nutrition</div><div style="font-size:12px;color:var(--text-dim);">Meal plan and guidance</div></div></div></div>
         <div class="card" style="cursor:pointer;padding:16px;" onclick="showClientPage('clientNotifications')"><div style="display:flex;align-items:center;gap:14px;"><span id="moreNotifIc"></span><div><div style="font-size:14px;font-weight:500;">Notifications</div><div style="font-size:12px;color:var(--text-dim);">Updates and alerts</div></div></div></div>
-        <div class="card" style="cursor:pointer;padding:16px;margin-top:12px;border-color:var(--ember);" onclick="logout()"><div style="display:flex;align-items:center;gap:14px;"><span style="font-size:20px;">\u21A9</span><div><div style="font-size:14px;font-weight:500;color:var(--ember);">Log Out</div></div></div></div>
+        <div class="card" style="cursor:pointer;padding:16px;margin-top:12px;border-color:var(--ember);" onclick="logout()"><div style="display:flex;align-items:center;gap:14px;"><span id="moreLogoutIc"></span><div><div style="font-size:14px;font-weight:500;color:var(--ember);">Log Out</div></div></div></div>
       </div>
     </div>
 
@@ -2276,7 +2276,7 @@ function mobileNav(pageId) {
   // Update mobile tab active states
   document.querySelectorAll('#clientMobileNav .mobile-tab').forEach(t => t.classList.remove('active'));
   const tabs = document.querySelectorAll('#clientMobileNav .mobile-tab');
-  const tabMap = {'clientDash':0,'clientProgramme':1,'clientProgress':2,'clientCheckin':3,'clientMore':4};
+  const tabMap = {'clientDash':0,'clientProgramme':1,'clientProgress':2,'clientCheckin':3,'clientMessages':4,'clientMore':5};
   const idx = tabMap[pageId];
   if (idx !== undefined && tabs[idx]) tabs[idx].classList.add('active');
   // Scroll to top on navigation
@@ -2483,14 +2483,15 @@ function initClientApp() {
   mtEl('mtProg','programme','currentColor');
   mtEl('mtProgress','target','currentColor');
   mtEl('mtCheckin','checkin','currentColor');
+  mtEl('mtChat','messages','currentColor');
   mtEl('mtMore','settings','currentColor');
 
   // More page icons
   const moreEl = (id, name, col) => { const el = document.getElementById(id); if (el) el.innerHTML = ic(name, col, 22); };
-  moreEl('moreChatIc','messages','#4A9DC8');
   moreEl('moreWellbeingIc','heart','#9B8EC4');
   moreEl('moreNutritionIc','nutrition','#8BB07E');
   moreEl('moreNotifIc','bell','#4A9DC8');
+  moreEl('moreLogoutIc','logout','var(--ember)');
 
   renderWellbeingHistory();
 
@@ -2988,7 +2989,8 @@ function _updateClientCompliance(clientId) {
 function _isCardioExercise(name) {
   if (!name) return false;
   const n = name.toLowerCase();
-  const cardioKeywords = ['run','running','ski erg','skierg','rowing','row','assault bike','air bike','airbike','bike','cycle','cycling','swim','walk','walking','jog','jogging','sprint','sled push','sled pull','farmer','carry','wall ball','burpee'];
+  // True cardio: time/distance based. Wall balls, burpees, carries are strength-style (weight/reps).
+  const cardioKeywords = ['run','running','runner','ski erg','skierg','rowing','rower','assault bike','air bike','airbike','echo bike','bike','cycle','cycling','swim','walk','walking','jog','jogging','sprint','sled push','sled pull'];
   return cardioKeywords.some(k => n.includes(k));
 }
 
@@ -3056,22 +3058,17 @@ function renderWLActiveSession() {
       <div class="wl-ex-body" id="wlExBody${i}">`;
     const isCardioEx = _isCardioExercise(ex.n);
     if (isCardioEx) {
-      // Cardio: single Time + Distance entry (no sets)
-      const set0 = sets[0] || { weight: '', reps: '', done: false };
-      if (!wlSetData[i] || !wlSetData[i].length) wlSetData[i] = [{ weight: '', reps: '', done: false }];
-      html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:8px 0;" id="wlSet${i}_0">
-        <div>
-          <label style="font-size:10px;text-transform:uppercase;color:var(--text-dim);letter-spacing:0.5px;display:block;margin-bottom:4px;">Time (mm:ss)</label>
-          <input type="text" class="wl-set-input" inputmode="numeric" placeholder="mm:ss" style="width:100%;padding:10px;font-size:14px;" value="${set0.done && set0.weight !== '' ? set0.weight : ''}" onblur="wlFormatTimeInput(this)" onchange="wlUpdateSet(${i},0,'weight',this.value)">
-        </div>
-        <div>
-          <label style="font-size:10px;text-transform:uppercase;color:var(--text-dim);letter-spacing:0.5px;display:block;margin-bottom:4px;">Distance</label>
-          <input type="text" class="wl-set-input" inputmode="decimal" placeholder="e.g. 5km" style="width:100%;padding:10px;font-size:14px;" value="${set0.done && set0.reps !== '' ? set0.reps : ''}" onchange="wlUpdateSet(${i},0,'reps',this.value)">
-        </div>
-      </div>
-      <div style="display:flex;justify-content:flex-end;padding:4px 0;">
-        <button class="wl-check-btn ${set0.done ? 'checked' : ''}" onclick="wlToggleSet(${i},0)" style="width:44px;height:44px;font-size:18px;">\u2713</button>
-      </div>`;
+      // Cardio: multi-set Time + Distance rows with Add Set
+      html += `<div class="wl-set-row header wl-cardio-header"><span>Set</span><span>Time</span><span>Distance</span><span></span></div>`;
+      sets.forEach((set, si) => {
+        html += `<div class="wl-set-row wl-cardio-row" id="wlSet${i}_${si}">
+          <div class="wl-set-num ${set.done ? 'done' : ''}">${si + 1}</div>
+          <input type="text" class="wl-set-input" inputmode="numeric" placeholder="mm:ss" value="${set.done && set.weight !== '' ? set.weight : ''}" onblur="wlFormatTimeInput(this)" onchange="wlUpdateSet(${i},${si},'weight',this.value)">
+          <input type="text" class="wl-set-input" inputmode="decimal" placeholder="km / m" value="${set.done && set.reps !== '' ? set.reps : ''}" onchange="wlUpdateSet(${i},${si},'reps',this.value)">
+          <button class="wl-check-btn ${set.done ? 'checked' : ''}" onclick="wlToggleSet(${i},${si})">\u2713</button>
+        </div>`;
+      });
+      html += `<button class="wl-add-set" onclick="wlAddSet(${i})">+ Add Set</button>`;
     } else {
       html += `<div class="wl-set-row header"><span>Set</span><span>kg</span><span>Reps</span><span></span></div>`;
       sets.forEach((set, si) => {
@@ -3881,27 +3878,43 @@ function editWorkoutEntry(idx) {
   const w = WORKOUT_LOG[cid][idx];
   const detail = document.getElementById(`histDetail${idx}`);
   if (!detail) return;
-  let html = '<div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--ocean);">Edit Workout</div>';
-  html += `<div class="form-group" style="margin-bottom:8px;"><label style="font-size:10px;color:var(--text-dim);">Session Name</label><input type="text" id="histEditName${idx}" value="${w.sessionName || ''}" style="width:100%;padding:6px 8px;font-size:12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:6px;color:var(--text-bright);"></div>`;
-  html += `<div class="form-group" style="margin-bottom:8px;"><label style="font-size:10px;color:var(--text-dim);">RPE</label><input type="number" id="histEditRPE${idx}" value="${w.rpe || ''}" min="1" max="10" style="width:80px;padding:6px 8px;font-size:12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:6px;color:var(--text-bright);"></div>`;
-  html += `<div class="form-group" style="margin-bottom:8px;"><label style="font-size:10px;color:var(--text-dim);">Notes</label><textarea id="histEditNotes${idx}" style="width:100%;padding:6px 8px;font-size:12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:6px;color:var(--text-bright);resize:none;min-height:40px;">${w.notes || ''}</textarea></div>`;
+  const fieldStyle = "width:100%;padding:8px 10px;font-size:13px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);box-sizing:border-box;";
+  const inpStyle = "width:100%;padding:8px 6px;font-size:12px;background:var(--slate-card);border:1px solid var(--slate-border);border-radius:6px;color:var(--text-bright);text-align:center;box-sizing:border-box;min-width:0;";
+  let html = '<div style="box-sizing:border-box;max-width:100%;overflow:hidden;">';
+  html += '<div style="margin-bottom:10px;font-size:13px;font-weight:600;color:var(--ocean);">Edit Workout</div>';
+  html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Session Name</label><input type="text" id="histEditName${idx}" value="${(w.sessionName||'').replace(/"/g,'&quot;')}" style="${fieldStyle}"></div>`;
+  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+    <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Date</label><input type="date" id="histEditDate${idx}" value="${w.date || ''}" style="${fieldStyle}"></div>
+    <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Duration (min)</label><input type="number" min="0" id="histEditDuration${idx}" value="${w.duration || ''}" style="${fieldStyle}"></div>
+  </div>`;
+  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+    <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">RPE (1-10)</label><input type="number" id="histEditRPE${idx}" value="${w.rpe || ''}" min="1" max="10" style="${fieldStyle}"></div>
+    <div></div>
+  </div>`;
+  html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Notes</label><textarea id="histEditNotes${idx}" style="${fieldStyle}resize:vertical;min-height:50px;">${w.notes || ''}</textarea></div>`;
   (w.exercises || []).forEach((ex, ei) => {
-    html += `<div style="margin-top:6px;padding:6px 8px;background:var(--slate-raised);border-radius:6px;">
-      <div style="font-size:11px;font-weight:600;color:var(--text-body);margin-bottom:4px;">${ex.name}</div>`;
+    const isC = _isCardioExercise(ex.name);
+    html += `<div style="margin-top:8px;padding:8px 10px;background:var(--slate-raised);border-radius:8px;box-sizing:border-box;max-width:100%;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-body);margin-bottom:6px;word-break:break-word;">${ex.name}</div>
+      <div style="display:grid;grid-template-columns:22px 1fr 1fr;gap:6px;margin-bottom:4px;">
+        <span style="font-size:9px;color:var(--text-dim);text-align:center;text-transform:uppercase;">#</span>
+        <span style="font-size:9px;color:var(--text-dim);text-align:center;text-transform:uppercase;">${isC ? 'Time' : 'kg'}</span>
+        <span style="font-size:9px;color:var(--text-dim);text-align:center;text-transform:uppercase;">${isC ? 'Distance' : 'Reps'}</span>
+      </div>`;
     (ex.sets || []).forEach((s, si) => {
-      const isC = _isCardioExercise(ex.name);
-      html += `<div style="display:flex;gap:4px;margin-bottom:2px;">
-        <span style="font-size:10px;color:var(--text-dim);width:20px;text-align:center;line-height:28px;">${si+1}</span>
-        <input type="${isC ? 'text' : 'number'}" value="${s.weight || ''}" placeholder="${isC ? 'time' : 'kg'}" onchange="updateHistorySet(${idx},${ei},${si},'weight',this.value)" style="flex:1;padding:4px 6px;font-size:11px;background:var(--slate-card);border:1px solid var(--slate-border);border-radius:4px;color:var(--text-bright);text-align:center;">
-        <input type="${isC ? 'text' : 'number'}" value="${s.reps || ''}" placeholder="${isC ? 'dist' : 'reps'}" onchange="updateHistorySet(${idx},${ei},${si},'reps',this.value)" style="flex:1;padding:4px 6px;font-size:11px;background:var(--slate-card);border:1px solid var(--slate-border);border-radius:4px;color:var(--text-bright);text-align:center;">
+      html += `<div style="display:grid;grid-template-columns:22px 1fr 1fr;gap:6px;margin-bottom:4px;align-items:center;">
+        <span style="font-size:11px;color:var(--text-dim);text-align:center;">${si+1}</span>
+        <input type="${isC ? 'text' : 'number'}" value="${s.weight || ''}" placeholder="${isC ? 'mm:ss' : 'kg'}" onchange="updateHistorySet(${idx},${ei},${si},'weight',this.value)" style="${inpStyle}">
+        <input type="${isC ? 'text' : 'number'}" value="${s.reps || ''}" placeholder="${isC ? 'km' : 'reps'}" onchange="updateHistorySet(${idx},${ei},${si},'reps',this.value)" style="${inpStyle}">
       </div>`;
     });
     html += '</div>';
   });
-  html += `<div style="display:flex;gap:8px;margin-top:10px;">
+  html += `<div style="display:flex;gap:8px;margin-top:12px;">
     <button class="btn btn-sm btn-ember" onclick="saveHistoryEdit(${idx})" style="flex:1;">Save</button>
-    <button class="btn btn-sm btn-ghost" onclick="renderWorkoutHistory()">Cancel</button>
+    <button class="btn btn-sm btn-ghost" onclick="renderWorkoutHistory()" style="flex:1;">Cancel</button>
   </div>`;
+  html += '</div>';
   detail.innerHTML = html;
   detail.style.display = 'block';
 }
@@ -3921,6 +3934,10 @@ function saveHistoryEdit(idx) {
   if (!cid || !WORKOUT_LOG[cid] || !WORKOUT_LOG[cid][idx]) return;
   const w = WORKOUT_LOG[cid][idx];
   w.sessionName = document.getElementById(`histEditName${idx}`)?.value || w.sessionName;
+  const dateVal = document.getElementById(`histEditDate${idx}`)?.value;
+  if (dateVal) w.date = dateVal;
+  const durVal = parseInt(document.getElementById(`histEditDuration${idx}`)?.value);
+  if (!isNaN(durVal) && durVal >= 0) w.duration = durVal;
   w.rpe = parseInt(document.getElementById(`histEditRPE${idx}`)?.value) || w.rpe;
   w.notes = document.getElementById(`histEditNotes${idx}`)?.value || '';
   // Recalculate volume
@@ -4331,7 +4348,10 @@ function openClientDetail(id) {
   document.getElementById('detailName').textContent = c.name;
   document.getElementById('detailMeta').textContent = `Joined ${c.joined} · Goal: ${c.goal} · Programme: ${c.programme} (Week ${c.week})`;
 
-  const lastW = c.weight[c.weight.length-1]||'—'; const firstW = c.weight[0]||lastW; const delta = (lastW - firstW).toFixed(1);
+  // Prefer most recent check-in weight if available; fall back to weight timeline, then onboarding start weight
+  const lastW = c.currentWeight || (c.weight && c.weight.length ? c.weight[c.weight.length-1] : null) || c.startWeight || '—';
+  const firstW = c.startWeight || (c.weight && c.weight.length ? c.weight[0] : null) || lastW;
+  const delta = (typeof lastW === 'number' && typeof firstW === 'number') ? (lastW - firstW).toFixed(1) : '0.0';
   document.getElementById('detailKPIs').innerHTML = `
     <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Compliance</div><div class="kpi-value" style="color:${c.compliance>=85?'var(--sage-text)':'var(--warning)'};">${c.compliance}%</div></div>
     <div class="kpi"><div class="kpi-label">Body Weight</div><div class="kpi-value">${lastW}<span style="font-size:14px;color:var(--text-dim);">kg</span></div><div class="kpi-sub">${delta>0?'+':''}${delta}kg</div></div>
@@ -5343,7 +5363,54 @@ function renderPTCycleHealth(clientId) {
     <!-- Pattern Recognition -->
     <div style="margin-bottom:16px;">
       <div style="font-size:12px;font-weight:500;color:var(--cycle-text);margin-bottom:8px;">Pattern Recognition</div>
-      ${data.patterns.map(p => `<div style="padding:10px 14px;background:var(--cycle-soft);border:1px solid var(--cycle-border);border-radius:10px;margin-bottom:8px;font-size:12px;color:var(--text-body);line-height:1.6;">${p}</div>`).join('')}
+      ${(data.patterns && data.patterns.length) ? data.patterns.map(p => `<div style="padding:10px 14px;background:var(--cycle-soft);border:1px solid var(--cycle-border);border-radius:10px;margin-bottom:8px;font-size:12px;color:var(--text-body);line-height:1.6;">${p}</div>`).join('') : '<div style="padding:10px 14px;background:var(--slate-raised);border-radius:10px;font-size:12px;color:var(--text-dim);">No patterns yet — more data needed.</div>'}
+    </div>
+
+    <!-- Daily Tracking Log -->
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:500;color:var(--cycle-text);margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;">
+        <span>Daily Tracking (last ${Math.min(log.length, 14)} entries)</span>
+        <span style="font-size:10px;color:var(--text-dim);font-weight:400;">${log.length} total entries logged</span>
+      </div>
+      ${log.length ? `<div style="overflow-x:auto;background:var(--slate-raised);border-radius:10px;border:1px solid var(--cycle-border);">
+        <table class="prog-table" style="width:100%;font-size:11px;margin:0;">
+          <thead><tr style="background:var(--cycle-soft);">
+            <th style="padding:8px 6px;text-align:left;color:var(--cycle-text);">Date</th>
+            <th style="padding:8px 6px;color:var(--cycle-text);">CD</th>
+            <th style="padding:8px 6px;color:var(--cycle-text);">Bleed</th>
+            <th style="padding:8px 6px;color:var(--cycle-text);">Flow</th>
+            <th style="padding:8px 6px;color:var(--cycle-text);">Pain</th>
+            <th style="padding:8px 6px;color:var(--cycle-text);">Energy</th>
+            <th style="padding:8px 6px;color:var(--cycle-text);">Mood</th>
+            <th style="padding:8px 6px;color:var(--cycle-text);">Rec</th>
+            <th style="padding:8px 6px;color:var(--cycle-text);">Impact</th>
+            <th style="padding:8px 6px;text-align:left;color:var(--cycle-text);">Symptoms</th>
+          </tr></thead>
+          <tbody>
+          ${log.slice(-14).reverse().map(e => {
+            const flowLabel = { none:'—', light:'Light', medium:'Med', heavy:'Heavy', 'very-heavy':'V.Heavy' }[e.flow] || '—';
+            const imp = { none:'None', mild:'Mild', moderate:'Mod', high:'High' }[e.impact] || '—';
+            const impCol = { none:'var(--sage)', mild:'var(--ocean)', moderate:'var(--warning)', high:'var(--danger)' }[e.impact] || 'var(--text-muted)';
+            const painCol = (e.pain||0) >= 7 ? 'var(--danger)' : (e.pain||0) >= 4 ? 'var(--warning)' : 'var(--text-body)';
+            const energyCol = (e.energy||0) <= 2 ? 'var(--warning)' : 'var(--text-body)';
+            const syms = (e.symptoms && e.symptoms.length) ? e.symptoms.join(', ') : '—';
+            return `<tr style="border-top:1px solid var(--slate-border);">
+              <td style="padding:6px;color:var(--text-body);white-space:nowrap;">${e.date || '—'}</td>
+              <td style="padding:6px;text-align:center;color:var(--cycle-text);font-weight:500;">${e.cd || '—'}</td>
+              <td style="padding:6px;text-align:center;color:${e.bleeding==='yes'?'var(--danger)':'var(--text-dim)'};">${e.bleeding==='yes'?'Yes':'No'}</td>
+              <td style="padding:6px;text-align:center;color:var(--text-body);">${flowLabel}</td>
+              <td style="padding:6px;text-align:center;color:${painCol};font-weight:500;">${e.pain ?? '—'}</td>
+              <td style="padding:6px;text-align:center;color:${energyCol};font-weight:500;">${e.energy ?? '—'}</td>
+              <td style="padding:6px;text-align:center;color:var(--text-body);">${e.mood ?? '—'}</td>
+              <td style="padding:6px;text-align:center;color:var(--text-body);">${e.recovery ?? '—'}</td>
+              <td style="padding:6px;text-align:center;color:${impCol};font-weight:500;">${imp}</td>
+              <td style="padding:6px;color:var(--text-dim);font-size:10px;max-width:180px;word-break:break-word;">${syms}</td>
+            </tr>`;
+          }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:10px;color:var(--text-dim);margin-top:6px;font-style:italic;">Pain, Energy, Mood, Recovery scored 1-5 (Pain 0-10). CD = Cycle Day.</div>` : '<div style="padding:12px;background:var(--slate-raised);border-radius:10px;font-size:12px;color:var(--text-dim);text-align:center;">No daily entries logged yet.</div>'}
     </div>
 
     <!-- PT Guidance Prompts -->
@@ -5517,6 +5584,40 @@ function submitCheckin() {
   // Add to beginning of array
   if (!CHECKIN_LOG[cid]) CHECKIN_LOG[cid] = [];
   CHECKIN_LOG[cid].unshift(newCI);
+
+  // Sync into PROGRESS_DATA measurements so Body tab + coach Body section reflect check-in
+  if (!PROGRESS_DATA[cid]) PROGRESS_DATA[cid] = { strength: [], cardio: [], measurements: [], wearable: [], weekly: [] };
+  const pad = n => String(n).padStart(2,'0');
+  const isoDate = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate());
+  const measurementEntry = {
+    date: isoDate,
+    weight: w || null,
+    chest: ch || null,
+    waist: wa || null,
+    hips: hi || null,
+    glutes: gl || null,
+    arm: ar || null,
+    thigh: th || null,
+    calf: ca || null,
+    fromCheckin: true
+  };
+  // Replace same-date entry or prepend
+  const existingIdx = PROGRESS_DATA[cid].measurements.findIndex(m => m.date === isoDate);
+  if (existingIdx >= 0) PROGRESS_DATA[cid].measurements[existingIdx] = measurementEntry;
+  else PROGRESS_DATA[cid].measurements.unshift(measurementEntry);
+  PROGRESS_DATA[cid].measurements.sort((a,b) => b.date.localeCompare(a.date));
+
+  // Update the client's current weight so overview / dashboard reflect latest check-in
+  if (w) {
+    const clientRecForWeight = CLIENTS.find(c => c.id === cid);
+    if (clientRecForWeight) {
+      clientRecForWeight.currentWeight = w;
+      clientRecForWeight.weightUpdated = isoDate;
+      // Append to weight timeline (array of numbers) for trend chart
+      if (!Array.isArray(clientRecForWeight.weight)) clientRecForWeight.weight = [];
+      clientRecForWeight.weight.push(w);
+    }
+  }
 
   // Update client check-in history
   renderCheckinHistory();
@@ -6299,6 +6400,7 @@ function renderClientOnboardingForm() {
       <div class="ob-field"><label class="ob-field-label">What are your main goals?</label>
         <div class="ob-opt-row" id="obGoalsRow">
           <div class="ob-opt" onclick="this.classList.toggle('sel')">Lose weight</div>
+          <div class="ob-opt" onclick="this.classList.toggle('sel')">Tone up</div>
           <div class="ob-opt" onclick="this.classList.toggle('sel')">Build muscle</div>
           <div class="ob-opt" onclick="this.classList.toggle('sel')">Get fitter</div>
           <div class="ob-opt" onclick="this.classList.toggle('sel')">Improve strength</div>
