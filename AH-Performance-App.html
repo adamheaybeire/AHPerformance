@@ -3061,10 +3061,13 @@ function renderWLActiveSession() {
       // Cardio: multi-set Time + Distance rows with Add Set
       html += `<div class="wl-set-row header wl-cardio-header"><span>Set</span><span>Time</span><span>Distance</span><span></span></div>`;
       sets.forEach((set, si) => {
+        // Pre-populate distance from coach's prescription (e.g. "5 × 1km" → set.reps = "1km")
+        const distVal = (set.reps !== '' && set.reps !== undefined && set.reps !== null) ? set.reps : '';
+        const timeVal = (set.done && set.weight !== '' && set.weight !== undefined) ? set.weight : '';
         html += `<div class="wl-set-row wl-cardio-row" id="wlSet${i}_${si}">
           <div class="wl-set-num ${set.done ? 'done' : ''}">${si + 1}</div>
-          <input type="text" class="wl-set-input" inputmode="numeric" placeholder="mm:ss" value="${set.done && set.weight !== '' ? set.weight : ''}" onblur="wlFormatTimeInput(this)" onchange="wlUpdateSet(${i},${si},'weight',this.value)">
-          <input type="text" class="wl-set-input" inputmode="decimal" placeholder="km / m" value="${set.done && set.reps !== '' ? set.reps : ''}" onchange="wlUpdateSet(${i},${si},'reps',this.value)">
+          <input type="text" class="wl-set-input" inputmode="numeric" placeholder="mm:ss" value="${timeVal}" onblur="wlFormatTimeInput(this)" onchange="wlUpdateSet(${i},${si},'weight',this.value)">
+          <input type="text" class="wl-set-input" inputmode="decimal" placeholder="km / m" value="${distVal}" onchange="wlUpdateSet(${i},${si},'reps',this.value)">
           <button class="wl-check-btn ${set.done ? 'checked' : ''}" onclick="wlToggleSet(${i},${si})">\u2713</button>
         </div>`;
       });
@@ -3490,10 +3493,16 @@ function initClientProgress() {
     else if (jw.startWeight) currentWeight = jw.startWeight;
   }
   const startWeight = pd.measurements.length > 1 ? pd.measurements[pd.measurements.length - 1].weight : currentWeight;
-  const weightChange = (currentWeight && startWeight) ? (startWeight - currentWeight).toFixed(1) : 0;
+  // Diff: positive = gained, negative = lost
+  const rawDiff = (currentWeight && startWeight) ? (parseFloat(currentWeight) - parseFloat(startWeight)) : 0;
+  const absChange = Math.abs(rawDiff).toFixed(1);
+  let arrow, arrowColour, arrowLabel;
+  if (rawDiff > 0.05) { arrow = '▲'; arrowColour = 'var(--warning)'; arrowLabel = `+${absChange}kg`; }
+  else if (rawDiff < -0.05) { arrow = '▼'; arrowColour = 'var(--sage-text)'; arrowLabel = `-${absChange}kg`; }
+  else { arrow = '—'; arrowColour = 'var(--text-muted)'; arrowLabel = `${absChange}kg`; }
   document.getElementById('clientProgressKPIs').innerHTML = `
     <div class="kpi" style="border-top:3px solid var(--ember);"><div class="kpi-label">Total Sessions</div><div class="kpi-value text-ember">${pd.strength.length + pd.cardio.length}</div><div class="kpi-sub">Logged entries</div></div>
-    <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Body Weight</div><div class="kpi-value">${currentWeight||'—'}<span style="font-size:14px;color:var(--text-dim);">kg</span></div><div class="kpi-sub text-sage">▼ ${weightChange}kg</div></div>
+    <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Body Weight</div><div class="kpi-value">${currentWeight||'—'}<span style="font-size:14px;color:var(--text-dim);">kg</span></div><div class="kpi-sub" style="color:${arrowColour};">${arrow} ${arrowLabel}</div></div>
     <div class="kpi" style="border-top:3px solid var(--ocean);"><div class="kpi-label">Squat Est. 1RM</div><div class="kpi-value text-ocean">${Math.round(bestSquat)}<span style="font-size:14px;color:var(--text-dim);">kg</span></div><div class="kpi-sub">Best estimate</div></div>
     <div class="kpi"><div class="kpi-label">Resting HR</div><div class="kpi-value">${latestW?.rhr||'—'}<span style="font-size:14px;color:var(--text-dim);">bpm</span></div><div class="kpi-sub">Latest</div></div>`;
 
@@ -3883,13 +3892,10 @@ function editWorkoutEntry(idx) {
   let html = '<div style="box-sizing:border-box;max-width:100%;overflow:hidden;">';
   html += '<div style="margin-bottom:10px;font-size:13px;font-weight:600;color:var(--ocean);">Edit Workout</div>';
   html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Session Name</label><input type="text" id="histEditName${idx}" value="${(w.sessionName||'').replace(/"/g,'&quot;')}" style="${fieldStyle}"></div>`;
+  html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Date</label><input type="date" id="histEditDate${idx}" value="${w.date || ''}" style="${fieldStyle}"></div>`;
   html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-    <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Date</label><input type="date" id="histEditDate${idx}" value="${w.date || ''}" style="${fieldStyle}"></div>
-    <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Duration (min)</label><input type="number" min="0" id="histEditDuration${idx}" value="${w.duration || ''}" style="${fieldStyle}"></div>
-  </div>`;
-  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+    <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Duration (mm:ss)</label><input type="text" inputmode="numeric" id="histEditDuration${idx}" value="${w.duration || ''}" placeholder="mm:ss" onblur="wlFormatTimeInput(this)" style="${fieldStyle}"></div>
     <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">RPE (1-10)</label><input type="number" id="histEditRPE${idx}" value="${w.rpe || ''}" min="1" max="10" style="${fieldStyle}"></div>
-    <div></div>
   </div>`;
   html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Notes</label><textarea id="histEditNotes${idx}" style="${fieldStyle}resize:vertical;min-height:50px;">${w.notes || ''}</textarea></div>`;
   (w.exercises || []).forEach((ex, ei) => {
@@ -3936,8 +3942,21 @@ function saveHistoryEdit(idx) {
   w.sessionName = document.getElementById(`histEditName${idx}`)?.value || w.sessionName;
   const dateVal = document.getElementById(`histEditDate${idx}`)?.value;
   if (dateVal) w.date = dateVal;
-  const durVal = parseInt(document.getElementById(`histEditDuration${idx}`)?.value);
-  if (!isNaN(durVal) && durVal >= 0) w.duration = durVal;
+  // Duration: accept mm:ss (e.g. "45:30") or bare minutes (e.g. "45") or empty
+  let durRaw = (document.getElementById(`histEditDuration${idx}`)?.value || '').trim();
+  if (durRaw) {
+    if (durRaw.includes(':')) {
+      // Validate mm:ss format
+      const parts = durRaw.split(':');
+      const mm = parseInt(parts[0]) || 0;
+      const ss = parseInt(parts[1]) || 0;
+      w.duration = `${String(mm).padStart(1,'0')}:${String(ss).padStart(2,'0')}`;
+    } else {
+      // Bare number → treat as minutes
+      const mins = parseInt(durRaw) || 0;
+      if (mins > 0) w.duration = `${mins}:00`;
+    }
+  }
   w.rpe = parseInt(document.getElementById(`histEditRPE${idx}`)?.value) || w.rpe;
   w.notes = document.getElementById(`histEditNotes${idx}`)?.value || '';
   // Recalculate volume
@@ -4341,6 +4360,24 @@ function buildClientRow(c) {
 
 function openClientDetail(id) {
   const c = CLIENTS.find(x=>x.id===id); if (!c) return;
+  // Defensive: back-fill any fields that onboarded clients may be missing so rendering doesn't crash
+  if (!Array.isArray(c.weight)) c.weight = [];
+  if (!Array.isArray(c.squat)) c.squat = [];
+  if (!Array.isArray(c.bench)) c.bench = [];
+  if (!Array.isArray(c.deadlift)) c.deadlift = [];
+  if (!Array.isArray(c.runs)) c.runs = [];
+  if (!Array.isArray(c.goals)) c.goals = [];
+  if (typeof c.notes !== 'string') c.notes = '';
+  if (!c.checkinDay) c.checkinDay = 'Monday';
+  if (!c.nextCheckin) c.nextCheckin = c.checkinDay;
+  if (!c.programme) c.programme = 'No programme';
+  if (typeof c.week !== 'number') c.week = 0;
+  if (typeof c.compliance !== 'number') c.compliance = 0;
+  if (!c.goal) c.goal = 'TBC';
+  if (!c.joined) c.joined = '—';
+  if (!c.initials) c.initials = (c.name||'?').split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase();
+  if (!c.bg) c.bg = 'var(--ember-soft)';
+  if (!c.colour) c.colour = 'var(--ember)';
   currentDetailClient = c;
   document.getElementById('detailAvatar').style.background = c.bg;
   document.getElementById('detailAvatar').style.color = c.colour;
@@ -4392,11 +4429,13 @@ function openClientDetail(id) {
   daySel.value = c.checkinDay;
 
   // Progress tab — init from PROGRESS_DATA if available
-  if (PROGRESS_DATA[c.id]) {
-    initDetailProgress(c.id);
-  } else {
-    document.getElementById('detailMeasTable').innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-dim);">No measurements recorded yet</td></tr>';
-  }
+  try {
+    if (PROGRESS_DATA[c.id]) {
+      initDetailProgress(c.id);
+    } else {
+      document.getElementById('detailMeasTable').innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-dim);">No measurements recorded yet</td></tr>';
+    }
+  } catch (e) { console.warn('initDetailProgress failed:', e); }
 
   // Wellbeing history for this client
   const clientWB = WELLBEING_DATA.filter(w => w.clientId === c.id);
@@ -4409,23 +4448,25 @@ function openClientDetail(id) {
   }
 
   // Charts — overview weight trend
-  const labels = c.weight.map((_,i) => 'Wk '+(i+1));
-  setTimeout(() => {
-    renderChart('detailWeightChart', labels, c.weight, 'Weight (kg)', '#8BB07E');
-  }, 100);
+  try {
+    const labels = (c.weight || []).map((_,i) => 'Wk '+(i+1));
+    setTimeout(() => {
+      try { renderChart('detailWeightChart', labels, c.weight || [], 'Weight (kg)', '#8BB07E'); } catch (e) {}
+    }, 100);
+  } catch (e) {}
 
   // Goals
-  renderDetailGoals(c);
+  try { renderDetailGoals(c); } catch (e) { console.warn('renderDetailGoals failed:', e); }
 
   // Cycle health (only if data exists for this client)
-  renderPTCycleHealth(c.id);
+  try { renderPTCycleHealth(c.id); } catch (e) { console.warn('renderPTCycleHealth failed:', e); }
 
   // Weekly check-ins
-  renderDetailCheckins(c.id);
+  try { renderDetailCheckins(c.id); } catch (e) { console.warn('renderDetailCheckins failed:', e); }
 
   showPTPage('ptClientDetail');
   showDetailTab('detailOverview');
-  renderPushHistory();
+  try { renderPushHistory(); } catch (e) {}
 }
 
 // ═══ PT DETAIL PROGRESS ═══
@@ -5270,14 +5311,24 @@ function renderPTCycleHealth(clientId) {
   const lastEntry = log[log.length - 1];
   const recentLogs = log.slice(-7);
 
-  // Symptom burden score (0-10)
-  let burdenSum = 0;
+  // Symptom burden score (0-10) — guarded against missing fields / empty log
+  let burdenSum = 0, burdenCount = 0;
   recentLogs.forEach(l => {
-    burdenSum += (l.pain / 10) + ((6 - l.energy) / 5) + ((6 - l.mood) / 5) + ((6 - l.recovery) / 5);
+    if (!l) return;
+    const pain = typeof l.pain === 'number' ? l.pain : 0;
+    const energy = typeof l.energy === 'number' ? l.energy : 3;
+    const mood = typeof l.mood === 'number' ? l.mood : 3;
+    const recovery = typeof l.recovery === 'number' ? l.recovery : 3;
+    burdenSum += (pain / 10) + ((6 - energy) / 5) + ((6 - mood) / 5) + ((6 - recovery) / 5);
+    burdenCount++;
   });
-  const burden = Math.min(10, Math.round((burdenSum / recentLogs.length / 4) * 10 * 10) / 10);
-  const burdenColour = burden <= 3 ? 'var(--sage)' : burden <= 6 ? 'var(--warning)' : 'var(--danger)';
-  const burdenLabel = burden <= 3 ? 'Low' : burden <= 6 ? 'Moderate' : 'High';
+  const burden = burdenCount > 0
+    ? Math.min(10, Math.round((burdenSum / burdenCount / 4) * 10 * 10) / 10)
+    : 0;
+  const hasBurdenData = burdenCount > 0;
+  const burdenColour = !hasBurdenData ? 'var(--text-muted)' : burden <= 3 ? 'var(--sage)' : burden <= 6 ? 'var(--warning)' : 'var(--danger)';
+  const burdenLabel = !hasBurdenData ? 'No data' : burden <= 3 ? 'Low' : burden <= 6 ? 'Moderate' : 'High';
+  const burdenDisplay = hasBurdenData ? burden : '—';
 
   // Training impact from last entry
   const impactMap = { none:'No Impact', mild:'Mild', moderate:'Moderate', high:'High' };
@@ -5346,10 +5397,10 @@ function renderPTCycleHealth(clientId) {
       <div style="background:var(--slate-raised);border-radius:10px;padding:16px;">
         <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;">Symptom Burden (7-day avg)</div>
         <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;color:${burdenColour};">${burden}</span>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;color:${burdenColour};">${burdenDisplay}</span>
           <span style="font-size:12px;color:${burdenColour};font-weight:500;">${burdenLabel}</span>
         </div>
-        <div class="burden-meter" style="margin-top:8px;"><div class="burden-meter-fill" style="width:${burden*10}%;background:${burdenColour};"></div></div>
+        <div class="burden-meter" style="margin-top:8px;"><div class="burden-meter-fill" style="width:${hasBurdenData ? burden*10 : 0}%;background:${burdenColour};"></div></div>
       </div>
       <div style="background:var(--slate-raised);border-radius:10px;padding:16px;">
         <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;">Training Impact (latest)</div>
@@ -6760,8 +6811,10 @@ function submitOnboardingForm() {
     joined: new Date().toLocaleDateString('en-GB', {month:'short', year:'numeric'}),
     squat:[], bench:[], deadlift:[],
     weight: p.weight ? [parseFloat(p.weight)] : [],
+    startWeight: p.weight ? parseFloat(p.weight) : null,
     height: p.height || '',
-    runs:[], goals:[],
+    runs:[], goals:[], notes: '',
+    email: p.email || '',
     onboarding: submission
   };
   CLIENTS.push(newClient);
@@ -6897,7 +6950,10 @@ function completeManualOnboard() {
     nextCheckin: document.getElementById('obManCheckinDay')?.value || 'Monday',
     checkinDay: document.getElementById('obManCheckinDay')?.value || 'Monday',
     joined: new Date().toLocaleDateString('en-GB',{month:'short',year:'numeric'}),
-    squat:[],bench:[],deadlift:[],weight:[],runs:[],goals:[]
+    squat:[],bench:[],deadlift:[],weight:[],runs:[],goals:[],
+    notes: document.getElementById('obManNotes')?.value || '',
+    email: document.getElementById('obManEmail')?.value || '',
+    startWeight: null
   };
   CLIENTS.push(newClient);
   WORKOUT_LOG[newId] = [];
@@ -7183,9 +7239,7 @@ function addClientNotification(clientId, type, message) {
 function triggerCheckinSubmitted(clientId, clientName, clientEmail, week) {
   addPTNotification('checkin', clientId, clientName, `Submitted Week ${week} check-in`);
   addClientNotification(clientId, 'checkin-due', `Week ${week} check-in submitted — your coach will review it soon`);
-  queueEmail(clientEmail, clientName, `${clientName} submitted their Week ${week} check-in`,
-    'checkin-submitted',
-    `Hi Adam,\n\n${clientName} has submitted their Week ${week} check-in. Log in to review their measurements, photos, and notes.\n\nAH Performance`);
+  // Note: no email is queued for check-in submission — PT sees this in-app only.
 }
 
 // Trigger: PT reviews check-in → notify client + queue email
