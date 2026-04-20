@@ -1027,6 +1027,18 @@ window.addEventListener('message', function(e) {
   if (e.data && e.data.type === 'ah-select-client') {
     const sel = document.getElementById('clientSelect');
     if (sel) sel.value = e.data.clientId;
+    // Load the client's existing programme into the builder if provided
+    if (e.data.programme && e.data.programme.days) {
+      programme = JSON.parse(JSON.stringify(e.data.programme));
+      activeDay = 0;
+      activeSessionIdx = 0;
+      const nameEl = document.getElementById('programmeName');
+      if (nameEl && e.data.programmeName) nameEl.value = e.data.programmeName;
+      const weekEl = document.getElementById('weekNumber');
+      if (weekEl && e.data.weekNumber) weekEl.value = e.data.weekNumber;
+      renderDayTabs();
+      switchDay(0);
+    }
   }
 });
 

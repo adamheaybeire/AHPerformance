@@ -1099,12 +1099,13 @@
     <!-- CLIENT: Nutrition -->
     <div class="page" id="clientNutrition">
       <div class="page-header"><h1>Nutrition</h1><p>Your personalised nutrition guidance from Coach Adam</p></div>
-      <div class="kpi-row">
-        <div class="kpi" style="border-top:3px solid var(--ember);"><div class="kpi-label">Daily Calories</div><div class="kpi-value text-ember">2,650<span style="font-size:14px;color:var(--text-dim);">kcal</span></div><div class="kpi-sub">Maintain + fuel training</div></div>
-        <div class="kpi" style="border-top:3px solid var(--ocean);"><div class="kpi-label">Protein</div><div class="kpi-value text-ocean">166<span style="font-size:14px;color:var(--text-dim);">g</span></div><div class="kpi-sub">2.0g/kg · 25%</div></div>
-        <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Carbs</div><div class="kpi-value text-sage">298<span style="font-size:14px;color:var(--text-dim);">g</span></div><div class="kpi-sub">45%</div></div>
-        <div class="kpi" style="border-top:3px solid var(--warning);"><div class="kpi-label">Fat</div><div class="kpi-value text-warning">88<span style="font-size:14px;color:var(--text-dim);">g</span></div><div class="kpi-sub">30%</div></div>
+      <div class="kpi-row" id="nutritionKPIs">
+        <div class="kpi" style="border-top:3px solid var(--ember);"><div class="kpi-label">Daily Calories</div><div class="kpi-value text-ember" id="nutClientCal">—<span style="font-size:14px;color:var(--text-dim);">kcal</span></div><div class="kpi-sub" id="nutClientCalSub"></div></div>
+        <div class="kpi" style="border-top:3px solid var(--ocean);"><div class="kpi-label">Protein</div><div class="kpi-value text-ocean" id="nutClientPro">—<span style="font-size:14px;color:var(--text-dim);">g</span></div><div class="kpi-sub" id="nutClientProSub"></div></div>
+        <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Carbs</div><div class="kpi-value text-sage" id="nutClientCarb">—<span style="font-size:14px;color:var(--text-dim);">g</span></div><div class="kpi-sub" id="nutClientCarbSub"></div></div>
+        <div class="kpi" style="border-top:3px solid var(--warning);"><div class="kpi-label">Fat</div><div class="kpi-value text-warning" id="nutClientFat">—<span style="font-size:14px;color:var(--text-dim);">g</span></div><div class="kpi-sub" id="nutClientFatSub"></div></div>
       </div>
+      <div id="nutClientNotes" style="display:none;" class="card"></div>
       <div class="card">
         <h3>Daily Nutrition Framework</h3>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;" id="nutritionMeals"></div>
@@ -1820,8 +1821,20 @@
     </div>
 
     <!-- PT: Nutrition -->
-    <div class="page" id="ptNutrition"><div class="page-header"><h1>Nutrition</h1><p>Client nutrition plans</p></div>
-      <div class="card" style="text-align:center;padding:48px;"><span id="ptNutIcon" style="margin-bottom:16px;display:flex;justify-content:center;"></span><h3 style="margin-bottom:8px;">Nutrition Guide</h3><p style="font-size:13px;color:var(--text-muted);max-width:400px;margin:0 auto 20px;">Nutrition planning will be integrated after programme builder testing.</p></div></div>
+    <div class="page" id="ptNutrition">
+      <div class="page-header"><h1>Nutrition</h1><p>Assign macros and nutrition guidance to clients</p></div>
+      <div class="card" style="margin-bottom:16px;">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:4px;">Select Client</label>
+            <select id="nutClientSelect" onchange="loadNutritionClient()" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-bright);font-size:14px;">
+              <option value="">Choose a client...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="ptNutritionBody"></div>
+    </div>
 
     <!-- PT: Exercise Library -->
     <div class="page" id="ptExercises" style="padding:0!important;overflow:hidden;">
@@ -1941,6 +1954,9 @@ const CLIENT_NOTIFICATIONS = { 1: [] };
 // ═══════════════════════════════════════
 const EMAIL_QUEUE = [];
 
+// Per-client nutrition assignments from coach
+const CLIENT_NUTRITION = {};
+
 const EXERCISE_DB = {
   'Bench Press': { cat:'Upper · Push', muscles:'Chest, anterior delts, triceps', setup:'Lie flat, eyes under bar. Grip 1.5× shoulder width. Feet flat, slight arch.', cues:'Drive feet into floor. Pull the bar to lower chest. Press back to start in a slight arc. Squeeze chest at top.', mistakes:'Flared elbows (keep ~45°). Bouncing off chest. Lifting hips.' },
   'Bent Over Row': { cat:'Upper · Pull', muscles:'Lats, rhomboids, rear delts, biceps', setup:'Hinge at hips ~45°. Grip just outside knees. Neutral spine. Slight knee bend.', cues:'Pull elbows back past ribs. Squeeze shoulder blades at top. Lower with control. Keep torso still.', mistakes:'Using momentum. Rounding lower back. Not pulling high enough.' },
@@ -1954,9 +1970,22 @@ const EXERCISE_DB = {
   'Calf Raises': { cat:'Lower · Isolation', muscles:'Gastrocnemius, soleus', setup:'Stand on edge of step or calf raise machine. Balls of feet on edge.', cues:'Rise up onto toes with control. Squeeze at top. Lower slowly below the step for full stretch.', mistakes:'Bouncing. Not full range. Going too fast.' },
   'Deadlift': { cat:'Full Body · Hinge', muscles:'Glutes, hamstrings, erectors, traps, grip', setup:'Bar over mid-foot. Hinge and grip just outside legs. Chest up, lats engaged. Shoulders over bar.', cues:'Push floor away. Bar drags up shins. Hips and chest rise together. Lockout with glutes. Lower under control.', mistakes:'Rounding back. Hips rising too fast. Bar drifting from body.' },
   'Sled Push': { cat:'HYROX Station', muscles:'Quads, glutes, calves, core, shoulders', setup:'Grip high handles. Lean into sled at ~45° angle.', cues:'Drive through balls of feet. Short powerful steps. Keep arms extended. Maintain forward lean.', mistakes:'Standing too upright. Long slow strides. Looking up.' },
+  'Sled Pull': { cat:'HYROX Station', muscles:'Hamstrings, glutes, back, grip, core', setup:'Attach a rope or strap to the sled. Face the sled. Grip the rope with both hands.', cues:'Pull the sled toward you hand over hand. Sit back slightly for leverage. Keep core braced. Maintain a strong base.', mistakes:'Standing too upright. Pulling only with arms. Losing grip.' },
   'Wall Balls': { cat:'HYROX Station', muscles:'Quads, glutes, shoulders, core', setup:'Hold med ball at chest. Feet shoulder-width facing wall. Target height marked.', cues:'Full squat depth. Explode up and throw ball to target. Catch and flow straight into next rep.', mistakes:'Shallow squat. Not using legs to throw. Breaking between reps.' },
   'Ski Erg': { cat:'HYROX Station', muscles:'Lats, triceps, core, hip flexors', setup:'Stand with slight forward lean. Grip handles above head.', cues:'Hinge at hips. Pull handles down past thighs. Extend hips. Reach back up with control.', mistakes:'All arms no hips. Standing too upright. Rushed recovery.' },
-  'Farmers Carry': { cat:'HYROX Station', muscles:'Grip, traps, core, obliques', setup:'Deadlift weights to standing. Shoulders back and down.', cues:'Walk with controlled steps. Shoulders pinned back. Core braced. Eyes forward. Breathe.', mistakes:'Hunching forward. Rushed uneven steps. Holding breath.' }
+  'Farmers Carry': { cat:'HYROX Station', muscles:'Grip, traps, core, obliques', setup:'Deadlift weights to standing. Shoulders back and down.', cues:'Walk with controlled steps. Shoulders pinned back. Core braced. Eyes forward. Breathe.', mistakes:'Hunching forward. Rushed uneven steps. Holding breath.' },
+  'Dumbbell Pull-over': { cat:'Upper · Compound', muscles:'Lats, chest, triceps, serratus anterior', setup:'Lie across a bench with shoulders supported. Hold one dumbbell with both hands above chest, arms extended.', cues:'Lower the dumbbell behind your head in an arc. Feel the stretch through lats and chest. Pull back over using lats and chest. Keep hips slightly dropped.', mistakes:'Bending elbows too much. Going too heavy too fast. Arching lower back excessively.' },
+  'Ab Air Bike': { cat:'Core · Abdominal', muscles:'Rectus abdominis, obliques, hip flexors', setup:'Lie flat on your back. Hands behind head, elbows wide. Legs elevated.', cues:'Bring opposite elbow to opposite knee. Extend the other leg straight. Alternate in a cycling motion. Keep lower back pressed to floor.', mistakes:'Pulling on neck. Moving too fast with no control. Not fully extending the leg.' },
+  'Floor Leg Raise': { cat:'Core · Abdominal', muscles:'Lower rectus abdominis, hip flexors', setup:'Lie flat on your back. Arms at sides or under hips for support. Legs straight.', cues:'Raise legs together until perpendicular to floor. Lower slowly with control. Keep lower back pressed into the floor throughout.', mistakes:'Arching lower back. Swinging legs. Bending knees.' },
+  'Pendlay Row': { cat:'Upper · Pull', muscles:'Lats, rhomboids, rear delts, traps, biceps', setup:'Bar on floor. Hinge forward until torso is parallel to floor. Grip just outside shoulder width.', cues:'Pull the bar explosively to lower chest. Lower it back to the floor each rep with control. Reset position between reps. Keep back flat.', mistakes:'Torso rising during the pull. Not resetting on the floor. Rounding the back.' },
+  'Dumbbell Tripod Row': { cat:'Upper · Pull', muscles:'Lats, rhomboids, rear delts, biceps', setup:'One hand and one knee on a bench. Other foot on the floor wide for stability. Dumbbell in the free hand.', cues:'Pull the dumbbell to your hip. Squeeze the shoulder blade at the top. Lower with control. Keep torso square to the floor.', mistakes:'Rotating the torso. Not pulling high enough. Using momentum.' },
+  'Wide Grip One Arm Cable Pull Down': { cat:'Upper · Pull', muscles:'Lats, teres major, biceps', setup:'Stand or kneel at a cable machine. Use a single handle on a high pulley. Grip with one hand, arm fully extended.', cues:'Pull the handle down and slightly across to your side. Focus on driving the elbow down. Squeeze the lat at the bottom. Return slowly.', mistakes:'Using too much body momentum. Not getting a full stretch at the top. Shrugging the shoulder.' },
+  'Spider Bicep Curl': { cat:'Arms · Isolation', muscles:'Biceps brachii, brachialis', setup:'Lie face down on an incline bench set to about 45°. Arms hang straight down holding dumbbells.', cues:'Curl the dumbbells up squeezing the biceps hard. Gravity works against you the whole time. Lower with control. Keep upper arms perpendicular to the floor.', mistakes:'Swinging the dumbbells. Not lowering fully. Using momentum from the shoulders.' },
+  'Landmine Shoulder Press': { cat:'Upper · Push', muscles:'Anterior delts, upper chest, triceps, core', setup:'Hold the end of a barbell loaded into a landmine. Feet shoulder-width. Bar at shoulder height.', cues:'Press the bar up and slightly forward. Lock out at the top. Lower with control. Brace your core throughout.', mistakes:'Leaning back excessively. Flaring the elbow. Losing core tension.' },
+  'Poliquin Lateral Raise': { cat:'Upper · Isolation', muscles:'Lateral deltoid', setup:'Stand holding a light dumbbell in one hand. Raise to 90° then rotate the thumb down at the top.', cues:'Raise the dumbbell to shoulder height. At the top, rotate the wrist so thumb points down. Hold for a beat. Lower with control.', mistakes:'Going too heavy. Shrugging the traps. Swinging the weight.' },
+  'Partials Lateral Raise': { cat:'Upper · Isolation', muscles:'Lateral deltoid', setup:'Stand with dumbbells at sides. Use a moderate weight — heavier than full-range lateral raises.', cues:'Raise dumbbells to about halfway (45°) with short controlled reps. Keep constant tension. Pump through the partial range.', mistakes:'Using full range instead of partial. Going too light. Losing tension at the bottom.' },
+  'Rotating Mountain Climber': { cat:'Core · Abdominal', muscles:'Obliques, rectus abdominis, hip flexors, shoulders', setup:'Start in a high plank position. Hands under shoulders, body in a straight line.', cues:'Drive one knee across toward the opposite elbow. Rotate the hips slightly. Alternate sides with control. Keep hips level.', mistakes:'Hips piking up. Moving too fast with no control. Not rotating enough.' },
+  'Lying Heel Tuck to Knee Raise': { cat:'Core · Abdominal', muscles:'Lower rectus abdominis, hip flexors', setup:'Lie flat on your back. Arms at your sides. Legs straight on the floor.', cues:'Slide heels toward your glutes bending at the knees. Then drive the knees up toward your chest. Extend legs back out straight. Control the entire movement.', mistakes:'Using momentum. Not extending the legs fully. Lifting the lower back off the floor.' }
 };
 
 // ═══════════════════════════════════════
@@ -2024,6 +2053,7 @@ function _buildState() {
     onboardingSubmissions: ONBOARDING_SUBMISSIONS,
     ptProgrammes: typeof PT_PROGRAMMES !== 'undefined' ? PT_PROGRAMMES : [],
     cycleLog: CYCLE_LOG,
+    clientNutrition: CLIENT_NUTRITION,
     savedAt: Date.now()
   };
 }
@@ -2054,6 +2084,7 @@ function _applyState(state) {
   if (state.clientProgrammes && typeof CLIENT_PROGRAMMES !== 'undefined') Object.assign(CLIENT_PROGRAMMES, state.clientProgrammes);
   if (state.ptProgrammes && typeof PT_PROGRAMMES !== 'undefined') { PT_PROGRAMMES.length = 0; state.ptProgrammes.forEach(p => PT_PROGRAMMES.push(p)); }
   if (state.cycleLog) Object.assign(CYCLE_LOG, state.cycleLog);
+  if (state.clientNutrition) Object.assign(CLIENT_NUTRITION, state.clientNutrition);
   // Clean up: fix any "undefined" client names in PT notifications
   PT_NOTIFICATIONS.forEach(n => {
     if (!n.client || n.client === 'undefined' || n.client === 'null') {
@@ -2295,6 +2326,7 @@ function showPTPage(id) {
   if (id === 'ptReports') renderPTAnalytics();
   if (id === 'ptProgrammes') { renderPTProgList(); sendClientListToIframe(); }
   if (id === 'ptExercises') { initExLibrary(); }
+  if (id === 'ptNutrition') { renderPTNutrition(); }
   if (id === 'ptOnboarding') { renderPTOnboardingView(); }
 }
 
@@ -2320,6 +2352,11 @@ function initClientApp() {
   const progWeeks = getClientProgrammeWeeks();
   const progKeys = Object.keys(progWeeks).map(Number).sort();
   const gender = clientData?.onboarding?.personal?.gender || '';
+
+  // Set programme week to the latest (current) week
+  if (progKeys.length) {
+    currentProgrammeWeek = progKeys[progKeys.length - 1];
+  }
 
   // ─── TODAY'S SESSION TILE ───
   const todayEl = document.getElementById('dashTodaySession');
@@ -2454,13 +2491,57 @@ function initClientApp() {
   document.getElementById('clientNotifBellIcon').innerHTML = ic('bell','var(--text-body)',20);
   renderClientNotifs();
 
-  // Nutrition meals
-  const nutritionEl = document.getElementById('nutritionMeals');
-  if (nutritionEl) nutritionEl.innerHTML = `
-    <div style="background:var(--slate-raised);padding:16px;border-radius:10px;border-left:3px solid var(--ember);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><h4 style="color:var(--ember);margin-bottom:0;">Breakfast</h4><span style="font-size:12px;color:var(--ember);font-family:'Space Grotesk';font-weight:600;">~600 kcal</span></div><p style="font-size:13px;color:var(--text-body);">Protein-rich start: eggs, oats, or Greek yoghurt with fruit. Aim for 30-40g protein.</p></div>
-    <div style="background:var(--slate-raised);padding:16px;border-radius:10px;border-left:3px solid var(--ocean);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><h4 style="color:var(--ocean);margin-bottom:0;">Lunch</h4><span style="font-size:12px;color:var(--ocean);font-family:'Space Grotesk';font-weight:600;">~750 kcal</span></div><p style="font-size:13px;color:var(--text-body);">Balanced plate: lean protein, complex carbs, vegetables. Chicken/fish with rice and veg.</p></div>
-    <div style="background:var(--slate-raised);padding:16px;border-radius:10px;border-left:3px solid var(--sage);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><h4 style="color:var(--sage-text);margin-bottom:0;">Post-Training Snack</h4><span style="font-size:12px;color:var(--sage-text);font-family:'Space Grotesk';font-weight:600;">~350 kcal</span></div><p style="font-size:13px;color:var(--text-body);">Within 60 min: protein shake + banana or rice cakes. 30g protein + fast carbs.</p></div>
-    <div style="background:var(--slate-raised);padding:16px;border-radius:10px;border-left:3px solid #9B8EC4;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><h4 style="color:#9B8EC4;margin-bottom:0;">Dinner</h4><span style="font-size:12px;color:#9B8EC4;font-family:'Space Grotesk';font-weight:600;">~700 kcal</span></div><p style="font-size:13px;color:var(--text-body);">Protein + veg focus: salmon, lean beef, or chicken with plenty of vegetables.</p></div>`;
+  // Nutrition — populate from coach-assigned data if available
+  const nutData = cid ? CLIENT_NUTRITION[cid] : null;
+  if (nutData) {
+    const cal = nutData.calories || 0;
+    const pPct = nutData.proteinPct || 0;
+    const cPct = nutData.carbsPct || 0;
+    const fPct = nutData.fatPct || 0;
+    const pGrams = Math.round(cal * pPct / 100 / 4);
+    const cGrams = Math.round(cal * cPct / 100 / 4);
+    const fGrams = Math.round(cal * fPct / 100 / 9);
+    const pPerKg = clientData?.onboarding?.personal?.weight ? (pGrams / parseFloat(clientData.onboarding.personal.weight)).toFixed(1) : '';
+
+    const calEl = document.getElementById('nutClientCal');
+    if (calEl) calEl.innerHTML = `${cal.toLocaleString()}<span style="font-size:14px;color:var(--text-dim);">kcal</span>`;
+    const calSub = document.getElementById('nutClientCalSub');
+    if (calSub) calSub.textContent = nutData.goal ? nutData.goal.replace('-',' ').replace(/\b\w/g,l=>l.toUpperCase()) : '';
+    const proEl = document.getElementById('nutClientPro');
+    if (proEl) proEl.innerHTML = `${pGrams}<span style="font-size:14px;color:var(--text-dim);">g</span>`;
+    const proSub = document.getElementById('nutClientProSub');
+    if (proSub) proSub.textContent = (pPerKg ? pPerKg + 'g/kg · ' : '') + pPct + '%';
+    const carbEl = document.getElementById('nutClientCarb');
+    if (carbEl) carbEl.innerHTML = `${cGrams}<span style="font-size:14px;color:var(--text-dim);">g</span>`;
+    const carbSub = document.getElementById('nutClientCarbSub');
+    if (carbSub) carbSub.textContent = cPct + '%';
+    const fatEl = document.getElementById('nutClientFat');
+    if (fatEl) fatEl.innerHTML = `${fGrams}<span style="font-size:14px;color:var(--text-dim);">g</span>`;
+    const fatSub = document.getElementById('nutClientFatSub');
+    if (fatSub) fatSub.textContent = fPct + '%';
+
+    // Coach notes
+    const notesEl = document.getElementById('nutClientNotes');
+    if (notesEl && nutData.notes) {
+      notesEl.style.display = '';
+      notesEl.innerHTML = `<h3>Coach Notes</h3><p style="font-size:13px;color:var(--text-body);line-height:1.6;margin-top:8px;">${nutData.notes.replace(/\n/g, '<br>')}</p>`;
+    }
+
+    // Meals from coach
+    const meals = nutData.meals || [];
+    const mealColours = ['var(--ember)','var(--ocean)','var(--sage-text)','#9B8EC4','var(--warning)'];
+    const nutritionEl = document.getElementById('nutritionMeals');
+    if (nutritionEl) nutritionEl.innerHTML = meals.map((m, i) => {
+      const colour = mealColours[i % mealColours.length];
+      const mealCal = Math.round(cal * (m.pct || 25) / 100);
+      return `<div style="background:var(--slate-raised);padding:16px;border-radius:10px;border-left:3px solid ${colour};"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><h4 style="color:${colour};margin-bottom:0;">${m.name}</h4><span style="font-size:12px;color:${colour};font-family:'Space Grotesk';font-weight:600;">~${mealCal} kcal</span></div><p style="font-size:13px;color:var(--text-body);">${m.desc}</p></div>`;
+    }).join('');
+  } else {
+    // Default placeholder when no nutrition assigned
+    const nutritionEl = document.getElementById('nutritionMeals');
+    if (nutritionEl) nutritionEl.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text-dim);font-size:13px;">Your nutrition plan will appear here once Coach Adam sets it up for you.</div>`;
+  }
 
   // Programme
   renderProgrammeWeek();
@@ -2605,10 +2686,10 @@ function _shortenExName(name) {
 function renderProgrammeWeek() {
   renderProgrammeSummary();
   const progWeeks = getClientProgrammeWeeks();
-  // Auto-clamp to the first available week if current week doesn't exist
+  // Auto-open the latest (highest) available week — this is the current week of the programme
   const availableWeeks = Object.keys(progWeeks).map(Number).sort((a,b)=>a-b);
   if (availableWeeks.length && !progWeeks[currentProgrammeWeek]) {
-    currentProgrammeWeek = availableWeeks[0];
+    currentProgrammeWeek = availableWeeks[availableWeeks.length - 1];
   }
   const week = progWeeks[currentProgrammeWeek];
   if (!week) return;
@@ -2990,8 +3071,15 @@ function _isCardioExercise(name) {
   if (!name) return false;
   const n = name.toLowerCase();
   // True cardio: time/distance based. Wall balls, burpees, carries are strength-style (weight/reps).
-  const cardioKeywords = ['run','running','runner','ski erg','skierg','rowing','rower','assault bike','air bike','airbike','echo bike','bike','cycle','cycling','swim','walk','walking','jog','jogging','sprint','sled push','sled pull'];
+  // Sled push/pull are separate — they use weight+distance, not time.
+  const cardioKeywords = ['run','running','runner','ski erg','skierg','rowing','rower','assault bike','air bike','airbike','echo bike','bike','cycle','cycling','swim','walk','walking','jog','jogging','sprint'];
   return cardioKeywords.some(k => n.includes(k));
+}
+
+function _isSledExercise(name) {
+  if (!name) return false;
+  const n = name.toLowerCase();
+  return n.includes('sled push') || n.includes('sled pull');
 }
 
 function renderWLActiveSession() {
@@ -3057,7 +3145,22 @@ function renderWLActiveSession() {
       </div>
       <div class="wl-ex-body" id="wlExBody${i}">`;
     const isCardioEx = _isCardioExercise(ex.n);
-    if (isCardioEx) {
+    const isSledEx = _isSledExercise(ex.n);
+    if (isSledEx) {
+      // Sled push/pull: Weight + Distance rows
+      html += `<div class="wl-set-row header wl-cardio-header"><span>Set</span><span>Weight (kg)</span><span>Distance</span><span></span></div>`;
+      sets.forEach((set, si) => {
+        const distVal = (set.reps !== '' && set.reps !== undefined && set.reps !== null) ? set.reps : '';
+        const weightVal = (set.done && set.weight !== '' && set.weight !== undefined) ? set.weight : '';
+        html += `<div class="wl-set-row wl-cardio-row" id="wlSet${i}_${si}">
+          <div class="wl-set-num ${set.done ? 'done' : ''}">${si + 1}</div>
+          <input type="number" class="wl-set-input" inputmode="decimal" placeholder="kg" value="${weightVal}" onchange="wlUpdateSet(${i},${si},'weight',this.value)">
+          <input type="text" class="wl-set-input" inputmode="decimal" placeholder="m" value="${distVal}" onchange="wlUpdateSet(${i},${si},'reps',this.value)">
+          <button class="wl-check-btn ${set.done ? 'checked' : ''}" onclick="wlToggleSet(${i},${si})">\u2713</button>
+        </div>`;
+      });
+      html += `<button class="wl-add-set" onclick="wlAddSet(${i})">+ Add Set</button>`;
+    } else if (isCardioEx) {
       // Cardio: multi-set Time + Distance rows with Add Set
       html += `<div class="wl-set-row header wl-cardio-header"><span>Set</span><span>Time</span><span>Distance</span><span></span></div>`;
       sets.forEach((set, si) => {
@@ -3224,7 +3327,30 @@ function wlToggleSet(exIdx, setIdx) {
   // Start rest countdown if set was marked done and exercise has a rest time
   if (set.done && wlCurrentSession && wlCurrentSession.exercises && wlCurrentSession.exercises[exIdx]) {
     const ex = wlCurrentSession.exercises[exIdx];
-    const restStr = ex.rest || '';
+    let restStr = ex.rest || '';
+
+    // For superset exercises, use superset rest times if exercise doesn't have its own
+    if (!restStr && wlCurrentSession.supersets && wlCurrentSession.supersets.length) {
+      const exOrigIdx = ex._idx !== undefined ? ex._idx : exIdx;
+      const ssGroup = wlCurrentSession.supersets.find(ss =>
+        (ss.exerciseIndices || []).includes(exOrigIdx)
+      );
+      if (ssGroup) {
+        // Determine if we're moving to next exercise in superset or wrapping to start a new round
+        const ssIndices = ssGroup.exerciseIndices || [];
+        const posInSS = ssIndices.indexOf(exOrigIdx);
+        const isLastInSuperset = posInSS === ssIndices.length - 1;
+        // Check if all exercises in superset have completed the current round
+        if (isLastInSuperset && ssGroup.restBetweenRound) {
+          restStr = String(ssGroup.restBetweenRound);
+        } else if (!isLastInSuperset && ssGroup.restBetweenEx) {
+          restStr = String(ssGroup.restBetweenEx);
+        } else if (ssGroup.restBetweenEx) {
+          restStr = String(ssGroup.restBetweenEx);
+        }
+      }
+    }
+
     // Parse rest time — supports "60", "60s", "1:30", "90 sec", etc
     let restSecs = 0;
     if (restStr) {
@@ -6075,8 +6201,232 @@ function saveNewExercise() {}
 //  IFRAME PROGRAMME ASSIGNMENT BRIDGE
 // ═══════════════════════════════════════
 
+// ═══════════════════════════════════════
+//  COACH NUTRITION SYSTEM
+// ═══════════════════════════════════════
+
+function renderPTNutrition() {
+  const sel = document.getElementById('nutClientSelect');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Choose a client...</option>' +
+    CLIENTS.filter(c => c.status !== 'inactive').map(c =>
+      `<option value="${c.id}">${c.name}</option>`
+    ).join('');
+}
+
+function loadNutritionClient() {
+  const sel = document.getElementById('nutClientSelect');
+  const body = document.getElementById('ptNutritionBody');
+  if (!sel || !body) return;
+  const cid = parseInt(sel.value);
+  if (!cid) { body.innerHTML = ''; return; }
+  const client = CLIENTS.find(c => c.id === cid);
+  if (!client) return;
+
+  const ob = client.onboarding || {};
+  const personal = ob.personal || {};
+  const goals = ob.goals || {};
+  const weight = parseFloat(personal.weight) || 80;
+  const height = parseFloat(personal.height) || 175;
+  const age = personal.dob ? Math.floor((Date.now() - new Date(personal.dob).getTime()) / (365.25*24*60*60*1000)) : 30;
+  const gender = (personal.gender || '').toLowerCase();
+
+  // Mifflin-St Jeor BMR
+  let bmr;
+  if (gender === 'female') {
+    bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+  } else {
+    bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+  }
+  const tdee = Math.round(bmr * 1.55); // moderate activity default
+
+  // Load existing nutrition data or set defaults
+  const existing = CLIENT_NUTRITION[cid] || {};
+  const calories = existing.calories || tdee;
+  const proteinPct = existing.proteinPct || 30;
+  const carbsPct = existing.carbsPct || 40;
+  const fatPct = existing.fatPct || 30;
+  const goal = existing.goal || 'maintenance';
+  const notes = existing.notes || '';
+  const meals = existing.meals || [
+    { name: 'Breakfast', desc: 'Protein-rich start: eggs, oats, or Greek yoghurt with fruit. Aim for 30-40g protein.', pct: 25 },
+    { name: 'Lunch', desc: 'Balanced plate: lean protein, complex carbs, vegetables.', pct: 30 },
+    { name: 'Post-Training Snack', desc: 'Within 60 min: protein shake + banana or rice cakes. 30g protein + fast carbs.', pct: 15 },
+    { name: 'Dinner', desc: 'Protein + veg focus: salmon, lean beef, or chicken with plenty of vegetables.', pct: 30 }
+  ];
+
+  body.innerHTML = `
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text-bright);">Client Details (from onboarding)</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;font-size:13px;">
+        <div><span style="color:var(--text-muted);">Weight:</span> <strong>${weight} kg</strong></div>
+        <div><span style="color:var(--text-muted);">Height:</span> <strong>${height} cm</strong></div>
+        <div><span style="color:var(--text-muted);">Age:</span> <strong>${age}</strong></div>
+        <div><span style="color:var(--text-muted);">Gender:</span> <strong>${personal.gender || 'Not set'}</strong></div>
+        <div><span style="color:var(--text-muted);">BMR:</span> <strong>${Math.round(bmr)} kcal</strong></div>
+        <div><span style="color:var(--text-muted);">TDEE (est.):</span> <strong>${tdee} kcal</strong></div>
+        <div><span style="color:var(--text-muted);">Goals:</span> <strong>${(goals.mainGoals || []).join(', ') || 'Not set'}</strong></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text-bright);">Macro Assignment</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div>
+          <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Goal</label>
+          <select id="nutGoal" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-bright);font-size:13px;">
+            <option value="fat-loss" ${goal==='fat-loss'?'selected':''}>Fat Loss</option>
+            <option value="maintenance" ${goal==='maintenance'?'selected':''}>Maintenance</option>
+            <option value="muscle-gain" ${goal==='muscle-gain'?'selected':''}>Muscle Gain</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Daily Calories (kcal)</label>
+          <input type="number" id="nutCalories" value="${calories}" min="800" max="5000" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-bright);font-size:13px;" oninput="updateNutMacroPreview()">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Protein %</label>
+          <input type="range" id="nutProtein" min="10" max="50" value="${proteinPct}" oninput="updateNutMacroPreview()" style="width:100%;">
+          <div style="font-size:12px;color:var(--ember);font-weight:600;text-align:center;" id="nutProteinLabel">${proteinPct}%</div>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Carbs %</label>
+          <input type="range" id="nutCarbs" min="10" max="60" value="${carbsPct}" oninput="updateNutMacroPreview()" style="width:100%;">
+          <div style="font-size:12px;color:var(--ocean);font-weight:600;text-align:center;" id="nutCarbsLabel">${carbsPct}%</div>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Fat %</label>
+          <input type="range" id="nutFat" min="10" max="50" value="${fatPct}" oninput="updateNutMacroPreview()" style="width:100%;">
+          <div style="font-size:12px;color:var(--sage-text);font-weight:600;text-align:center;" id="nutFatLabel">${fatPct}%</div>
+        </div>
+      </div>
+      <div id="nutMacroTotalWarn" style="font-size:12px;color:var(--warning);text-align:center;margin-bottom:8px;display:none;"></div>
+      <div id="nutMacroPreview" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;"></div>
+
+      <div style="margin-bottom:12px;">
+        <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Coach Notes / Additional Guidance</label>
+        <textarea id="nutNotes" rows="3" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-bright);font-size:13px;resize:vertical;" placeholder="Hydration targets, supplement recommendations, food sensitivities...">${notes}</textarea>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text-bright);">Daily Meal Framework</div>
+      <div id="nutMealEditor"></div>
+      <button onclick="addNutMeal()" class="btn btn-sm" style="margin-top:10px;font-size:12px;padding:6px 14px;background:var(--slate-raised);color:var(--text-muted);border:1px dashed var(--slate-border);border-radius:8px;">+ Add Meal</button>
+    </div>
+
+    <div style="display:flex;gap:12px;justify-content:flex-end;">
+      <button class="btn btn-sm" style="font-size:13px;padding:10px 24px;background:var(--ember);color:white;border-color:var(--ember);border-radius:8px;cursor:pointer;" onclick="saveClientNutrition(${cid})">Save & Assign to Client</button>
+    </div>`;
+
+  // Render macro preview and meal editor
+  window._nutMeals = JSON.parse(JSON.stringify(meals));
+  updateNutMacroPreview();
+  renderNutMealEditor();
+}
+
+function updateNutMacroPreview() {
+  const cal = parseInt(document.getElementById('nutCalories')?.value) || 0;
+  const pPct = parseInt(document.getElementById('nutProtein')?.value) || 0;
+  const cPct = parseInt(document.getElementById('nutCarbs')?.value) || 0;
+  const fPct = parseInt(document.getElementById('nutFat')?.value) || 0;
+
+  document.getElementById('nutProteinLabel').textContent = pPct + '%';
+  document.getElementById('nutCarbsLabel').textContent = cPct + '%';
+  document.getElementById('nutFatLabel').textContent = fPct + '%';
+
+  const total = pPct + cPct + fPct;
+  const warn = document.getElementById('nutMacroTotalWarn');
+  if (total !== 100) {
+    warn.textContent = `Macro split totals ${total}% (should equal 100%)`;
+    warn.style.display = '';
+  } else {
+    warn.style.display = 'none';
+  }
+
+  const pGrams = Math.round(cal * pPct / 100 / 4);
+  const cGrams = Math.round(cal * cPct / 100 / 4);
+  const fGrams = Math.round(cal * fPct / 100 / 9);
+
+  const preview = document.getElementById('nutMacroPreview');
+  if (preview) preview.innerHTML = `
+    <div style="background:var(--slate-raised);padding:12px;border-radius:10px;border-top:3px solid var(--ember);text-align:center;">
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Calories</div>
+      <div style="font-size:20px;font-weight:700;color:var(--ember);font-family:'Space Grotesk';">${cal.toLocaleString()}</div>
+      <div style="font-size:10px;color:var(--text-dim);">kcal/day</div>
+    </div>
+    <div style="background:var(--slate-raised);padding:12px;border-radius:10px;border-top:3px solid var(--ocean);text-align:center;">
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Protein</div>
+      <div style="font-size:20px;font-weight:700;color:var(--ocean);font-family:'Space Grotesk';">${pGrams}g</div>
+      <div style="font-size:10px;color:var(--text-dim);">${pPct}%</div>
+    </div>
+    <div style="background:var(--slate-raised);padding:12px;border-radius:10px;border-top:3px solid var(--sage);text-align:center;">
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Carbs</div>
+      <div style="font-size:20px;font-weight:700;color:var(--sage-text);font-family:'Space Grotesk';">${cGrams}g</div>
+      <div style="font-size:10px;color:var(--text-dim);">${cPct}%</div>
+    </div>
+    <div style="background:var(--slate-raised);padding:12px;border-radius:10px;border-top:3px solid var(--warning);text-align:center;">
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Fat</div>
+      <div style="font-size:20px;font-weight:700;color:var(--warning);font-family:'Space Grotesk';">${fGrams}g</div>
+      <div style="font-size:10px;color:var(--text-dim);">${fPct}%</div>
+    </div>`;
+}
+
+function renderNutMealEditor() {
+  const el = document.getElementById('nutMealEditor');
+  if (!el) return;
+  el.innerHTML = (window._nutMeals || []).map((m, i) => `
+    <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;${i > 0 ? 'border-top:1px solid var(--slate-border);':''}">
+      <div style="flex:1;">
+        <input type="text" value="${m.name}" onchange="window._nutMeals[${i}].name=this.value" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-bright);font-size:13px;font-weight:600;margin-bottom:6px;" placeholder="Meal name">
+        <textarea onchange="window._nutMeals[${i}].desc=this.value" rows="2" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;resize:vertical;" placeholder="Description / guidance...">${m.desc}</textarea>
+      </div>
+      <div style="width:60px;text-align:center;">
+        <input type="number" value="${m.pct}" min="5" max="50" onchange="window._nutMeals[${i}].pct=parseInt(this.value)" style="width:50px;padding:4px;border-radius:6px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-bright);font-size:12px;text-align:center;">
+        <div style="font-size:10px;color:var(--text-dim);">% cals</div>
+      </div>
+      <button onclick="window._nutMeals.splice(${i},1);renderNutMealEditor()" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;padding:4px;" title="Remove">✕</button>
+    </div>`).join('');
+}
+
+function addNutMeal() {
+  if (!window._nutMeals) window._nutMeals = [];
+  window._nutMeals.push({ name: 'Snack', desc: '', pct: 10 });
+  renderNutMealEditor();
+}
+
+function saveClientNutrition(cid) {
+  const cal = parseInt(document.getElementById('nutCalories')?.value) || 0;
+  const pPct = parseInt(document.getElementById('nutProtein')?.value) || 0;
+  const cPct = parseInt(document.getElementById('nutCarbs')?.value) || 0;
+  const fPct = parseInt(document.getElementById('nutFat')?.value) || 0;
+  const goal = document.getElementById('nutGoal')?.value || 'maintenance';
+  const notes = document.getElementById('nutNotes')?.value || '';
+
+  CLIENT_NUTRITION[cid] = {
+    calories: cal,
+    proteinPct: pPct,
+    carbsPct: cPct,
+    fatPct: fPct,
+    goal: goal,
+    notes: notes,
+    meals: JSON.parse(JSON.stringify(window._nutMeals || [])),
+    updatedAt: new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})
+  };
+
+  const client = CLIENTS.find(c => c.id === cid);
+  if (client) {
+    addPTNotification('nutrition', cid, client.name, 'Nutrition plan updated for ' + client.name);
+  }
+
+  scheduleSave();
+  alert('Nutrition plan saved and assigned to ' + (client ? client.name : 'client') + '.');
+}
+
 // Convert Programme Builder format → client PROGRAMME_WEEKS format
-function convertBuilderToClientFormat(builderProgramme, weekNumber) {
+function convertBuilderToClientFormat(builderProgramme, weekNumber, programmeName) {
   const dayAbbrev = {Monday:'Mon',Tuesday:'Tue',Wednesday:'Wed',Thursday:'Thu',Friday:'Fri',Saturday:'Sat',Sunday:'Sun'};
   const sessions = [];
   builderProgramme.days.forEach(day => {
@@ -6132,7 +6482,8 @@ function convertBuilderToClientFormat(builderProgramme, weekNumber) {
     });
   });
   const weekData = {};
-  weekData[weekNumber] = { label: 'Week ' + weekNumber, sessions: sessions };
+  const weekLabel = programmeName ? programmeName : 'Week ' + weekNumber;
+  weekData[weekNumber] = { label: weekLabel, sessions: sessions };
   return weekData;
 }
 
@@ -6175,7 +6526,7 @@ window.addEventListener('message', function(e) {
     client.week = weekNumber + '/' + weekNumber;
 
     // Convert and store as client-viewable programme weeks
-    const converted = convertBuilderToClientFormat(programme, weekNumber);
+    const converted = convertBuilderToClientFormat(programme, weekNumber, programmeName);
     if (!CLIENT_PROGRAMMES) window.CLIENT_PROGRAMMES = {};
     if (!CLIENT_PROGRAMMES[clientId]) CLIENT_PROGRAMMES[clientId] = {};
     Object.assign(CLIENT_PROGRAMMES[clientId], converted);
@@ -6190,15 +6541,10 @@ window.addEventListener('message', function(e) {
     // Notify client
     triggerProgrammeUpdated(clientId, clientName, client.email || '', programmeName);
 
-    // Queue email
+    // Queue email via the proper queueEmail function
     const emailAddr = client.email || (clientName.split(' ')[0].toLowerCase() + '@email.com');
-    EMAIL_QUEUE.push({
-      to: emailAddr,
-      subject: 'New Programme: ' + programmeName,
-      body: 'Hi ' + clientName.split(' ')[0] + ', your new programme "' + programmeName + '" is ready to view in the app.',
-      status: 'queued',
-      time: 'Just now'
-    });
+    queueEmail(emailAddr, clientName, 'New Programme: ' + programmeName, 'programme-assigned',
+      'Hi ' + clientName.split(' ')[0] + ', your new programme "' + programmeName + '" is ready to view in the app.');
 
     alert('Programme "' + programmeName + '" assigned to ' + clientName + ' successfully.');
     scheduleSave();
@@ -6267,13 +6613,14 @@ function renderDetailProgramme() {
     html += `<div class="card" style="margin-bottom:16px;">
       <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text-bright);">Assigned Programmes</div>`;
     assigned.forEach(p => {
-      const statusCol = p.status === 'active' ? 'var(--sage)' : 'var(--text-dim)';
+      const statusCol = p.status === 'active' ? 'var(--sage)' : p.status === 'completed' ? 'var(--ocean)' : 'var(--text-dim)';
+      const statusBg = p.status === 'active' ? 'var(--sage-soft)' : p.status === 'completed' ? 'var(--ocean-soft)' : 'var(--slate-raised)';
       html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--slate-border);">
         <div>
           <div style="font-size:14px;font-weight:500;">${p.name}</div>
           <div style="font-size:11px;color:var(--text-muted);">Week ${p.weekNumber} · Assigned ${p.assignedDate}</div>
         </div>
-        <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:${p.status==='active'?'var(--sage-soft)':'var(--slate-raised)'};color:${statusCol};font-weight:600;text-transform:uppercase;">${p.status}</span>
+        <span onclick="toggleProgrammeStatus(${p.id})" style="cursor:pointer;font-size:11px;padding:3px 10px;border-radius:20px;background:${statusBg};color:${statusCol};font-weight:600;text-transform:uppercase;" title="Click to toggle status">${p.status}</span>
       </div>`;
     });
     html += `</div>`;
@@ -6364,6 +6711,20 @@ function showDetailProgrammeWeek(clientId, weekNum) {
   }).join('');
 }
 
+function toggleProgrammeStatus(progId) {
+  const prog = PT_PROGRAMMES.find(p => p.id === progId);
+  if (!prog) return;
+  if (prog.status === 'active') {
+    prog.status = 'completed';
+  } else if (prog.status === 'completed') {
+    prog.status = 'active';
+  } else {
+    prog.status = 'active';
+  }
+  renderDetailProgramme();
+  scheduleSave();
+}
+
 function goToProgrammeBuilder(clientId) {
   // Navigate to the Programme Builder page and pre-select the client
   showPTPage('ptProgrammes');
@@ -6374,11 +6735,17 @@ function goToProgrammeBuilder(clientId) {
         type: 'ah-client-list',
         clients: CLIENTS.filter(c => c.status !== 'inactive').map(c => ({ id: c.id, name: c.name, programme: c.programme }))
       }, '*');
-      // Pre-select the client after a short delay
+      // Pre-select the client and load their programme after a short delay
       setTimeout(() => {
+        // Find the latest active programme for this client
+        const clientProgs = PT_PROGRAMMES.filter(p => p.clientId === clientId).sort((a,b) => (b.id || 0) - (a.id || 0));
+        const activeProg = clientProgs.find(p => p.status === 'active') || clientProgs[0];
         iframe.contentWindow.postMessage({
           type: 'ah-select-client',
-          clientId: clientId
+          clientId: clientId,
+          programme: activeProg ? activeProg.builderData : null,
+          programmeName: activeProg ? activeProg.name : '',
+          weekNumber: activeProg ? activeProg.weekNumber : 1
         }, '*');
       }, 300);
     }
@@ -7134,6 +7501,15 @@ function renderEmailQueue() {
 
   if (!EMAIL_QUEUE.length) { el.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--text-dim);">No emails in queue</div>'; return; }
 
+  // Normalise legacy email entries that may be missing required fields
+  EMAIL_QUEUE.forEach(e => {
+    if (!e.id) e.id = 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+    if (!e.toName) e.toName = e.to ? e.to.split('@')[0] : 'Unknown';
+    if (!e.template) e.template = 'general';
+    if (!e.createdAt) e.createdAt = e.time || 'Unknown';
+    if (e.status === 'queued') e.status = 'pending';
+  });
+
   el.innerHTML = EMAIL_QUEUE.map(e => `
     <div class="email-item" onclick="previewEmail('${e.id}')">
       <div style="flex:1;min-width:0;">
@@ -7147,6 +7523,7 @@ function renderEmailQueue() {
       <div style="display:flex;gap:6px;flex-shrink:0;">
         ${e.status === 'pending' ? `<button class="btn btn-sm btn-ember" onclick="event.stopPropagation();sendEmail('${e.id}')">Send</button>` : ''}
         ${e.status === 'failed' ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();retryEmail('${e.id}')">Retry</button>` : ''}
+        <button class="btn btn-sm" style="background:transparent;color:var(--text-dim);border:1px solid var(--slate-border);font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();deleteEmail('${e.id}')" title="Delete">✕</button>
       </div>
     </div>`).join('');
 }
@@ -7176,6 +7553,14 @@ function retryEmail(eId) {
   if (!e) return;
   e.status = 'pending';
   renderEmailQueue();
+}
+
+function deleteEmail(eId) {
+  const idx = EMAIL_QUEUE.findIndex(x => x.id === eId);
+  if (idx < 0) return;
+  EMAIL_QUEUE.splice(idx, 1);
+  renderEmailQueue();
+  scheduleSave();
 }
 
 function sendAllPendingEmails() {
