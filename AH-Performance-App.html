@@ -6853,6 +6853,22 @@ window.addEventListener('message', function(e) {
     scheduleSave();
   }
 
+  if (e.data.type === 'ah-request-client-programme') {
+    const cid = e.data.clientId;
+    const clientProgs = PT_PROGRAMMES.filter(p => p.clientId === cid).sort((a,b) => (b.id || 0) - (a.id || 0));
+    const activeProg = clientProgs.find(p => p.status === 'active') || clientProgs[0];
+    const iframe = document.querySelector('#ptProgrammes iframe');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({
+        type: 'ah-select-client',
+        clientId: cid,
+        programme: activeProg ? activeProg.builderData : null,
+        programmeName: activeProg ? activeProg.name : '',
+        weekNumber: activeProg ? activeProg.weekNumber : 1
+      }, '*');
+    }
+  }
+
   if (e.data.type === 'ah-save-programme') {
     const { programmeName, weekNumber, programme } = e.data;
     PT_PROGRAMMES.push({
@@ -7875,6 +7891,9 @@ function sendAllPendingEmails() {
 }
 
 function queueEmail(to, toName, subject, template, body) {
+  // Guard: don't queue emails with missing/undefined addresses
+  if (!to || to === 'undefined') { console.warn('queueEmail skipped — no valid email address for', toName); return; }
+  if (!toName || toName === 'undefined') toName = 'Client';
   const id = 'e' + (EMAIL_QUEUE.length + 1) + '_' + Date.now();
   const now = new Date();
   const createdAt = now.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'}) + ', ' + now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});

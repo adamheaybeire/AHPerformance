@@ -181,7 +181,7 @@ body { font-family: var(--font-body); background: var(--base); color: var(--text
 <div class="programme-meta">
   <span class="meta-label">Client</span>
   <input class="meta-input wide" id="clientName" placeholder="Client name..." />
-  <select class="meta-input wide" id="clientSelect" style="display:none;" onfocus="if(window.parent!==window)window.parent.postMessage({type:'ah-request-clients'},'*')">
+  <select class="meta-input wide" id="clientSelect" style="display:none;" onfocus="if(window.parent!==window)window.parent.postMessage({type:'ah-request-clients'},'*')" onchange="if(window.parent!==window&&this.value)window.parent.postMessage({type:'ah-request-client-programme',clientId:parseInt(this.value)},'*')">
     <option value="">Select client...</option>
   </select>
   <span class="meta-label">Programme</span>
