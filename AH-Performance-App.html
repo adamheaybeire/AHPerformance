@@ -6204,6 +6204,13 @@ function saveNewExercise() {}
 // ═══════════════════════════════════════
 //  COACH NUTRITION SYSTEM
 // ═══════════════════════════════════════
+// Mirrors AH-Nutrition-Guide.html logic: Mifflin-St Jeor BMR,
+// activity-level TDEE, goal multipliers, per-kg protein,
+// coach override toggles for calories & macros,
+// calculated-estimate AND goal-based-range views.
+
+// ── Internal state for the currently loaded client nutrition form ──
+let _nutState = {};
 
 function renderPTNutrition() {
   const sel = document.getElementById('nutClientSelect');
@@ -6219,14 +6226,15 @@ function loadNutritionClient() {
   const body = document.getElementById('ptNutritionBody');
   if (!sel || !body) return;
   const cid = parseInt(sel.value);
-  if (!cid) { body.innerHTML = ''; return; }
+  if (!cid) { body.innerHTML = ''; _nutState = {}; return; }
   const client = CLIENTS.find(c => c.id === cid);
   if (!client) return;
 
+  // ── Pull client bio from onboarding or latest data ──
   const ob = client.onboarding || {};
   const personal = ob.personal || {};
-  const goals = ob.goals || {};
-  const weight = parseFloat(personal.weight) || 80;
+  const obGoals = ob.goals || {};
+  const weight = client.currentWeight || parseFloat(personal.weight) || 80;
   const height = parseFloat(personal.height) || 175;
   const age = personal.dob ? Math.floor((Date.now() - new Date(personal.dob).getTime()) / (365.25*24*60*60*1000)) : 30;
   const gender = (personal.gender || '').toLowerCase();
@@ -6238,150 +6246,443 @@ function loadNutritionClient() {
   } else {
     bmr = 10 * weight + 6.25 * height - 5 * age + 5;
   }
-  const tdee = Math.round(bmr * 1.55); // moderate activity default
 
-  // Load existing nutrition data or set defaults
+  // BMI
+  const heightM = height / 100;
+  const bmi = weight / (heightM * heightM);
+  let bmiLabel, bmiColour;
+  if (bmi < 18.5) { bmiLabel = 'Underweight'; bmiColour = 'var(--ocean-text)'; }
+  else if (bmi < 25) { bmiLabel = 'Normal'; bmiColour = 'var(--sage-text)'; }
+  else if (bmi < 30) { bmiLabel = 'Overweight'; bmiColour = 'var(--ember)'; }
+  else { bmiLabel = 'Obese'; bmiColour = 'var(--danger)'; }
+
+  // Load existing saved nutrition or defaults
   const existing = CLIENT_NUTRITION[cid] || {};
-  const calories = existing.calories || tdee;
-  const proteinPct = existing.proteinPct || 30;
-  const carbsPct = existing.carbsPct || 40;
-  const fatPct = existing.fatPct || 30;
-  const goal = existing.goal || 'maintenance';
-  const notes = existing.notes || '';
-  const meals = existing.meals || [
-    { name: 'Breakfast', desc: 'Protein-rich start: eggs, oats, or Greek yoghurt with fruit. Aim for 30-40g protein.', pct: 25 },
-    { name: 'Lunch', desc: 'Balanced plate: lean protein, complex carbs, vegetables.', pct: 30 },
-    { name: 'Post-Training Snack', desc: 'Within 60 min: protein shake + banana or rice cakes. 30g protein + fast carbs.', pct: 15 },
-    { name: 'Dinner', desc: 'Protein + veg focus: salmon, lean beef, or chicken with plenty of vegetables.', pct: 30 }
-  ];
+  const actLevel = existing.activityLevel || 1.55;
+
+  // Build internal state object that all sub-functions reference
+  _nutState = {
+    cid, client, weight, height, age, gender, bmr, bmi, bmiLabel, bmiColour,
+    activityLevel: actLevel,
+    tdee: Math.round(bmr * actLevel),
+    goal: existing.goal || 'maintenance',
+    calOverride: existing.calOverride || false,
+    macroOverride: existing.macroOverride || false,
+    customCalories: existing.calories || 0,
+    proteinPct: existing.proteinPct || 30,
+    carbsPct: existing.carbsPct || 40,
+    fatPct: existing.fatPct || 30,
+    notes: existing.notes || '',
+    meals: existing.meals ? JSON.parse(JSON.stringify(existing.meals)) : [
+      { name: 'Breakfast', desc: 'Protein-rich start: eggs, oats, or Greek yoghurt with fruit. Aim for 30-40g protein.', pct: 25 },
+      { name: 'Lunch', desc: 'Balanced plate: lean protein, complex carbs, vegetables.', pct: 30 },
+      { name: 'Post-Training Snack', desc: 'Within 60 min: protein shake + banana or rice cakes. 30g protein + fast carbs.', pct: 15 },
+      { name: 'Dinner', desc: 'Protein + veg focus: salmon, lean beef, or chicken with plenty of vegetables.', pct: 30 }
+    ],
+    mode: existing._mode || 'calculated'
+  };
+  window._nutMeals = _nutState.meals;
+
+  const inputStyle = "width:100%;padding:8px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-bright);font-size:13px;box-sizing:border-box;";
+  const labelStyle = "font-size:11px;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:4px;letter-spacing:0.3px;";
 
   body.innerHTML = `
+    <!-- ═══ CLIENT DETAILS + BMI ═══ -->
     <div class="card" style="margin-bottom:16px;">
-      <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text-bright);">Client Details (from onboarding)</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;font-size:13px;">
-        <div><span style="color:var(--text-muted);">Weight:</span> <strong>${weight} kg</strong></div>
-        <div><span style="color:var(--text-muted);">Height:</span> <strong>${height} cm</strong></div>
-        <div><span style="color:var(--text-muted);">Age:</span> <strong>${age}</strong></div>
-        <div><span style="color:var(--text-muted);">Gender:</span> <strong>${personal.gender || 'Not set'}</strong></div>
-        <div><span style="color:var(--text-muted);">BMR:</span> <strong>${Math.round(bmr)} kcal</strong></div>
-        <div><span style="color:var(--text-muted);">TDEE (est.):</span> <strong>${tdee} kcal</strong></div>
-        <div><span style="color:var(--text-muted);">Goals:</span> <strong>${(goals.mainGoals || []).join(', ') || 'Not set'}</strong></div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text-bright);">Client Details</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;font-size:13px;">
+        <div><span style="color:var(--text-muted);">Weight</span><br><strong>${weight} kg</strong></div>
+        <div><span style="color:var(--text-muted);">Height</span><br><strong>${height} cm</strong></div>
+        <div><span style="color:var(--text-muted);">Age</span><br><strong>${age}</strong></div>
+        <div><span style="color:var(--text-muted);">Gender</span><br><strong>${personal.gender || 'Not set'}</strong></div>
+        <div><span style="color:var(--text-muted);">BMI</span><br><strong style="color:${bmiColour};">${bmi.toFixed(1)} <span style="font-size:11px;font-weight:400;">(${bmiLabel})</span></strong></div>
+        <div><span style="color:var(--text-muted);">BMR</span><br><strong>${Math.round(bmr)} kcal</strong></div>
+        <div><span style="color:var(--text-muted);">Goals</span><br><strong>${(obGoals.mainGoals || []).join(', ') || 'Not set'}</strong></div>
+      </div>
+      <div style="margin-top:12px;">
+        <label style="${labelStyle}">Activity Level</label>
+        <select id="nutActivity" onchange="_nutState.activityLevel=parseFloat(this.value);_nutState.tdee=Math.round(_nutState.bmr*_nutState.activityLevel);nutRecalculate();" style="${inputStyle}">
+          <option value="1.2" ${actLevel==1.2?'selected':''}>Sedentary — desk job, little or no exercise</option>
+          <option value="1.375" ${actLevel==1.375?'selected':''}>Lightly active — light exercise 1-3 days/week</option>
+          <option value="1.55" ${actLevel==1.55?'selected':''}>Moderately active — moderate exercise 3-5 days/week</option>
+          <option value="1.725" ${actLevel==1.725?'selected':''}>Very active — hard training 6-7 days/week</option>
+          <option value="1.9" ${actLevel==1.9?'selected':''}>Extremely active — very hard training, physical job</option>
+        </select>
+      </div>
+      <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="background:var(--slate-raised);padding:12px;border-radius:10px;text-align:center;border-top:3px solid var(--ocean);">
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">TDEE (estimated)</div>
+          <div id="nutTDEEDisplay" style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;color:var(--ocean-text);">${_nutState.tdee}</div>
+          <div style="font-size:10px;color:var(--text-dim);">kcal/day</div>
+        </div>
+        <div style="background:var(--slate-raised);padding:12px;border-radius:10px;text-align:center;border-top:3px solid var(--sage);">
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Water Target</div>
+          <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;color:var(--sage-text);">${Math.max(2, weight * 0.033).toFixed(1)}</div>
+          <div style="font-size:10px;color:var(--text-dim);">litres/day</div>
+        </div>
       </div>
     </div>
 
+    <!-- ═══ MODE TOGGLE: Calculated Estimate / Goal-Based Ranges ═══ -->
     <div class="card" style="margin-bottom:16px;">
-      <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text-bright);">Macro Assignment</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-        <div>
-          <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Goal</label>
-          <select id="nutGoal" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-bright);font-size:13px;">
-            <option value="fat-loss" ${goal==='fat-loss'?'selected':''}>Fat Loss</option>
-            <option value="maintenance" ${goal==='maintenance'?'selected':''}>Maintenance</option>
-            <option value="muscle-gain" ${goal==='muscle-gain'?'selected':''}>Muscle Gain</option>
+      <div style="display:flex;background:var(--slate-deep);border-radius:10px;padding:4px;margin-bottom:16px;border:1px solid var(--slate-border);">
+        <button id="nutModeCalc" class="btn btn-sm" style="flex:1;padding:10px 0;border-radius:8px;font-size:13px;font-family:'Space Grotesk',sans-serif;border:none;cursor:pointer;transition:all 0.2s;" onclick="nutSetMode('calculated')">Calculated Estimate</button>
+        <button id="nutModeRange" class="btn btn-sm" style="flex:1;padding:10px 0;border-radius:8px;font-size:13px;font-family:'Space Grotesk',sans-serif;border:none;cursor:pointer;transition:all 0.2s;" onclick="nutSetMode('ranges')">Goal-Based Ranges</button>
+      </div>
+
+      <!-- ── CALCULATED ESTIMATE VIEW ── -->
+      <div id="nutCalcView">
+        <div style="margin-bottom:14px;">
+          <label style="${labelStyle}">Primary Goal</label>
+          <select id="nutGoal" onchange="_nutState.goal=this.value;nutRecalculate();" style="${inputStyle}">
+            <option value="fat-loss" ${_nutState.goal==='fat-loss'?'selected':''}>Fat Loss</option>
+            <option value="maintenance" ${_nutState.goal==='maintenance'?'selected':''}>Maintenance</option>
+            <option value="muscle-gain" ${_nutState.goal==='muscle-gain'?'selected':''}>Muscle Gain</option>
           </select>
         </div>
-        <div>
-          <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Daily Calories (kcal)</label>
-          <input type="number" id="nutCalories" value="${calories}" min="800" max="5000" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-bright);font-size:13px;" oninput="updateNutMacroPreview()">
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
-        <div>
-          <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Protein %</label>
-          <input type="range" id="nutProtein" min="10" max="50" value="${proteinPct}" oninput="updateNutMacroPreview()" style="width:100%;">
-          <div style="font-size:12px;color:var(--ember);font-weight:600;text-align:center;" id="nutProteinLabel">${proteinPct}%</div>
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Carbs %</label>
-          <input type="range" id="nutCarbs" min="10" max="60" value="${carbsPct}" oninput="updateNutMacroPreview()" style="width:100%;">
-          <div style="font-size:12px;color:var(--ocean);font-weight:600;text-align:center;" id="nutCarbsLabel">${carbsPct}%</div>
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Fat %</label>
-          <input type="range" id="nutFat" min="10" max="50" value="${fatPct}" oninput="updateNutMacroPreview()" style="width:100%;">
-          <div style="font-size:12px;color:var(--sage-text);font-weight:600;text-align:center;" id="nutFatLabel">${fatPct}%</div>
-        </div>
-      </div>
-      <div id="nutMacroTotalWarn" style="font-size:12px;color:var(--warning);text-align:center;margin-bottom:8px;display:none;"></div>
-      <div id="nutMacroPreview" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;"></div>
 
-      <div style="margin-bottom:12px;">
-        <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Coach Notes / Additional Guidance</label>
-        <textarea id="nutNotes" rows="3" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-bright);font-size:13px;resize:vertical;" placeholder="Hydration targets, supplement recommendations, food sensitivities...">${notes}</textarea>
+        <!-- ── COACH OVERRIDE: CALORIES ── -->
+        <div style="background:linear-gradient(135deg,rgba(224,122,58,0.06),rgba(74,157,200,0.06));border:1px dashed var(--ember);border-radius:12px;padding:16px;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <span style="font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--ember);background:var(--ember-soft);padding:4px 10px;border-radius:6px;">Coach Controls</span>
+            <span style="font-size:12px;color:var(--text-dim);">Override the auto-calculated values</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div id="nutCalOverrideToggle" class="toggle-switch${_nutState.calOverride?' on':''}" onclick="nutToggleCalOverride()" style="position:relative;width:40px;height:22px;background:${_nutState.calOverride?'var(--ember)':'var(--slate-border)'};border-radius:11px;cursor:pointer;transition:background 0.2s;flex-shrink:0;"></div>
+            <span style="font-size:12px;color:var(--text-muted);">Override calculated calorie target</span>
+          </div>
+          <div id="nutCalOverrideField" style="display:${_nutState.calOverride?'grid':'none'};grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+            <div>
+              <label style="${labelStyle}">Custom Daily Calories</label>
+              <input type="number" id="nutCustomCalories" value="${_nutState.customCalories || ''}" placeholder="e.g. 2200" min="800" max="5000" step="50" oninput="nutRecalculate()" style="${inputStyle}">
+            </div>
+            <div>
+              <label style="${labelStyle}">TDEE Reference</label>
+              <div id="nutTDEERef" style="font-family:'Space Grotesk',sans-serif;font-size:14px;color:var(--text-dim);padding:8px 0;">${_nutState.tdee} kcal (formula)</div>
+            </div>
+          </div>
+
+          <!-- ── COACH OVERRIDE: MACROS ── -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div id="nutMacroOverrideToggle" class="toggle-switch${_nutState.macroOverride?' on':''}" onclick="nutToggleMacroOverride()" style="position:relative;width:40px;height:22px;background:${_nutState.macroOverride?'var(--ember)':'var(--slate-border)'};border-radius:11px;cursor:pointer;transition:background 0.2s;flex-shrink:0;"></div>
+            <span style="font-size:12px;color:var(--text-muted);">Override macro split percentages</span>
+          </div>
+          <div id="nutMacroOverrideField" style="display:${_nutState.macroOverride?'grid':'none'};grid-template-columns:1fr 1fr 1fr;gap:12px;">
+            <div>
+              <label style="${labelStyle}">Protein</label>
+              <input type="range" id="nutSliderProtein" min="10" max="60" value="${_nutState.proteinPct}" oninput="nutRecalculate()" style="width:100%;">
+              <div id="nutSliderProteinVal" style="font-size:12px;color:var(--ember);font-weight:600;text-align:center;">${_nutState.proteinPct}%</div>
+            </div>
+            <div>
+              <label style="${labelStyle}">Carbs</label>
+              <input type="range" id="nutSliderCarbs" min="10" max="60" value="${_nutState.carbsPct}" oninput="nutRecalculate()" style="width:100%;">
+              <div id="nutSliderCarbsVal" style="font-size:12px;color:var(--ocean);font-weight:600;text-align:center;">${_nutState.carbsPct}%</div>
+            </div>
+            <div>
+              <label style="${labelStyle}">Fat</label>
+              <input type="range" id="nutSliderFat" min="10" max="60" value="${_nutState.fatPct}" oninput="nutRecalculate()" style="width:100%;">
+              <div id="nutSliderFatVal" style="font-size:12px;color:var(--sage-text);font-weight:600;text-align:center;">${_nutState.fatPct}%</div>
+            </div>
+          </div>
+          <div id="nutMacroTotalWarn" style="font-size:12px;text-align:center;margin-top:6px;display:none;"></div>
+        </div>
+
+        <!-- ── RESULTS PANEL ── -->
+        <div id="nutCalcResults">
+          <div id="nutMacroPreview" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;"></div>
+          <div style="display:flex;height:12px;border-radius:6px;overflow:hidden;margin-bottom:8px;" id="nutMacroBar"></div>
+          <div id="nutMacroLegend" style="display:flex;gap:16px;font-size:12px;color:var(--text-body);margin-bottom:14px;"></div>
+          <div id="nutProteinNote" style="font-size:12px;color:var(--text-muted);background:var(--slate-raised);border-radius:8px;padding:10px;margin-bottom:14px;"></div>
+          <div style="font-size:12px;color:var(--text-dim);line-height:1.7;">
+            <strong style="color:var(--text-body);">How to use:</strong> These are estimated daily targets based on the Mifflin-St Jeor equation. Track intake for 2 weeks and adjust: if weight is stable when the goal is to lose, reduce by 100-200 kcal. Small adjustments beat drastic changes.
+          </div>
+        </div>
+      </div>
+
+      <!-- ── GOAL-BASED RANGES VIEW ── -->
+      <div id="nutRangesView" style="display:none;">
+        <div id="nutGoalCards"></div>
+        <div style="margin-top:12px;font-size:12px;color:var(--text-dim);line-height:1.7;">
+          Broad ranges suited to most people at this weight. Pick the range that matches the primary goal and start in the middle. Adjust based on progress after 2-3 weeks.
+        </div>
       </div>
     </div>
 
+    <!-- ═══ COACH NOTES ═══ -->
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-bright);">Coach Notes / Additional Guidance</div>
+      <textarea id="nutNotes" rows="3" style="${inputStyle}resize:vertical;min-height:60px;" placeholder="Hydration targets, supplement recommendations, food sensitivities...">${_nutState.notes}</textarea>
+    </div>
+
+    <!-- ═══ MEAL FRAMEWORK ═══ -->
     <div class="card" style="margin-bottom:16px;">
       <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--text-bright);">Daily Meal Framework</div>
       <div id="nutMealEditor"></div>
       <button onclick="addNutMeal()" class="btn btn-sm" style="margin-top:10px;font-size:12px;padding:6px 14px;background:var(--slate-raised);color:var(--text-muted);border:1px dashed var(--slate-border);border-radius:8px;">+ Add Meal</button>
     </div>
 
+    <!-- ═══ SAVE ═══ -->
     <div style="display:flex;gap:12px;justify-content:flex-end;">
       <button class="btn btn-sm" style="font-size:13px;padding:10px 24px;background:var(--ember);color:white;border-color:var(--ember);border-radius:8px;cursor:pointer;" onclick="saveClientNutrition(${cid})">Save & Assign to Client</button>
     </div>`;
 
-  // Render macro preview and meal editor
-  window._nutMeals = JSON.parse(JSON.stringify(meals));
-  updateNutMacroPreview();
+  // Render toggle pseudo-elements via a small style block
+  _nutInjectToggleCSS();
+
+  // Set initial mode and calculate
+  nutSetMode(_nutState.mode);
+  nutRecalculate();
   renderNutMealEditor();
 }
 
-function updateNutMacroPreview() {
-  const cal = parseInt(document.getElementById('nutCalories')?.value) || 0;
-  const pPct = parseInt(document.getElementById('nutProtein')?.value) || 0;
-  const cPct = parseInt(document.getElementById('nutCarbs')?.value) || 0;
-  const fPct = parseInt(document.getElementById('nutFat')?.value) || 0;
+// ── Inject toggle switch :after pseudo-element via style ──
+function _nutInjectToggleCSS() {
+  if (document.getElementById('nutToggleCSS')) return;
+  const style = document.createElement('style');
+  style.id = 'nutToggleCSS';
+  style.textContent = `
+    #ptNutritionBody .toggle-switch{position:relative;width:40px;height:22px;border-radius:11px;cursor:pointer;transition:background 0.2s;flex-shrink:0;}
+    #ptNutritionBody .toggle-switch::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:white;top:3px;left:3px;transition:transform 0.2s;}
+    #ptNutritionBody .toggle-switch.on{background:var(--ember) !important;}
+    #ptNutritionBody .toggle-switch.on::after{transform:translateX(18px);}
+  `;
+  document.head.appendChild(style);
+}
 
-  document.getElementById('nutProteinLabel').textContent = pPct + '%';
-  document.getElementById('nutCarbsLabel').textContent = cPct + '%';
-  document.getElementById('nutFatLabel').textContent = fPct + '%';
-
-  const total = pPct + cPct + fPct;
-  const warn = document.getElementById('nutMacroTotalWarn');
-  if (total !== 100) {
-    warn.textContent = `Macro split totals ${total}% (should equal 100%)`;
-    warn.style.display = '';
+// ── Mode toggle ──
+function nutSetMode(mode) {
+  _nutState.mode = mode;
+  const calcBtn = document.getElementById('nutModeCalc');
+  const rangeBtn = document.getElementById('nutModeRange');
+  const calcView = document.getElementById('nutCalcView');
+  const rangeView = document.getElementById('nutRangesView');
+  if (!calcBtn) return;
+  if (mode === 'calculated') {
+    calcBtn.style.background = 'var(--ember)'; calcBtn.style.color = 'white';
+    rangeBtn.style.background = 'none'; rangeBtn.style.color = 'var(--text-muted)';
+    calcView.style.display = ''; rangeView.style.display = 'none';
   } else {
-    warn.style.display = 'none';
+    rangeBtn.style.background = 'var(--ember)'; rangeBtn.style.color = 'white';
+    calcBtn.style.background = 'none'; calcBtn.style.color = 'var(--text-muted)';
+    calcView.style.display = 'none'; rangeView.style.display = '';
+    nutBuildGoalCards();
+  }
+}
+
+// ── Calorie override toggle ──
+function nutToggleCalOverride() {
+  _nutState.calOverride = !_nutState.calOverride;
+  const tog = document.getElementById('nutCalOverrideToggle');
+  tog.classList.toggle('on', _nutState.calOverride);
+  tog.style.background = _nutState.calOverride ? 'var(--ember)' : 'var(--slate-border)';
+  document.getElementById('nutCalOverrideField').style.display = _nutState.calOverride ? 'grid' : 'none';
+  nutRecalculate();
+}
+
+// ── Macro override toggle ──
+function nutToggleMacroOverride() {
+  _nutState.macroOverride = !_nutState.macroOverride;
+  const tog = document.getElementById('nutMacroOverrideToggle');
+  tog.classList.toggle('on', _nutState.macroOverride);
+  tog.style.background = _nutState.macroOverride ? 'var(--ember)' : 'var(--slate-border)';
+  document.getElementById('nutMacroOverrideField').style.display = _nutState.macroOverride ? 'grid' : 'none';
+  nutRecalculate();
+}
+
+// ══════════════════════════════════════════
+//  CORE RECALCULATE — mirrors AH-Nutrition-Guide.html logic
+// ══════════════════════════════════════════
+function nutRecalculate() {
+  if (!_nutState.tdee) return;
+  const s = _nutState;
+  const goal = s.goal;
+
+  // ── Step 1: Base calorie target from goal ──
+  let target;
+  if (goal === 'fat-loss') target = Math.round(s.tdee * 0.8);
+  else if (goal === 'muscle-gain') target = Math.round(s.tdee * 1.1);
+  else target = s.tdee;
+
+  // ── Step 2: Coach calorie override ──
+  if (s.calOverride) {
+    const custom = parseInt(document.getElementById('nutCustomCalories')?.value);
+    if (custom && custom >= 800 && custom <= 5000) target = custom;
   }
 
-  const pGrams = Math.round(cal * pPct / 100 / 4);
-  const cGrams = Math.round(cal * cPct / 100 / 4);
-  const fGrams = Math.round(cal * fPct / 100 / 9);
+  // Update TDEE display
+  const tdeeDisp = document.getElementById('nutTDEEDisplay');
+  if (tdeeDisp) tdeeDisp.textContent = s.tdee.toLocaleString();
+  const tdeeRef = document.getElementById('nutTDEERef');
+  if (tdeeRef) tdeeRef.textContent = s.tdee.toLocaleString() + ' kcal (formula)';
 
+  // ── Step 3: Macros ──
+  let proteinG, carbsG, fatG, proteinKcal, carbsKcal, fatKcal, pPct, cPct, fPct;
+
+  if (s.macroOverride) {
+    // Use slider values
+    const sp = parseInt(document.getElementById('nutSliderProtein')?.value) || 30;
+    const sc = parseInt(document.getElementById('nutSliderCarbs')?.value) || 40;
+    const sf = parseInt(document.getElementById('nutSliderFat')?.value) || 30;
+    const total = sp + sc + sf;
+    const normP = sp / total, normC = sc / total, normF = sf / total;
+
+    proteinKcal = Math.round(target * normP);
+    carbsKcal = Math.round(target * normC);
+    fatKcal = target - proteinKcal - carbsKcal;
+    proteinG = Math.round(proteinKcal / 4);
+    carbsG = Math.round(carbsKcal / 4);
+    fatG = Math.round(fatKcal / 9);
+    pPct = Math.round(normP * 100);
+    cPct = Math.round(normC * 100);
+    fPct = 100 - pPct - cPct;
+
+    // Update slider labels
+    const pLabel = document.getElementById('nutSliderProteinVal');
+    const cLabel = document.getElementById('nutSliderCarbsVal');
+    const fLabel = document.getElementById('nutSliderFatVal');
+    if (pLabel) pLabel.textContent = sp + '%';
+    if (cLabel) cLabel.textContent = sc + '%';
+    if (fLabel) fLabel.textContent = sf + '%';
+
+    // Total warning
+    const warn = document.getElementById('nutMacroTotalWarn');
+    if (warn) {
+      if (total !== 100) {
+        warn.textContent = `Total: ${total}% ${total < 100 ? '(' + (100-total) + '% unallocated)' : '(' + (total-100) + '% over)'}`;
+        warn.style.color = 'var(--danger)';
+        warn.style.display = '';
+      } else {
+        warn.textContent = 'Total: 100%';
+        warn.style.color = 'var(--sage-text)';
+        warn.style.display = '';
+      }
+    }
+  } else {
+    // ── Default: protein per-kg, split remainder by carb/fat goal ratio ──
+    let proteinPerKg, carbShare, fatShare;
+    if (goal === 'fat-loss') { proteinPerKg = 2.2; carbShare = 35; fatShare = 25; }
+    else if (goal === 'muscle-gain') { proteinPerKg = 2.0; carbShare = 45; fatShare = 20; }
+    else { proteinPerKg = 1.8; carbShare = 40; fatShare = 25; }
+
+    proteinG = Math.round(s.weight * proteinPerKg);
+    proteinKcal = proteinG * 4;
+    pPct = Math.round((proteinKcal / target) * 100);
+
+    const remainKcal = target - proteinKcal;
+    const carbKcalShare = carbShare / (carbShare + fatShare);
+    carbsKcal = Math.round(remainKcal * carbKcalShare);
+    fatKcal = remainKcal - carbsKcal;
+    carbsG = Math.round(carbsKcal / 4);
+    fatG = Math.round(fatKcal / 9);
+    cPct = Math.round((carbsKcal / target) * 100);
+    fPct = 100 - pPct - cPct;
+
+    // Sync sliders to match auto-calc
+    const sP = document.getElementById('nutSliderProtein');
+    const sC = document.getElementById('nutSliderCarbs');
+    const sF = document.getElementById('nutSliderFat');
+    if (sP) { sP.value = pPct; document.getElementById('nutSliderProteinVal').textContent = pPct + '%'; }
+    if (sC) { sC.value = cPct; document.getElementById('nutSliderCarbsVal').textContent = cPct + '%'; }
+    if (sF) { sF.value = fPct; document.getElementById('nutSliderFatVal').textContent = fPct + '%'; }
+    const warn = document.getElementById('nutMacroTotalWarn');
+    if (warn) { warn.textContent = 'Total: 100%'; warn.style.color = 'var(--sage-text)'; warn.style.display = ''; }
+  }
+
+  // Store for save
+  s._computed = { target, proteinG, carbsG, fatG, pPct, cPct, fPct };
+
+  // ── Step 4: Render results ──
+  const proteinPerKgDisplay = (proteinG / s.weight).toFixed(1);
   const preview = document.getElementById('nutMacroPreview');
   if (preview) preview.innerHTML = `
     <div style="background:var(--slate-raised);padding:12px;border-radius:10px;border-top:3px solid var(--ember);text-align:center;">
-      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Calories</div>
-      <div style="font-size:20px;font-weight:700;color:var(--ember);font-family:'Space Grotesk';">${cal.toLocaleString()}</div>
+      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Daily Target</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--ember);">${target.toLocaleString()}</div>
       <div style="font-size:10px;color:var(--text-dim);">kcal/day</div>
     </div>
     <div style="background:var(--slate-raised);padding:12px;border-radius:10px;border-top:3px solid var(--ocean);text-align:center;">
       <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Protein</div>
-      <div style="font-size:20px;font-weight:700;color:var(--ocean);font-family:'Space Grotesk';">${pGrams}g</div>
-      <div style="font-size:10px;color:var(--text-dim);">${pPct}%</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--ocean);">${proteinG}g</div>
+      <div style="font-size:10px;color:var(--text-dim);">${proteinKcal} kcal · ${pPct}%</div>
     </div>
     <div style="background:var(--slate-raised);padding:12px;border-radius:10px;border-top:3px solid var(--sage);text-align:center;">
       <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Carbs</div>
-      <div style="font-size:20px;font-weight:700;color:var(--sage-text);font-family:'Space Grotesk';">${cGrams}g</div>
-      <div style="font-size:10px;color:var(--text-dim);">${cPct}%</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--sage-text);">${carbsG}g</div>
+      <div style="font-size:10px;color:var(--text-dim);">${carbsKcal} kcal · ${cPct}%</div>
     </div>
     <div style="background:var(--slate-raised);padding:12px;border-radius:10px;border-top:3px solid var(--warning);text-align:center;">
       <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Fat</div>
-      <div style="font-size:20px;font-weight:700;color:var(--warning);font-family:'Space Grotesk';">${fGrams}g</div>
-      <div style="font-size:10px;color:var(--text-dim);">${fPct}%</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--warning);">${fatG}g</div>
+      <div style="font-size:10px;color:var(--text-dim);">${fatKcal} kcal · ${fPct}%</div>
     </div>`;
+
+  // Macro bar
+  const bar = document.getElementById('nutMacroBar');
+  if (bar) bar.innerHTML = `
+    <div style="width:${pPct}%;background:var(--ember);"></div>
+    <div style="width:${cPct}%;background:var(--ocean);"></div>
+    <div style="width:${fPct}%;background:var(--sage);"></div>`;
+
+  // Legend
+  const legend = document.getElementById('nutMacroLegend');
+  if (legend) legend.innerHTML = `
+    <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ember);margin-right:6px;vertical-align:middle;"></span>Protein ${pPct}%</span>
+    <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ocean);margin-right:6px;vertical-align:middle;"></span>Carbs ${cPct}%</span>
+    <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--sage);margin-right:6px;vertical-align:middle;"></span>Fat ${fPct}%</span>`;
+
+  // Protein note
+  const pNote = document.getElementById('nutProteinNote');
+  if (pNote) pNote.innerHTML = `Protein: <strong>${proteinPerKgDisplay}g per kg</strong> body weight (${proteinG}g/day). ` +
+    (goal === 'fat-loss' ? 'Higher protein during a deficit helps preserve lean mass.' :
+     goal === 'muscle-gain' ? 'Sufficient protein to support muscle protein synthesis.' :
+     'Adequate protein for general health and training recovery.');
 }
 
+// ── Goal-based range cards (simple mode) ──
+function nutBuildGoalCards() {
+  const w = _nutState.weight;
+  const goals = [
+    { id: 'fat-loss', title: 'Fat Loss', desc: 'Moderate calorie deficit with high protein to preserve muscle mass while losing body fat.',
+      low: Math.round(w * 22), high: Math.round(w * 26), protein: '2.0–2.4g per kg' },
+    { id: 'maintenance', title: 'Maintenance / Recomposition', desc: 'Eating at or near energy expenditure. Good for body recomp, general health, or transitioning between phases.',
+      low: Math.round(w * 28), high: Math.round(w * 32), protein: '1.6–2.0g per kg' },
+    { id: 'muscle-gain', title: 'Muscle Gain', desc: 'Slight calorie surplus to support muscle growth. Pair with a structured resistance training programme.',
+      low: Math.round(w * 33), high: Math.round(w * 38), protein: '1.8–2.2g per kg' }
+  ];
+
+  const el = document.getElementById('nutGoalCards');
+  if (!el) return;
+  el.innerHTML = goals.map(g => {
+    const sel = _nutState.goal === g.id;
+    const proteinLow = Math.round(w * parseFloat(g.protein));
+    const proteinHigh = Math.round(w * parseFloat(g.protein.split('–')[1] || g.protein));
+    return `<div onclick="nutSelectGoalCard('${g.id}',this)" style="background:var(--slate-deep);border:1px solid ${sel?'var(--ember)':'var(--slate-border)'};${sel?'background:var(--ember-soft);':''}border-radius:10px;padding:18px;margin-bottom:12px;cursor:pointer;transition:all 0.2s;">
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:500;margin-bottom:4px;">${g.title}</div>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.6;margin-bottom:10px;">${g.desc}</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:600;color:var(--ember);">${g.low.toLocaleString()} – ${g.high.toLocaleString()} <span style="font-size:12px;color:var(--text-muted);font-weight:300;">kcal/day</span></div>
+      <div style="margin-top:6px;font-size:12px;color:var(--text-muted);">Protein: ${g.protein} (${proteinLow}–${proteinHigh}g/day)</div>
+    </div>`;
+  }).join('');
+}
+
+function nutSelectGoalCard(goalId, el) {
+  _nutState.goal = goalId;
+  const goalSel = document.getElementById('nutGoal');
+  if (goalSel) goalSel.value = goalId;
+  nutRecalculate();
+  nutBuildGoalCards();
+}
+
+// ── Meal framework editor ──
 function renderNutMealEditor() {
   const el = document.getElementById('nutMealEditor');
   if (!el) return;
+  const inputStyle = "width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-bright);font-size:13px;box-sizing:border-box;";
   el.innerHTML = (window._nutMeals || []).map((m, i) => `
     <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;${i > 0 ? 'border-top:1px solid var(--slate-border);':''}">
       <div style="flex:1;">
-        <input type="text" value="${m.name}" onchange="window._nutMeals[${i}].name=this.value" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-bright);font-size:13px;font-weight:600;margin-bottom:6px;" placeholder="Meal name">
-        <textarea onchange="window._nutMeals[${i}].desc=this.value" rows="2" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;resize:vertical;" placeholder="Description / guidance...">${m.desc}</textarea>
+        <input type="text" value="${(m.name||'').replace(/"/g,'&quot;')}" onchange="window._nutMeals[${i}].name=this.value" style="${inputStyle}font-weight:600;margin-bottom:6px;" placeholder="Meal name">
+        <textarea onchange="window._nutMeals[${i}].desc=this.value" rows="2" style="${inputStyle}color:var(--text-body);font-size:12px;resize:vertical;" placeholder="Description / guidance...">${m.desc || ''}</textarea>
       </div>
       <div style="width:60px;text-align:center;">
         <input type="number" value="${m.pct}" min="5" max="50" onchange="window._nutMeals[${i}].pct=parseInt(this.value)" style="width:50px;padding:4px;border-radius:6px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-bright);font-size:12px;text-align:center;">
@@ -6397,22 +6698,24 @@ function addNutMeal() {
   renderNutMealEditor();
 }
 
+// ── Save ──
 function saveClientNutrition(cid) {
-  const cal = parseInt(document.getElementById('nutCalories')?.value) || 0;
-  const pPct = parseInt(document.getElementById('nutProtein')?.value) || 0;
-  const cPct = parseInt(document.getElementById('nutCarbs')?.value) || 0;
-  const fPct = parseInt(document.getElementById('nutFat')?.value) || 0;
-  const goal = document.getElementById('nutGoal')?.value || 'maintenance';
+  const s = _nutState;
+  const comp = s._computed || {};
   const notes = document.getElementById('nutNotes')?.value || '';
 
   CLIENT_NUTRITION[cid] = {
-    calories: cal,
-    proteinPct: pPct,
-    carbsPct: cPct,
-    fatPct: fPct,
-    goal: goal,
+    calories: comp.target || 0,
+    proteinPct: comp.pPct || 0,
+    carbsPct: comp.cPct || 0,
+    fatPct: comp.fPct || 0,
+    goal: s.goal,
     notes: notes,
     meals: JSON.parse(JSON.stringify(window._nutMeals || [])),
+    activityLevel: s.activityLevel,
+    calOverride: s.calOverride,
+    macroOverride: s.macroOverride,
+    _mode: s.mode,
     updatedAt: new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})
   };
 
