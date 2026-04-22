@@ -1121,6 +1121,208 @@
       </p>
     </div>
 
+    <!-- CLIENT: Food Diary -->
+    <div class="page" id="clientFoodDiary">
+      <div class="page-header"><h1>Food Diary</h1><p>Track what you eat to stay on target</p></div>
+
+      <!-- Week day selector -->
+      <div class="card" style="padding:8px 12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+          <button class="btn-ghost" style="border:none;background:none;padding:6px;cursor:pointer;color:var(--text-muted);" onclick="fdShiftWeek(-1)">&larr;</button>
+          <span id="fdWeekLabel" style="font-size:13px;font-weight:600;color:var(--text-body);"></span>
+          <button class="btn-ghost" style="border:none;background:none;padding:6px;cursor:pointer;color:var(--text-muted);" onclick="fdShiftWeek(1)">&rarr;</button>
+        </div>
+        <div id="fdDaySelector" style="display:flex;gap:4px;justify-content:space-between;"></div>
+      </div>
+
+      <!-- Daily calorie/macro summary -->
+      <div class="card" id="fdDailySummary" style="padding:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h3 style="margin:0;" id="fdDateLabel">Today</h3>
+          <span id="fdCalSummary" style="font-size:22px;font-weight:700;color:var(--ember);font-family:'Space Grotesk',sans-serif;">0 <span style="font-size:13px;font-weight:400;color:var(--text-dim);">/ — kcal</span></span>
+        </div>
+        <div id="fdCalBar" style="height:8px;background:var(--slate-deep);border-radius:4px;overflow:hidden;margin-bottom:16px;">
+          <div id="fdCalBarFill" style="height:100%;background:var(--ember);border-radius:4px;transition:width 0.3s;width:0%;"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">Protein</div>
+            <div id="fdProVal" style="font-size:18px;font-weight:700;color:var(--ocean);font-family:'Space Grotesk';">0g</div>
+            <div id="fdProTarget" style="font-size:11px;color:var(--text-dim);">/ —g</div>
+            <div style="height:4px;background:var(--slate-deep);border-radius:2px;margin-top:6px;overflow:hidden;"><div id="fdProBar" style="height:100%;background:var(--ocean);border-radius:2px;transition:width 0.3s;width:0%;"></div></div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">Carbs</div>
+            <div id="fdCarbVal" style="font-size:18px;font-weight:700;color:var(--sage-text);font-family:'Space Grotesk';">0g</div>
+            <div id="fdCarbTarget" style="font-size:11px;color:var(--text-dim);">/ —g</div>
+            <div style="height:4px;background:var(--slate-deep);border-radius:2px;margin-top:6px;overflow:hidden;"><div id="fdCarbBar" style="height:100%;background:var(--sage-text);border-radius:2px;transition:width 0.3s;width:0%;"></div></div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:4px;">Fat</div>
+            <div id="fdFatVal" style="font-size:18px;font-weight:700;color:var(--warning);font-family:'Space Grotesk';">0g</div>
+            <div id="fdFatTarget" style="font-size:11px;color:var(--text-dim);">/ —g</div>
+            <div style="height:4px;background:var(--slate-deep);border-radius:2px;margin-top:6px;overflow:hidden;"><div id="fdFatBar" style="height:100%;background:var(--warning);border-radius:2px;transition:width 0.3s;width:0%;"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Meal sections -->
+      <div id="fdMeals"></div>
+    </div>
+
+    <!-- Food Diary: Log Overlay -->
+    <div id="fdLogOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--slate-bg);z-index:9999;overflow-y:auto;">
+      <div style="max-width:500px;margin:0 auto;padding:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <button onclick="fdCloseLog()" style="background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:8px;">&larr; Back</button>
+          <h3 id="fdLogMealTitle" style="margin:0;font-size:16px;">Log Food</h3>
+          <div style="width:60px;"></div>
+        </div>
+
+        <!-- Search / Scan bar -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <div style="flex:1;position:relative;">
+            <input type="text" id="fdSearchInput" placeholder="Search for a food..." style="width:100%;padding:12px 12px 12px 38px;border-radius:10px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:16px;" oninput="fdSearchFood(this.value)">
+            <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:0.4;">${ic('search','currentColor',16)}</span>
+          </div>
+          <button onclick="fdStartBarcodeScan()" style="width:48px;height:48px;border-radius:10px;border:1px solid var(--slate-border);background:var(--slate-card);cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Scan barcode">${ic('barcode','var(--ember)',20)}</button>
+        </div>
+
+        <!-- Tabs: Recents / Search Results -->
+        <div id="fdSearchResults" style="display:none;"></div>
+
+        <div id="fdRecentsList">
+          <div style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Recent Foods</div>
+          <div id="fdRecentsContent" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+
+        <!-- Manual entry button -->
+        <div style="margin-top:16px;text-align:center;">
+          <button onclick="fdShowManualEntry()" class="btn" style="background:var(--slate-raised);color:var(--text-body);border:1px solid var(--slate-border);width:100%;padding:14px;border-radius:10px;font-size:14px;cursor:pointer;">
+            ${ic('plus','var(--ember)',16)} &nbsp;Add Custom Food
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Food Diary: Product Detail Overlay -->
+    <div id="fdProductOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--slate-bg);z-index:10000;overflow-y:auto;">
+      <div style="max-width:500px;margin:0 auto;padding:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <button onclick="fdCloseProduct()" style="background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:8px;">&larr; Back</button>
+          <h3 id="fdProductTitle" style="margin:0;font-size:16px;max-width:60%;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Product</h3>
+          <div style="width:60px;"></div>
+        </div>
+
+        <!-- Product brand -->
+        <div id="fdProductBrand" style="text-align:center;font-size:12px;color:var(--text-dim);margin-bottom:16px;"></div>
+
+        <!-- Serving size input -->
+        <div class="card" style="padding:16px;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <label style="font-size:13px;color:var(--text-dim);white-space:nowrap;">Serving size</label>
+            <input type="number" id="fdServingSize" value="100" min="1" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;text-align:center;" oninput="fdUpdateServing()">
+            <span id="fdServingUnit" style="font-size:13px;color:var(--text-dim);">g</span>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;" id="fdQuickServing">
+            <button onclick="fdSetServing(25)" class="btn btn-sm" style="background:var(--slate-deep);border:1px solid var(--slate-border);color:var(--text-body);border-radius:16px;padding:6px 12px;font-size:12px;cursor:pointer;">25g</button>
+            <button onclick="fdSetServing(50)" class="btn btn-sm" style="background:var(--slate-deep);border:1px solid var(--slate-border);color:var(--text-body);border-radius:16px;padding:6px 12px;font-size:12px;cursor:pointer;">50g</button>
+            <button onclick="fdSetServing(100)" class="btn btn-sm" style="background:var(--slate-deep);border:1px solid var(--slate-border);color:var(--text-body);border-radius:16px;padding:6px 12px;font-size:12px;cursor:pointer;">100g</button>
+            <button onclick="fdSetServing(150)" class="btn btn-sm" style="background:var(--slate-deep);border:1px solid var(--slate-border);color:var(--text-body);border-radius:16px;padding:6px 12px;font-size:12px;cursor:pointer;">150g</button>
+            <button onclick="fdSetServing(200)" class="btn btn-sm" style="background:var(--slate-deep);border:1px solid var(--slate-border);color:var(--text-body);border-radius:16px;padding:6px 12px;font-size:12px;cursor:pointer;">200g</button>
+          </div>
+        </div>
+
+        <!-- Nutritional breakdown -->
+        <div class="card" style="padding:16px;margin-top:12px;">
+          <h4 style="margin-bottom:12px;font-size:14px;color:var(--text-body);">Nutritional Information</h4>
+          <div style="display:flex;justify-content:space-around;margin-bottom:16px;">
+            <div style="text-align:center;">
+              <div style="font-size:24px;font-weight:700;color:var(--ember);font-family:'Space Grotesk';" id="fdProdCal">0</div>
+              <div style="font-size:11px;color:var(--text-dim);">kcal</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:20px;font-weight:700;color:var(--ocean);font-family:'Space Grotesk';" id="fdProdPro">0g</div>
+              <div style="font-size:11px;color:var(--text-dim);">Protein</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:20px;font-weight:700;color:var(--sage-text);font-family:'Space Grotesk';" id="fdProdCarb">0g</div>
+              <div style="font-size:11px;color:var(--text-dim);">Carbs</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:20px;font-weight:700;color:var(--warning);font-family:'Space Grotesk';" id="fdProdFat">0g</div>
+              <div style="font-size:11px;color:var(--text-dim);">Fat</div>
+            </div>
+          </div>
+          <div id="fdProdDetails" style="border-top:1px solid var(--slate-border);padding-top:12px;font-size:13px;color:var(--text-body);">
+            <!-- Detailed nutrition rows rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Add button -->
+        <button onclick="fdAddProduct()" class="btn btn-ember" style="width:100%;padding:16px;margin-top:16px;font-size:16px;font-weight:600;border-radius:12px;cursor:pointer;">
+          Add to Diary
+        </button>
+      </div>
+    </div>
+
+    <!-- Food Diary: Manual Entry Overlay -->
+    <div id="fdManualOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--slate-bg);z-index:10000;overflow-y:auto;">
+      <div style="max-width:500px;margin:0 auto;padding:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <button onclick="fdCloseManual()" style="background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:8px;">&larr; Back</button>
+          <h3 style="margin:0;font-size:16px;">Add Custom Food</h3>
+          <div style="width:60px;"></div>
+        </div>
+        <div class="card" style="padding:16px;">
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div>
+              <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Food Name *</label>
+              <input type="text" id="fdManualName" placeholder="e.g. Chicken breast" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div>
+                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Serving (g)</label>
+                <input type="number" id="fdManualServing" value="100" min="1" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;">
+              </div>
+              <div>
+                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Calories (kcal) *</label>
+                <input type="number" id="fdManualCal" placeholder="0" min="0" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;">
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+              <div>
+                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Protein (g)</label>
+                <input type="number" id="fdManualPro" placeholder="0" min="0" step="0.1" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;">
+              </div>
+              <div>
+                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Carbs (g)</label>
+                <input type="number" id="fdManualCarb" placeholder="0" min="0" step="0.1" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;">
+              </div>
+              <div>
+                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Fat (g)</label>
+                <input type="number" id="fdManualFat" placeholder="0" min="0" step="0.1" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;">
+              </div>
+            </div>
+          </div>
+        </div>
+        <button onclick="fdAddManualFood()" class="btn btn-ember" style="width:100%;padding:16px;margin-top:16px;font-size:16px;font-weight:600;border-radius:12px;cursor:pointer;">
+          Add to Diary
+        </button>
+      </div>
+    </div>
+
+    <!-- Food Diary: Barcode Scanner Overlay -->
+    <div id="fdScanOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#000;z-index:10001;">
+      <div style="position:relative;width:100%;height:100%;">
+        <video id="fdScanVideo" style="width:100%;height:100%;object-fit:cover;" playsinline></video>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:250px;height:150px;border:2px solid var(--ember);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,0.5);"></div>
+        <div style="position:absolute;top:20px;left:0;right:0;text-align:center;color:#fff;font-size:14px;font-weight:500;">Point at a barcode</div>
+        <button onclick="fdStopScan()" style="position:absolute;top:20px;right:20px;background:rgba(0,0,0,0.6);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;">✕</button>
+        <div id="fdScanStatus" style="position:absolute;bottom:40px;left:0;right:0;text-align:center;color:#fff;font-size:13px;"></div>
+      </div>
+    </div>
+
     <!-- CLIENT: Messages -->
     <div class="page" id="clientMessages">
       <div class="page-header"><h1>Messages</h1><p>Chat with Coach Adam</p></div>
@@ -1588,6 +1790,7 @@
         <div class="detail-tab" onclick="showDetailTab('detailCheckins')">Check-Ins</div>
         <div class="detail-tab" onclick="showDetailTab('detailNotes')">Notes</div>
         <div class="detail-tab" onclick="showDetailTab('detailOnboarding')">Onboarding</div>
+        <div class="detail-tab" onclick="showDetailTab('detailFoodDiary')">Food Diary</div>
       </div>
       <div class="tab-content active" id="detailOverview">
         <div class="kpi-row" id="detailKPIs"></div>
@@ -1798,6 +2001,27 @@
       <div class="tab-content" id="detailOnboarding">
         <div id="detailOnboardingContent"></div>
       </div>
+      <div class="tab-content" id="detailFoodDiary">
+        <div class="card" style="padding:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="margin:0;">Client Food Diary</h3>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button onclick="ptFdShiftDay(-1)" style="background:none;border:1px solid var(--slate-border);border-radius:6px;padding:4px 10px;cursor:pointer;color:var(--text-muted);">&larr;</button>
+              <span id="ptFdDateLabel" style="font-size:13px;font-weight:600;min-width:120px;text-align:center;"></span>
+              <button onclick="ptFdShiftDay(1)" style="background:none;border:1px solid var(--slate-border);border-radius:6px;padding:4px 10px;cursor:pointer;color:var(--text-muted);">&rarr;</button>
+            </div>
+          </div>
+          <!-- Daily summary -->
+          <div id="ptFdSummary"></div>
+          <!-- Meal breakdown -->
+          <div id="ptFdMeals" style="margin-top:16px;"></div>
+        </div>
+        <!-- 7-day overview -->
+        <div class="card" style="padding:16px;margin-top:12px;">
+          <h3 style="margin-bottom:12px;">7-Day Overview</h3>
+          <div id="ptFd7Day"></div>
+        </div>
+      </div>
     </div>
 
     <!-- PT: Messages -->
@@ -1917,6 +2141,11 @@ const ICONS = {
   camera: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
   heart: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
   settings: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  foodDiary: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15c0-1 .6-2 2-2s2 .5 2 1.5c0 1.5-2 2-2 3.5"/><circle cx="11" cy="19.5" r="0.5" fill="${c}"/></svg>`,
+  barcode: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="2" height="16"/><rect x="6" y="4" width="1" height="16"/><rect x="9" y="4" width="2" height="16"/><rect x="14" y="4" width="1" height="16"/><rect x="17" y="4" width="3" height="16"/><rect x="22" y="4" width="1" height="16"/></svg>`,
+  search: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+  plus: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  trash: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
 };
 
 function ic(name, colour, size) { return ICONS[name] ? ICONS[name](colour, size) : ''; }
@@ -1946,6 +2175,10 @@ const CLIENTS = [
 const WELLBEING_DATA = [];
 
 const CYCLE_LOG = {};
+
+// Food diary log (per-client, keyed by date string)
+// Structure: FOOD_LOG[clientId] = { '2026-04-22': { breakfast: [...], lunch: [...], dinner: [...], snacks: [...] } }
+const FOOD_LOG = {};
 
 // Workout session log (per-client)
 const WORKOUT_LOG = { 1: [] };
@@ -2061,6 +2294,7 @@ function _buildState() {
     ptProgrammes: typeof PT_PROGRAMMES !== 'undefined' ? PT_PROGRAMMES : [],
     cycleLog: CYCLE_LOG,
     clientNutrition: CLIENT_NUTRITION,
+    foodLog: FOOD_LOG,
     savedAt: Date.now()
   };
 }
@@ -2092,6 +2326,7 @@ function _applyState(state) {
   if (state.ptProgrammes && typeof PT_PROGRAMMES !== 'undefined') { PT_PROGRAMMES.length = 0; state.ptProgrammes.forEach(p => PT_PROGRAMMES.push(p)); }
   if (state.cycleLog) Object.assign(CYCLE_LOG, state.cycleLog);
   if (state.clientNutrition) Object.assign(CLIENT_NUTRITION, state.clientNutrition);
+  if (state.foodLog) Object.assign(FOOD_LOG, state.foodLog);
   // Clean up: fix any "undefined" client names in PT notifications
   PT_NOTIFICATIONS.forEach(n => {
     if (!n.client || n.client === 'undefined' || n.client === 'null') {
@@ -2163,6 +2398,7 @@ function buildSidebars() {
     <div class="nav-item" onclick="showClientPage('clientProgramme')"><span class="nav-ic">${ic('programme','currentColor')}</span><span>My Programme</span></div>
     <div class="nav-item" onclick="showClientPage('clientProgress')"><span class="nav-ic">${ic('progress','currentColor')}</span><span>My Progress</span></div>
     <div class="nav-item" onclick="showClientPage('clientNutrition')"><span class="nav-ic">${ic('nutrition','currentColor')}</span><span>Nutrition</span></div>
+    <div class="nav-item" onclick="showClientPage('clientFoodDiary')"><span class="nav-ic">${ic('foodDiary','currentColor')}</span><span>Food Diary</span></div>
     <div class="nav-item" onclick="showClientPage('clientMessages')"><span class="nav-ic">${ic('messages','currentColor')}</span><span>Messages</span><span class="badge" id="clientMsgBadge">2</span></div>
     <div class="nav-item" onclick="showClientPage('clientCheckin')"><span class="nav-ic">${ic('checkin','currentColor')}</span><span>Check In</span><span class="badge checkin-badge hidden" id="clientCheckinBadge">Due</span></div>
     <div class="nav-item" onclick="showClientPage('clientWellbeing')"><span class="nav-ic">${ic('wellbeing','currentColor')}</span><span>Wellbeing</span></div>
@@ -2287,6 +2523,7 @@ function showClientPage(id) {
   const nav = [...document.querySelectorAll('#clientApp .nav-item')].find(n => n.getAttribute('onclick')?.includes(id));
   if (nav) nav.classList.add('active');
   if (id === 'clientProgress') initClientProgress();
+  if (id === 'clientFoodDiary') initFoodDiary();
   if (id === 'clientCheckin') resetCheckinWizard();
   if (id === 'clientNotifications') renderClientNotifFullList();
   if (id === 'clientOnboarding') renderClientOnboardingForm();
@@ -5074,6 +5311,148 @@ function showDetailTab(tabId) {
   if (tabId === 'detailProgress') setTimeout(() => { if (currentDetailClient) initDetailProgress(currentDetailClient.id); }, 50);
   if (tabId === 'detailProgramme') renderDetailProgramme();
   if (tabId === 'detailOnboarding') renderDetailOnboarding();
+  if (tabId === 'detailFoodDiary') renderPTFoodDiary();
+}
+
+// ─── Coach: Food Diary View ───
+let _ptFdDate = new Date();
+
+function ptFdShiftDay(dir) {
+  _ptFdDate.setDate(_ptFdDate.getDate() + dir);
+  renderPTFoodDiary();
+}
+
+function renderPTFoodDiary() {
+  const c = currentDetailClient;
+  if (!c) return;
+  const cid = c.id;
+  const todayStr = _fdDateStr(new Date());
+  const selStr = _fdDateStr(_ptFdDate);
+
+  // Date label
+  const dateLabel = document.getElementById('ptFdDateLabel');
+  if (dateLabel) {
+    if (selStr === todayStr) dateLabel.textContent = 'Today';
+    else {
+      const yest = new Date(); yest.setDate(yest.getDate()-1);
+      if (selStr === _fdDateStr(yest)) dateLabel.textContent = 'Yesterday';
+      else dateLabel.textContent = _ptFdDate.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
+    }
+  }
+
+  // Get targets
+  const n = CLIENT_NUTRITION[cid];
+  const targets = n && n.calories ? {
+    cal: n.calories,
+    protein: Math.round(n.calories * (n.proteinPct||0) / 100 / 4),
+    carbs: Math.round(n.calories * (n.carbsPct||0) / 100 / 4),
+    fat: Math.round(n.calories * (n.fatPct||0) / 100 / 9)
+  } : null;
+
+  // Day totals
+  const log = FOOD_LOG[cid];
+  const day = log && log[selStr] ? log[selStr] : { breakfast:[], lunch:[], dinner:[], snacks:[] };
+  let cal=0, pro=0, carb=0, fat=0;
+  ['breakfast','lunch','dinner','snacks'].forEach(m => {
+    (day[m]||[]).forEach(f => { cal += f.cal||0; pro += f.protein||0; carb += f.carbs||0; fat += f.fat||0; });
+  });
+  cal = Math.round(cal); pro = Math.round(pro*10)/10; carb = Math.round(carb*10)/10; fat = Math.round(fat*10)/10;
+
+  const hasEntries = cal > 0;
+  const summaryEl = document.getElementById('ptFdSummary');
+  if (summaryEl) {
+    if (!hasEntries) {
+      summaryEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-dim);font-size:13px;">No food logged for this day.</div>';
+    } else {
+      const calPct = targets ? Math.min(100, cal / targets.cal * 100).toFixed(0) : 0;
+      const calColor = targets && cal > targets.cal * 1.1 ? 'var(--danger)' : 'var(--ember)';
+      summaryEl.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:13px;color:var(--text-dim);">Calories</span>
+          <span style="font-size:18px;font-weight:700;color:${calColor};font-family:'Space Grotesk';">${cal} <span style="font-size:12px;font-weight:400;color:var(--text-dim);">/ ${targets ? targets.cal : '—'} kcal</span></span>
+        </div>
+        <div style="height:6px;background:var(--slate-deep);border-radius:3px;overflow:hidden;margin-bottom:14px;">
+          <div style="height:100%;background:${calColor};width:${calPct}%;border-radius:3px;"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;text-align:center;">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--ocean);font-family:'Space Grotesk';">${pro}g</div>
+            <div style="font-size:11px;color:var(--text-dim);">Protein ${targets ? '/ '+targets.protein+'g' : ''}</div>
+          </div>
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--sage-text);font-family:'Space Grotesk';">${carb}g</div>
+            <div style="font-size:11px;color:var(--text-dim);">Carbs ${targets ? '/ '+targets.carbs+'g' : ''}</div>
+          </div>
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--warning);font-family:'Space Grotesk';">${fat}g</div>
+            <div style="font-size:11px;color:var(--text-dim);">Fat ${targets ? '/ '+targets.fat+'g' : ''}</div>
+          </div>
+        </div>`;
+    }
+  }
+
+  // Meal breakdown
+  const mealsEl = document.getElementById('ptFdMeals');
+  if (mealsEl && hasEntries) {
+    const mealNames = { breakfast:'Breakfast', lunch:'Lunch', dinner:'Dinner', snacks:'Snacks' };
+    const mealIcons = { breakfast:'☀️', lunch:'🍽️', dinner:'🌙', snacks:'🍎' };
+    let html = '';
+    Object.keys(mealNames).forEach(key => {
+      const items = day[key] || [];
+      if (items.length === 0) return;
+      const mealCal = items.reduce((s,f) => s + (f.cal||0), 0);
+      html += `<div style="margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <span>${mealIcons[key]}</span>
+          <span style="font-size:13px;font-weight:600;">${mealNames[key]}</span>
+          <span style="font-size:12px;color:var(--text-dim);margin-left:auto;font-family:'Space Grotesk';">${Math.round(mealCal)} kcal</span>
+        </div>`;
+      items.forEach(f => {
+        html += `<div style="display:flex;justify-content:space-between;padding:6px 0 6px 24px;font-size:13px;border-bottom:1px solid var(--slate-border);">
+          <span style="color:var(--text-body);">${f.name} <span style="color:var(--text-dim);font-size:11px;">(${f.serving||100}g)</span></span>
+          <span style="color:var(--ember);font-weight:600;font-family:'Space Grotesk';">${Math.round(f.cal||0)} kcal</span>
+        </div>`;
+      });
+      html += '</div>';
+    });
+    mealsEl.innerHTML = html;
+  } else if (mealsEl) {
+    mealsEl.innerHTML = '';
+  }
+
+  // 7-day overview
+  const sevenEl = document.getElementById('ptFd7Day');
+  if (sevenEl) {
+    let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;">';
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const ds = _fdDateStr(d);
+      const dayLog = log && log[ds] ? log[ds] : null;
+      let dayCal = 0;
+      if (dayLog) ['breakfast','lunch','dinner','snacks'].forEach(m => (dayLog[m]||[]).forEach(f => dayCal += f.cal||0));
+      dayCal = Math.round(dayCal);
+      const pct = targets && dayCal > 0 ? Math.min(100, dayCal / targets.cal * 100) : 0;
+      const barColor = dayCal === 0 ? 'var(--slate-border)' : (targets && dayCal > targets.cal * 1.1 ? 'var(--danger)' : 'var(--sage-text)');
+      const dayLabel = d.toLocaleDateString('en-GB', {weekday:'short'});
+      html += `<div>
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;">${dayLabel}</div>
+        <div style="height:60px;background:var(--slate-deep);border-radius:4px;position:relative;overflow:hidden;">
+          <div style="position:absolute;bottom:0;left:0;right:0;height:${pct}%;background:${barColor};border-radius:4px;transition:height 0.3s;"></div>
+        </div>
+        <div style="font-size:11px;font-weight:600;color:${dayCal > 0 ? 'var(--text-body)' : 'var(--text-dim)'};margin-top:4px;font-family:'Space Grotesk';">${dayCal > 0 ? dayCal : '—'}</div>
+      </div>`;
+    }
+    html += '</div>';
+    if (targets) {
+      html += `<div style="display:flex;justify-content:center;gap:16px;margin-top:8px;font-size:11px;color:var(--text-dim);">
+        <span>● <span style="color:var(--sage-text);">On target</span></span>
+        <span>● <span style="color:var(--danger);">Over 110%</span></span>
+        <span style="font-family:'Space Grotesk';">Target: ${targets.cal} kcal</span>
+      </div>`;
+    }
+    sevenEl.innerHTML = html;
+  }
 }
 
 function renderDetailOnboarding() {
@@ -5421,6 +5800,561 @@ function toggleTableRows(tableId, toggleEl) {
 
 let allStrRows = '';
 let allCardRows = '';
+
+// ═══════════════════════════════════════
+//  FOOD DIARY — CLIENT SIDE
+// ═══════════════════════════════════════
+let _fdSelectedDate = new Date();
+let _fdWeekStart = null;
+let _fdCurrentMeal = 'breakfast';
+let _fdCurrentProduct = null; // { name, brand, cal100, pro100, carb100, fat100, fibre100, sugar100, salt100, barcode }
+let _fdSearchTimeout = null;
+let _fdScanStream = null;
+let _fdBarcodeDetector = null;
+
+function _fdDateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function _fdGetClientId() {
+  return loggedInUser ? loggedInUser.clientId : 1;
+}
+
+function _fdGetTargets() {
+  const cid = _fdGetClientId();
+  const n = CLIENT_NUTRITION[cid];
+  if (!n || !n.calories) return null;
+  const cal = n.calories;
+  const pG = Math.round(cal * (n.proteinPct||0) / 100 / 4);
+  const cG = Math.round(cal * (n.carbsPct||0) / 100 / 4);
+  const fG = Math.round(cal * (n.fatPct||0) / 100 / 9);
+  return { cal, protein: pG, carbs: cG, fat: fG };
+}
+
+function _fdGetDayLog(dateStr) {
+  const cid = _fdGetClientId();
+  if (!FOOD_LOG[cid]) FOOD_LOG[cid] = {};
+  if (!FOOD_LOG[cid][dateStr]) FOOD_LOG[cid][dateStr] = { breakfast:[], lunch:[], dinner:[], snacks:[] };
+  return FOOD_LOG[cid][dateStr];
+}
+
+function _fdDayTotals(dateStr) {
+  const day = _fdGetDayLog(dateStr);
+  let cal=0, pro=0, carb=0, fat=0;
+  ['breakfast','lunch','dinner','snacks'].forEach(m => {
+    (day[m]||[]).forEach(f => { cal += f.cal||0; pro += f.protein||0; carb += f.carbs||0; fat += f.fat||0; });
+  });
+  return { cal: Math.round(cal), protein: Math.round(pro*10)/10, carbs: Math.round(carb*10)/10, fat: Math.round(fat*10)/10 };
+}
+
+function _fdGetRecents() {
+  const cid = _fdGetClientId();
+  const log = FOOD_LOG[cid];
+  if (!log) return [];
+  const seen = new Map();
+  // Go through dates in reverse order
+  const dates = Object.keys(log).sort().reverse();
+  for (const dt of dates) {
+    const day = log[dt];
+    ['breakfast','lunch','dinner','snacks'].forEach(m => {
+      (day[m]||[]).forEach(f => {
+        const key = (f.name||'').toLowerCase();
+        if (key && !seen.has(key)) {
+          seen.set(key, { ...f });
+        }
+      });
+    });
+    if (seen.size >= 20) break;
+  }
+  return [...seen.values()];
+}
+
+function initFoodDiary() {
+  _fdSelectedDate = new Date();
+  _fdWeekStart = _fdGetWeekStart(new Date());
+  renderFoodDiary();
+}
+
+function _fdGetWeekStart(d) {
+  const dt = new Date(d);
+  const day = dt.getDay();
+  const diff = day === 0 ? 6 : day - 1; // Monday = start of week
+  dt.setDate(dt.getDate() - diff);
+  dt.setHours(0,0,0,0);
+  return dt;
+}
+
+function fdShiftWeek(dir) {
+  _fdWeekStart.setDate(_fdWeekStart.getDate() + (dir * 7));
+  if (dir === -1) {
+    // Select last day of previous week that has data, or Monday
+    _fdSelectedDate = new Date(_fdWeekStart);
+  } else {
+    _fdSelectedDate = new Date(_fdWeekStart);
+  }
+  renderFoodDiary();
+}
+
+function fdSelectDay(dateStr) {
+  _fdSelectedDate = new Date(dateStr + 'T12:00:00');
+  renderFoodDiary();
+}
+
+function renderFoodDiary() {
+  const today = new Date();
+  const todayStr = _fdDateStr(today);
+  const selStr = _fdDateStr(_fdSelectedDate);
+  const targets = _fdGetTargets();
+  const totals = _fdDayTotals(selStr);
+
+  // Week label
+  const wkEnd = new Date(_fdWeekStart);
+  wkEnd.setDate(wkEnd.getDate() + 6);
+  const fmt = d => d.toLocaleDateString('en-GB', {day:'numeric',month:'short'});
+  const wkLabel = document.getElementById('fdWeekLabel');
+  if (wkLabel) wkLabel.textContent = fmt(_fdWeekStart) + ' – ' + fmt(wkEnd);
+
+  // Day selector
+  const dayEl = document.getElementById('fdDaySelector');
+  if (dayEl) {
+    let html = '';
+    const dayNames = ['M','T','W','T','F','S','S'];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(_fdWeekStart);
+      d.setDate(d.getDate() + i);
+      const ds = _fdDateStr(d);
+      const isToday = ds === todayStr;
+      const isSel = ds === selStr;
+      const dayTotals = _fdDayTotals(ds);
+      const hasData = dayTotals.cal > 0;
+      const dotColor = hasData ? (targets && dayTotals.cal > targets.cal * 1.1 ? 'var(--ember)' : 'var(--sage-text)') : 'transparent';
+      html += `<button onclick="fdSelectDay('${ds}')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:10px;border:none;cursor:pointer;
+        background:${isSel ? 'var(--ember)' : 'transparent'};
+        color:${isSel ? '#fff' : (isToday ? 'var(--ember)' : 'var(--text-body)')};
+        font-weight:${isToday || isSel ? '700' : '400'};font-size:12px;font-family:'Space Grotesk',sans-serif;">
+        <span style="font-size:10px;opacity:0.7;">${dayNames[i]}</span>
+        <span>${d.getDate()}</span>
+        <span style="width:5px;height:5px;border-radius:50%;background:${isSel ? '#fff' : dotColor};"></span>
+      </button>`;
+    }
+    dayEl.innerHTML = html;
+  }
+
+  // Date label
+  const dateLabel = document.getElementById('fdDateLabel');
+  if (dateLabel) {
+    if (selStr === todayStr) dateLabel.textContent = 'Today';
+    else {
+      const yest = new Date(today); yest.setDate(yest.getDate()-1);
+      if (selStr === _fdDateStr(yest)) dateLabel.textContent = 'Yesterday';
+      else dateLabel.textContent = _fdSelectedDate.toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'short'});
+    }
+  }
+
+  // Calorie summary
+  const calSummary = document.getElementById('fdCalSummary');
+  if (calSummary) {
+    const tgt = targets ? targets.cal : '—';
+    calSummary.innerHTML = `${totals.cal} <span style="font-size:13px;font-weight:400;color:var(--text-dim);">/ ${tgt} kcal</span>`;
+  }
+  const calBar = document.getElementById('fdCalBarFill');
+  if (calBar && targets) calBar.style.width = Math.min(100, (totals.cal / targets.cal * 100)).toFixed(1) + '%';
+
+  // Macro summaries
+  const macros = [
+    { key:'Pro', val:totals.protein, tgt: targets?.protein },
+    { key:'Carb', val:totals.carbs, tgt: targets?.carbs },
+    { key:'Fat', val:totals.fat, tgt: targets?.fat }
+  ];
+  macros.forEach(m => {
+    const valEl = document.getElementById('fd'+m.key+'Val');
+    if (valEl) valEl.textContent = m.val + 'g';
+    const tgtEl = document.getElementById('fd'+m.key+'Target');
+    if (tgtEl) tgtEl.textContent = '/ ' + (m.tgt || '—') + 'g';
+    const bar = document.getElementById('fd'+m.key+'Bar');
+    if (bar && m.tgt) bar.style.width = Math.min(100, (m.val / m.tgt * 100)).toFixed(1) + '%';
+  });
+
+  // Meal sections
+  const mealsEl = document.getElementById('fdMeals');
+  if (mealsEl) {
+    const mealNames = { breakfast:'Breakfast', lunch:'Lunch', dinner:'Dinner', snacks:'Snacks' };
+    const mealIcons = { breakfast:'☀️', lunch:'🍽️', dinner:'🌙', snacks:'🍎' };
+    const day = _fdGetDayLog(selStr);
+    let html = '';
+    Object.keys(mealNames).forEach(key => {
+      const items = day[key] || [];
+      const mealCal = items.reduce((s,f) => s + (f.cal||0), 0);
+      html += `<div class="card" style="padding:16px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${items.length ? '12' : '0'}px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:18px;">${mealIcons[key]}</span>
+            <h4 style="margin:0;font-size:15px;">${mealNames[key]}</h4>
+            ${mealCal > 0 ? `<span style="font-size:12px;color:var(--text-dim);font-family:'Space Grotesk';">${Math.round(mealCal)} kcal</span>` : ''}
+          </div>
+          <button onclick="fdOpenLog('${key}')" style="background:var(--ember);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
+            ${ic('plus','#fff',14)} Log
+          </button>
+        </div>`;
+      if (items.length) {
+        items.forEach((f, idx) => {
+          html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;${idx > 0 ? 'border-top:1px solid var(--slate-border);' : ''}">
+            <div style="flex:1;">
+              <div style="font-size:14px;font-weight:500;color:var(--text-body);">${f.name}</div>
+              <div style="font-size:12px;color:var(--text-dim);">${f.serving || 100}g</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="text-align:right;">
+                <div style="font-size:14px;font-weight:600;color:var(--ember);font-family:'Space Grotesk';">${Math.round(f.cal||0)}</div>
+                <div style="font-size:10px;color:var(--text-dim);">kcal</div>
+              </div>
+              <button onclick="fdRemoveItem('${key}',${idx})" style="background:none;border:none;cursor:pointer;opacity:0.4;padding:4px;" title="Remove">${ic('trash','var(--text-muted)',14)}</button>
+            </div>
+          </div>`;
+        });
+      }
+      html += `</div>`;
+    });
+    mealsEl.innerHTML = html;
+  }
+}
+
+function fdOpenLog(mealKey) {
+  _fdCurrentMeal = mealKey;
+  const mealNames = { breakfast:'Breakfast', lunch:'Lunch', dinner:'Dinner', snacks:'Snacks' };
+  document.getElementById('fdLogMealTitle').textContent = 'Log ' + mealNames[mealKey];
+  document.getElementById('fdSearchInput').value = '';
+  document.getElementById('fdSearchResults').style.display = 'none';
+  document.getElementById('fdRecentsList').style.display = '';
+  document.getElementById('fdLogOverlay').style.display = '';
+
+  // Render recents
+  const recents = _fdGetRecents();
+  const el = document.getElementById('fdRecentsContent');
+  if (el) {
+    if (recents.length === 0) {
+      el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-dim);font-size:13px;">No recent foods yet. Search for a food or scan a barcode to get started.</div>';
+    } else {
+      el.innerHTML = recents.map(f => `
+        <button onclick='fdSelectRecent(${JSON.stringify(f).replace(/'/g,"&#39;")})' style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:10px;cursor:pointer;text-align:left;">
+          <div>
+            <div style="font-size:14px;font-weight:500;color:var(--text-body);">${f.name}</div>
+            <div style="font-size:12px;color:var(--text-dim);">${f.serving||100}g${f.brand ? ' · '+f.brand : ''}</div>
+          </div>
+          <div style="font-size:14px;font-weight:600;color:var(--ember);font-family:'Space Grotesk';">${Math.round(f.cal||0)} kcal</div>
+        </button>`).join('');
+    }
+  }
+}
+
+function fdCloseLog() {
+  document.getElementById('fdLogOverlay').style.display = 'none';
+}
+
+function fdSelectRecent(food) {
+  // Open product detail with this food's per-100g values
+  const serving = food.serving || 100;
+  _fdCurrentProduct = {
+    name: food.name,
+    brand: food.brand || '',
+    cal100: (food.cal||0) / serving * 100,
+    pro100: (food.protein||0) / serving * 100,
+    carb100: (food.carbs||0) / serving * 100,
+    fat100: (food.fat||0) / serving * 100,
+    fibre100: (food.fibre||0) / serving * 100,
+    sugar100: (food.sugar||0) / serving * 100,
+    salt100: (food.salt||0) / serving * 100,
+    barcode: food.barcode || ''
+  };
+  fdShowProduct(serving);
+}
+
+function fdShowProduct(defaultServing) {
+  if (!_fdCurrentProduct) return;
+  const p = _fdCurrentProduct;
+  document.getElementById('fdProductTitle').textContent = p.name;
+  document.getElementById('fdProductBrand').textContent = p.brand || '';
+  document.getElementById('fdServingSize').value = defaultServing || 100;
+  document.getElementById('fdProductOverlay').style.display = '';
+  fdUpdateServing();
+}
+
+function fdSetServing(g) {
+  document.getElementById('fdServingSize').value = g;
+  fdUpdateServing();
+}
+
+function fdUpdateServing() {
+  if (!_fdCurrentProduct) return;
+  const p = _fdCurrentProduct;
+  const g = parseFloat(document.getElementById('fdServingSize').value) || 100;
+  const factor = g / 100;
+  const cal = Math.round(p.cal100 * factor);
+  const pro = Math.round(p.pro100 * factor * 10) / 10;
+  const carb = Math.round(p.carb100 * factor * 10) / 10;
+  const fat = Math.round(p.fat100 * factor * 10) / 10;
+  document.getElementById('fdProdCal').textContent = cal;
+  document.getElementById('fdProdPro').textContent = pro + 'g';
+  document.getElementById('fdProdCarb').textContent = carb + 'g';
+  document.getElementById('fdProdFat').textContent = fat + 'g';
+
+  // Detailed breakdown
+  const fibre = Math.round((p.fibre100||0) * factor * 10) / 10;
+  const sugar = Math.round((p.sugar100||0) * factor * 10) / 10;
+  const salt = Math.round((p.salt100||0) * factor * 100) / 100;
+  const details = document.getElementById('fdProdDetails');
+  if (details) {
+    details.innerHTML = [
+      ['Calories', cal + ' kcal', 'var(--ember)'],
+      ['Protein', pro + 'g', 'var(--ocean)'],
+      ['Carbohydrates', carb + 'g', 'var(--sage-text)'],
+      ['  of which Sugars', sugar + 'g', ''],
+      ['Fat', fat + 'g', 'var(--warning)'],
+      ['Fibre', fibre + 'g', ''],
+      ['Salt', salt + 'g', '']
+    ].map(([label, val, col]) =>
+      `<div style="display:flex;justify-content:space-between;padding:6px 0;${label.startsWith(' ') ? 'padding-left:16px;font-size:12px;color:var(--text-dim);' : ''}${col ? 'font-weight:500;' : ''}">
+        <span>${label.trim()}</span><span style="${col ? 'color:'+col+';' : ''}">${val}</span>
+      </div>`
+    ).join('');
+  }
+}
+
+function fdCloseProduct() {
+  document.getElementById('fdProductOverlay').style.display = 'none';
+}
+
+function fdAddProduct() {
+  if (!_fdCurrentProduct) return;
+  const p = _fdCurrentProduct;
+  const g = parseFloat(document.getElementById('fdServingSize').value) || 100;
+  const factor = g / 100;
+  const entry = {
+    name: p.name,
+    brand: p.brand || '',
+    serving: g,
+    cal: Math.round(p.cal100 * factor),
+    protein: Math.round(p.pro100 * factor * 10) / 10,
+    carbs: Math.round(p.carb100 * factor * 10) / 10,
+    fat: Math.round(p.fat100 * factor * 10) / 10,
+    fibre: Math.round((p.fibre100||0) * factor * 10) / 10,
+    sugar: Math.round((p.sugar100||0) * factor * 10) / 10,
+    salt: Math.round((p.salt100||0) * factor * 100) / 100,
+    barcode: p.barcode || '',
+    time: new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'})
+  };
+  const dateStr = _fdDateStr(_fdSelectedDate);
+  const day = _fdGetDayLog(dateStr);
+  day[_fdCurrentMeal].push(entry);
+  scheduleSave();
+  fdCloseProduct();
+  fdCloseLog();
+  renderFoodDiary();
+}
+
+function fdRemoveItem(mealKey, idx) {
+  const dateStr = _fdDateStr(_fdSelectedDate);
+  const day = _fdGetDayLog(dateStr);
+  if (day[mealKey] && day[mealKey][idx] !== undefined) {
+    day[mealKey].splice(idx, 1);
+    scheduleSave();
+    renderFoodDiary();
+  }
+}
+
+// ─── Manual entry ───
+function fdShowManualEntry() {
+  document.getElementById('fdManualOverlay').style.display = '';
+  document.getElementById('fdManualName').value = '';
+  document.getElementById('fdManualServing').value = '100';
+  document.getElementById('fdManualCal').value = '';
+  document.getElementById('fdManualPro').value = '';
+  document.getElementById('fdManualCarb').value = '';
+  document.getElementById('fdManualFat').value = '';
+}
+
+function fdCloseManual() {
+  document.getElementById('fdManualOverlay').style.display = 'none';
+}
+
+function fdAddManualFood() {
+  const name = document.getElementById('fdManualName').value.trim();
+  const cal = parseFloat(document.getElementById('fdManualCal').value) || 0;
+  if (!name) { alert('Please enter a food name.'); return; }
+  if (cal <= 0) { alert('Please enter the calorie amount.'); return; }
+  const serving = parseFloat(document.getElementById('fdManualServing').value) || 100;
+  const entry = {
+    name: name,
+    brand: '',
+    serving: serving,
+    cal: Math.round(cal),
+    protein: parseFloat(document.getElementById('fdManualPro').value) || 0,
+    carbs: parseFloat(document.getElementById('fdManualCarb').value) || 0,
+    fat: parseFloat(document.getElementById('fdManualFat').value) || 0,
+    fibre: 0, sugar: 0, salt: 0, barcode: '',
+    time: new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'})
+  };
+  const dateStr = _fdDateStr(_fdSelectedDate);
+  const day = _fdGetDayLog(dateStr);
+  day[_fdCurrentMeal].push(entry);
+  scheduleSave();
+  fdCloseManual();
+  fdCloseLog();
+  renderFoodDiary();
+}
+
+// ─── Food Search (Open Food Facts API) ───
+function fdSearchFood(query) {
+  if (_fdSearchTimeout) clearTimeout(_fdSearchTimeout);
+  if (!query || query.length < 3) {
+    document.getElementById('fdSearchResults').style.display = 'none';
+    document.getElementById('fdRecentsList').style.display = '';
+    return;
+  }
+  _fdSearchTimeout = setTimeout(() => {
+    document.getElementById('fdSearchResults').style.display = '';
+    document.getElementById('fdRecentsList').style.display = 'none';
+    document.getElementById('fdSearchResults').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">Searching...</div>';
+    fetch('https://world.openfoodfacts.org/cgi/search.pl?action=process&search_terms=' + encodeURIComponent(query) + '&json=1&page_size=15&fields=product_name,brands,nutriments,code,image_small_url')
+      .then(r => r.json())
+      .then(data => {
+        const products = (data.products || []).filter(p => p.product_name && p.nutriments);
+        if (products.length === 0) {
+          document.getElementById('fdSearchResults').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">No results found. Try a different search or add manually.</div>';
+          return;
+        }
+        document.getElementById('fdSearchResults').innerHTML = products.map(p => {
+          const n = p.nutriments;
+          const cal = Math.round(n['energy-kcal_100g'] || n['energy-kcal'] || (n.energy_100g || 0) / 4.184 || 0);
+          const pro = Math.round((n.proteins_100g || 0) * 10) / 10;
+          return `<button onclick='fdSelectSearchResult(${JSON.stringify({
+            name: p.product_name,
+            brand: p.brands || '',
+            cal100: cal,
+            pro100: pro,
+            carb100: Math.round((n.carbohydrates_100g||0)*10)/10,
+            fat100: Math.round((n.fat_100g||0)*10)/10,
+            fibre100: Math.round((n.fiber_100g||0)*10)/10,
+            sugar100: Math.round((n.sugars_100g||0)*10)/10,
+            salt100: Math.round((n.salt_100g||0)*100)/100,
+            barcode: p.code||''
+          }).replace(/'/g,"&#39;")})' style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:10px;cursor:pointer;text-align:left;margin-bottom:6px;">
+            <div style="flex:1;">
+              <div style="font-size:14px;font-weight:500;color:var(--text-body);">${p.product_name}</div>
+              <div style="font-size:12px;color:var(--text-dim);">${p.brands || 'Unknown brand'} · per 100g</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:14px;font-weight:600;color:var(--ember);font-family:'Space Grotesk';">${cal} kcal</div>
+              <div style="font-size:11px;color:var(--text-dim);">P:${pro}g</div>
+            </div>
+          </button>`;
+        }).join('');
+      })
+      .catch(() => {
+        document.getElementById('fdSearchResults').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">Search failed — check your connection and try again.</div>';
+      });
+  }, 400);
+}
+
+function fdSelectSearchResult(product) {
+  _fdCurrentProduct = product;
+  fdShowProduct(100);
+}
+
+// ─── Barcode Scanner ───
+function fdStartBarcodeScan() {
+  const overlay = document.getElementById('fdScanOverlay');
+  overlay.style.display = '';
+  const video = document.getElementById('fdScanVideo');
+  const status = document.getElementById('fdScanStatus');
+  status.textContent = 'Starting camera...';
+
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } })
+    .then(stream => {
+      _fdScanStream = stream;
+      video.srcObject = stream;
+      video.play();
+      status.textContent = 'Scanning...';
+
+      // Try native BarcodeDetector first
+      if ('BarcodeDetector' in window) {
+        _fdBarcodeDetector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e'] });
+        _fdScanLoop();
+      } else {
+        status.textContent = 'Barcode scanning not supported on this device. Try searching instead.';
+        setTimeout(() => fdStopScan(), 3000);
+      }
+    })
+    .catch(err => {
+      status.textContent = 'Camera access denied. Please allow camera access and try again.';
+      console.warn('Camera error:', err);
+      setTimeout(() => fdStopScan(), 3000);
+    });
+}
+
+function _fdScanLoop() {
+  if (!_fdScanStream || !_fdBarcodeDetector) return;
+  const video = document.getElementById('fdScanVideo');
+  if (!video || video.readyState < 2) { requestAnimationFrame(_fdScanLoop); return; }
+
+  _fdBarcodeDetector.detect(video).then(barcodes => {
+    if (barcodes.length > 0) {
+      const code = barcodes[0].rawValue;
+      document.getElementById('fdScanStatus').textContent = 'Found: ' + code;
+      fdStopScan();
+      fdLookupBarcode(code);
+    } else {
+      requestAnimationFrame(_fdScanLoop);
+    }
+  }).catch(() => {
+    requestAnimationFrame(_fdScanLoop);
+  });
+}
+
+function fdStopScan() {
+  if (_fdScanStream) {
+    _fdScanStream.getTracks().forEach(t => t.stop());
+    _fdScanStream = null;
+  }
+  _fdBarcodeDetector = null;
+  document.getElementById('fdScanOverlay').style.display = 'none';
+}
+
+function fdLookupBarcode(code) {
+  const status = document.getElementById('fdScanStatus');
+  // Show loading in log overlay
+  document.getElementById('fdSearchInput').value = 'Barcode: ' + code;
+  document.getElementById('fdSearchResults').style.display = '';
+  document.getElementById('fdRecentsList').style.display = 'none';
+  document.getElementById('fdSearchResults').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">Looking up product...</div>';
+
+  fetch('https://world.openfoodfacts.org/api/v2/product/' + code + '.json')
+    .then(r => r.json())
+    .then(data => {
+      if (data.status !== 1 || !data.product) {
+        document.getElementById('fdSearchResults').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">Product not found in database. Try searching by name or add manually.</div>';
+        return;
+      }
+      const p = data.product;
+      const n = p.nutriments || {};
+      _fdCurrentProduct = {
+        name: p.product_name || 'Unknown Product',
+        brand: p.brands || '',
+        cal100: Math.round(n['energy-kcal_100g'] || (n.energy_100g || 0) / 4.184 || 0),
+        pro100: Math.round((n.proteins_100g||0)*10)/10,
+        carb100: Math.round((n.carbohydrates_100g||0)*10)/10,
+        fat100: Math.round((n.fat_100g||0)*10)/10,
+        fibre100: Math.round((n.fiber_100g||0)*10)/10,
+        sugar100: Math.round((n.sugars_100g||0)*10)/10,
+        salt100: Math.round((n.salt_100g||0)*100)/100,
+        barcode: code
+      };
+      fdShowProduct(100);
+    })
+    .catch(() => {
+      document.getElementById('fdSearchResults').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">Lookup failed — check your connection and try again.</div>';
+    });
+}
 
 // ═══════════════════════════════════════
 //  CYCLE TRACKING — CLIENT SIDE
