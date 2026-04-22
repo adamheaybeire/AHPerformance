@@ -69,7 +69,7 @@
   /* ─── APP SHELL ─── */
   .app{display:none;min-height:100vh;min-height:100dvh;}.app.active{display:flex;}
 
-  .sidebar{width:230px;background:var(--slate-deep);border-right:1px solid var(--slate-border);padding:24px 0;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:10;}
+  .sidebar{width:230px;background:var(--slate-deep);border-right:1px solid var(--slate-border);padding:24px 0;padding-top:calc(24px + env(safe-area-inset-top, 0px));position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:10;}
   .sidebar-logo{display:flex;align-items:center;gap:10px;padding:0 20px;margin-bottom:8px;}
   .sidebar-logo .mark{width:36px;height:36px;border-radius:10px;border:2px solid var(--ember);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--ember);}
   .sidebar-logo .wordmark{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;}
@@ -85,7 +85,7 @@
   .nav-item .badge{margin-left:auto;background:var(--ember);color:#fff;font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px;}
   .logout-item{border-top:1px solid var(--slate-border);padding-top:12px;margin-top:24px;}
 
-  .main{margin-left:230px;flex:1;padding:32px 40px;max-width:1200px;}
+  .main{margin-left:230px;flex:1;padding:32px 40px;padding-top:calc(32px + env(safe-area-inset-top, 0px));max-width:1200px;}
   .page{display:none;}.page.active{display:block;}
   .page-header{margin-bottom:28px;}
   .page-header h1{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:400;margin-bottom:4px;}
@@ -298,7 +298,7 @@
   @media(max-width:768px){
     /* Client app — full mobile layout */
     #clientApp .sidebar{display:none !important;}
-    #clientApp .main{margin-left:0 !important;padding:16px 16px 80px !important;height:100vh;height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+    #clientApp .main{margin-left:0 !important;padding:16px 16px 80px !important;padding-top:calc(16px + env(safe-area-inset-top, 0px)) !important;height:100vh;height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
     #clientApp .mobile-tab-bar{display:block;}
 
     /* Full-width cards */
@@ -2249,6 +2249,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   await loadAppState();
   buildSidebars();
+
+  // Auto-login: if user was previously logged in, restore their session
+  try {
+    const savedEmail = localStorage.getItem('ahLoggedInEmail');
+    if (savedEmail) {
+      const user = USERS.find(u => u.email === savedEmail);
+      if (user) {
+        loggedInUser = user;
+        login(user.role);
+        console.log('AH Performance: Auto-logged in as ' + user.name + ' (' + user.role + ')');
+      }
+    }
+  } catch(e) {}
+
   // Auto-sync from server every 30 seconds to pick up changes from other devices
   setInterval(async () => {
     try {
@@ -2357,27 +2371,59 @@ function saveAppState() {
 }
 
 async function loadAppState() {
-  // Try server first (shared state), fall back to localStorage
-  let loaded = false;
+  // Load from BOTH sources and use whichever is newest.
+  // This prevents data loss when the server resets (e.g. Render redeploy).
+  let serverState = null;
+  let localState = null;
+
+  // Try server
   try {
     const res = await fetch('/api/state');
     if (res.ok) {
       const state = await res.json();
-      if (state && state.savedAt) {
-        _applyState(state);
-        loaded = true;
-        console.log('AH Performance: State loaded from server (' + CLIENTS.length + ' clients, ' + USERS.length + ' users)');
-      }
+      if (state && state.savedAt) serverState = state;
     }
   } catch (e) {}
-  if (!loaded) {
-    try {
-      const raw = localStorage.getItem('ahPerformanceState');
-      if (raw) {
-        _applyState(JSON.parse(raw));
-        console.log('AH Performance: State loaded from localStorage (' + CLIENTS.length + ' clients, ' + USERS.length + ' users)');
-      }
-    } catch (e) {}
+
+  // Try localStorage
+  try {
+    const raw = localStorage.getItem('ahPerformanceState');
+    if (raw) {
+      const state = JSON.parse(raw);
+      if (state && state.savedAt) localState = state;
+    }
+  } catch (e) {}
+
+  // Pick the newest state (or whichever exists)
+  let chosen = null;
+  let source = 'none';
+  if (serverState && localState) {
+    if (serverState.savedAt >= localState.savedAt) {
+      chosen = serverState; source = 'server';
+    } else {
+      chosen = localState; source = 'localStorage (newer)';
+    }
+  } else if (serverState) {
+    chosen = serverState; source = 'server';
+  } else if (localState) {
+    chosen = localState; source = 'localStorage';
+  }
+
+  if (chosen) {
+    _applyState(chosen);
+    console.log('AH Performance: State loaded from ' + source + ' (' + CLIENTS.length + ' clients, ' + USERS.length + ' users, saved ' + new Date(chosen.savedAt).toLocaleString() + ')');
+
+    // If localStorage had newer data, re-push to server so it's synced
+    if (source.includes('localStorage')) {
+      try {
+        fetch('/api/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(chosen)
+        }).then(() => console.log('AH Performance: Restored server state from localStorage'))
+          .catch(() => {});
+      } catch (e) {}
+    }
   }
 }
 
@@ -2448,6 +2494,8 @@ function attemptLogin() {
   }
   errEl.style.display = 'none';
   loggedInUser = user;
+  // Remember login for next session
+  try { localStorage.setItem('ahLoggedInEmail', user.email); } catch(e) {}
   login(user.role);
 }
 
@@ -2496,6 +2544,7 @@ function login(role) {
 function logout() {
   currentRole = null;
   loggedInUser = null;
+  try { localStorage.removeItem('ahLoggedInEmail'); } catch(e) {}
   document.querySelectorAll('.app').forEach(a => a.classList.remove('active'));
   document.getElementById('onboardingLanding').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
@@ -7957,13 +8006,8 @@ window.addEventListener('message', function(e) {
 
     // Notify PT
     addPTNotification('programme', clientId, clientName, 'Programme assigned: ' + programmeName);
-    // Notify client
+    // Notify client + queue email (triggerProgrammeUpdated handles both)
     triggerProgrammeUpdated(clientId, clientName, client.email || '', programmeName);
-
-    // Queue email via the proper queueEmail function
-    const emailAddr = client.email || (clientName.split(' ')[0].toLowerCase() + '@email.com');
-    queueEmail(emailAddr, clientName, 'New Programme: ' + programmeName, 'programme-assigned',
-      'Hi ' + clientName.split(' ')[0] + ', your new programme "' + programmeName + '" is ready to view in the app.');
 
     alert('Programme "' + programmeName + '" assigned to ' + clientName + ' successfully.');
     scheduleSave();
@@ -8957,6 +9001,7 @@ function renderEmailQueue() {
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
         ${e.status === 'pending' ? `<button class="btn btn-sm btn-ember" onclick="event.stopPropagation();sendEmail('${e.id}')">Send</button>` : ''}
+        ${e.status === 'sending' ? `<span style="font-size:11px;color:var(--text-dim);padding:4px 10px;">Sending...</span>` : ''}
         ${e.status === 'failed' ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();retryEmail('${e.id}')">Retry</button>` : ''}
         <button class="btn btn-sm" style="background:transparent;color:var(--text-dim);border:1px solid var(--slate-border);font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();deleteEmail('${e.id}')" title="Delete">✕</button>
       </div>
@@ -8977,10 +9022,33 @@ function previewEmail(eId) {
 function sendEmail(eId) {
   const e = EMAIL_QUEUE.find(x => x.id === eId);
   if (!e) return;
-  // Simulate sending — in production this hits SendGrid API
-  e.status = 'sent';
+  e.status = 'sending';
   renderEmailQueue();
-  addPTNotification('email', null, null, `Email sent to ${e.toName}: "${e.subject}"`);
+
+  fetch('/api/send-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to: e.to, toName: e.toName, subject: e.subject, body: e.body })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      e.status = 'sent';
+      addPTNotification('email', null, null, `Email sent to ${e.toName}: "${e.subject}"`);
+    } else {
+      e.status = 'failed';
+      e.error = data.error || 'Unknown error';
+      console.warn('Email failed:', data.error);
+    }
+    renderEmailQueue();
+    scheduleSave();
+  })
+  .catch(err => {
+    e.status = 'failed';
+    e.error = 'Network error — check connection';
+    renderEmailQueue();
+    scheduleSave();
+  });
 }
 
 function retryEmail(eId) {
@@ -9001,15 +9069,16 @@ function deleteEmail(eId) {
 function sendAllPendingEmails() {
   const pending = EMAIL_QUEUE.filter(e => e.status === 'pending');
   if (!pending.length) { alert('No pending emails to send.'); return; }
-  pending.forEach(e => e.status = 'sent');
-  renderEmailQueue();
-  addPTNotification('email', null, null, `${pending.length} emails sent successfully`);
+  pending.forEach(e => sendEmail(e.id));
 }
 
 function queueEmail(to, toName, subject, template, body) {
   // Guard: don't queue emails with missing/undefined addresses
   if (!to || to === 'undefined') { console.warn('queueEmail skipped — no valid email address for', toName); return; }
   if (!toName || toName === 'undefined') toName = 'Client';
+  // Duplicate guard: skip if same recipient+template is already pending within last 60 seconds
+  const recentDup = EMAIL_QUEUE.find(e => e.to === to && e.template === template && e.status === 'pending');
+  if (recentDup) { console.warn('queueEmail skipped duplicate — already pending:', template, 'for', to); return; }
   const id = 'e' + (EMAIL_QUEUE.length + 1) + '_' + Date.now();
   const now = new Date();
   const createdAt = now.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'}) + ', ' + now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
