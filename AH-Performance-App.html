@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>AH Performance</title>
 
 <!-- PWA Meta Tags -->
@@ -50,7 +50,7 @@
   .login-form{max-width:360px;margin:0 auto;text-align:left;}
   .login-field{margin-bottom:16px;}
   .login-field label{display:block;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:500;letter-spacing:0.5px;color:var(--text-body);margin-bottom:6px;}
-  .login-field input{width:100%;padding:12px 16px;background:var(--slate-card);border:1.5px solid var(--slate-border);border-radius:8px;color:var(--text-bright);font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s;}
+  .login-field input{width:100%;padding:12px 16px;background:var(--slate-card);border:1.5px solid var(--slate-border);border-radius:8px;color:var(--text-bright);font-family:'Inter',sans-serif;font-size:16px;outline:none;transition:border-color 0.2s;}
   .login-field input:focus{border-color:var(--ember);background:var(--slate-raised);}
   .login-field input::placeholder{color:var(--text-dim);font-weight:300;}
   .login-btn{width:100%;padding:14px;background:var(--ember);color:#fff;border:none;border-radius:8px;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:background 0.2s;margin-top:8px;}
@@ -115,7 +115,7 @@
   .form-row.three{grid-template-columns:1fr 1fr 1fr;}
   .form-group{display:flex;flex-direction:column;}
   .form-label{font-size:11px;font-weight:500;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px;}
-  input,select,textarea{background:var(--slate-raised);border:1px solid var(--slate-border);color:var(--text-bright);padding:10px 12px;border-radius:8px;font-family:'Inter',sans-serif;font-size:13px;transition:border 0.15s;}
+  input,select,textarea{background:var(--slate-raised);border:1px solid var(--slate-border);color:var(--text-bright);padding:10px 12px;border-radius:8px;font-family:'Inter',sans-serif;font-size:16px;transition:border 0.15s;}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ember);}
   textarea{resize:vertical;min-height:60px;}
 
@@ -329,7 +329,7 @@
 
     /* Wellbeing page mobile */
     #clientWellbeing .wellbeing-grid{grid-template-columns:1fr 1fr !important;gap:8px !important;}
-    #clientWellbeing .wb-metric select{font-size:12px !important;padding:8px !important;}
+    #clientWellbeing .wb-metric select{font-size:16px !important;padding:8px !important;}
     #clientWellbeing .mood-scale{gap:6px !important;}
     #clientWellbeing .mood-btn{width:40px !important;height:40px !important;font-size:16px !important;}
     #clientWellbeing .card{padding:14px !important;}
@@ -356,10 +356,10 @@
     .prog-form .form-row.three{grid-template-columns:1fr !important;gap:8px !important;}
     .prog-form .form-row.five{grid-template-columns:30px 1fr 1fr 60px 30px !important;gap:4px !important;}
     .prog-form .form-row.five .form-group{gap:2px !important;}
-    .prog-form .form-row.five input,.prog-form .form-row.five select{padding:6px 4px !important;font-size:11px !important;}
+    .prog-form .form-row.five input,.prog-form .form-row.five select{padding:6px 4px !important;font-size:16px !important;}
     .prog-form .form-row.full{grid-template-columns:1fr !important;}
     .prog-form .form-label{font-size:9px !important;}
-    .prog-form input,.prog-form select,.prog-form textarea{padding:7px 8px !important;font-size:12px !important;}
+    .prog-form input,.prog-form select,.prog-form textarea{padding:7px 8px !important;font-size:16px !important;}
     .prog-form .btn-row{flex-wrap:wrap;gap:6px !important;}
     .prog-form .btn-row .btn{font-size:12px !important;padding:8px 12px !important;}
 
@@ -376,7 +376,7 @@
     #clientProgress .prog-table th{font-size:9px !important;text-transform:uppercase;letter-spacing:0.3px;}
     #clientProgress .card h3{font-size:13px !important;}
     #clientProgress .flex-between{flex-wrap:wrap;gap:6px;}
-    #clientProgress .flex-between select{font-size:10px !important;padding:4px 6px !important;max-width:100px;}
+    #clientProgress .flex-between select{font-size:16px !important;padding:4px 6px !important;max-width:120px;}
     #clientProgress .card .val{font-size:10px !important;}
     #clientProgress .card{padding:12px !important;overflow-x:auto;}
     #clientProgress .chart-container{height:180px !important;min-height:120px !important;}
@@ -439,14 +439,14 @@
   .wl-set-num{width:26px;height:26px;border-radius:50%;background:var(--slate-raised);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text-muted);font-family:'Space Grotesk',sans-serif;}
   .wl-set-num.done{background:var(--sage);color:white;}
   .wl-next-set{background:rgba(224,122,58,0.08);border-radius:8px;outline:1.5px solid rgba(224,122,58,0.3);outline-offset:2px;animation:wl-pulse-next 1.5s ease-in-out 2;}
-  .wl-set-input{width:100%;padding:8px 6px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);font-size:14px;font-family:'Space Grotesk',sans-serif;text-align:center;-webkit-appearance:none;appearance:none;}
+  .wl-set-input{width:100%;padding:8px 6px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);font-size:16px;font-family:'Space Grotesk',sans-serif;text-align:center;-webkit-appearance:none;appearance:none;}
   .wl-set-input:focus{border-color:var(--ember);outline:none;}
   .wl-set-input::placeholder{color:var(--text-dim);font-size:11px;}
   .wl-check-btn{width:36px;height:36px;border-radius:10px;border:2px solid var(--slate-border);background:transparent;color:var(--text-dim);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:all 0.15s;}
   .wl-check-btn.checked{background:var(--sage);border-color:var(--sage);color:white;}
   .wl-add-set{background:none;border:1px dashed var(--slate-border);border-radius:8px;padding:8px;width:100%;color:var(--text-dim);font-size:11px;cursor:pointer;margin-top:4px;-webkit-tap-highlight-color:transparent;}
   .wl-add-set:active{background:var(--slate-raised);}
-  .wl-notes-input{width:100%;padding:8px 10px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-body);font-size:12px;resize:none;min-height:32px;font-family:Inter,sans-serif;}
+  .wl-notes-input{width:100%;padding:8px 10px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-body);font-size:16px;resize:none;min-height:32px;font-family:Inter,sans-serif;}
   .wl-notes-input:focus{border-color:var(--ocean);outline:none;}
   /* Timer bar — flexbox child above footer */
   .wl-timer-bar{display:flex;align-items:center;justify-content:center;gap:0;padding:8px 16px;background:var(--slate-card);border-top:1px solid var(--slate-border);flex-shrink:0;}
@@ -485,7 +485,7 @@
   .checkin-step.active{display:block;}
   .ci-step-number{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
   .checkin-step h3{margin-bottom:4px;font-size:18px;}
-  .checkin-step textarea{width:100%;min-height:100px;font-size:13px;line-height:1.6;resize:vertical;}
+  .checkin-step textarea{width:100%;min-height:100px;font-size:16px;line-height:1.6;resize:vertical;}
   .char-count{text-align:right;font-size:11px;color:var(--text-dim);margin-top:4px;font-family:'Space Grotesk',sans-serif;}
   .char-count.at-limit{color:var(--danger);}
 
@@ -585,7 +585,7 @@
   .prog-form .form-group{display:flex;flex-direction:column;gap:4px;}
   .prog-form .form-label{font-size:11px;font-weight:500;letter-spacing:0.3px;text-transform:uppercase;color:var(--text-muted);}
   .prog-form .btn-row{display:flex;gap:8px;margin-top:14px;}
-  .prog-form input,.prog-form select,.prog-form textarea{background:var(--slate-deep);border:1px solid var(--slate-border);border-radius:8px;padding:9px 12px;color:var(--text-bright);font-size:13px;font-family:'Inter',sans-serif;font-weight:300;width:100%;transition:border-color 0.2s;}
+  .prog-form input,.prog-form select,.prog-form textarea{background:var(--slate-deep);border:1px solid var(--slate-border);border-radius:8px;padding:9px 12px;color:var(--text-bright);font-size:16px;font-family:'Inter',sans-serif;font-weight:300;width:100%;transition:border-color 0.2s;}
   .prog-form input:focus,.prog-form select:focus{outline:none;border-color:var(--ember);}
 
   /* Data table for progress */
@@ -643,7 +643,7 @@
   .ob-field-label .req{color:var(--ember);margin-left:2px;}
   .ob-field-hint{font-size:11px;color:var(--text-dim);margin-top:4px;font-weight:300;}
   .ob-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-  .ob-input,.ob-select,.ob-textarea{width:100%;padding:11px 14px;background:var(--slate-card);border:1.5px solid var(--slate-border);border-radius:8px;color:var(--text-bright);font-family:'Inter',sans-serif;font-size:14px;font-weight:400;outline:none;transition:border-color 0.2s;-webkit-appearance:none;}
+  .ob-input,.ob-select,.ob-textarea{width:100%;padding:11px 14px;background:var(--slate-card);border:1.5px solid var(--slate-border);border-radius:8px;color:var(--text-bright);font-family:'Inter',sans-serif;font-size:16px;font-weight:400;outline:none;transition:border-color 0.2s;-webkit-appearance:none;}
   .ob-input:focus,.ob-select:focus,.ob-textarea:focus{border-color:var(--ember);background:var(--slate-raised);}
   .ob-input::placeholder,.ob-textarea::placeholder{color:var(--text-dim);font-weight:300;}
   .ob-textarea{resize:vertical;min-height:70px;line-height:1.6;}
@@ -691,6 +691,11 @@
   .ob-flag-injury{background:var(--ocean-soft);color:var(--ocean-text);border:1px solid var(--ocean-border);}
   .ob-flag-goal{background:var(--ember-soft);color:var(--ember);border:1px solid var(--ember-glow);}
   @media(max-width:600px){.ob-row{grid-template-columns:1fr;}.ob-opt-row{flex-direction:column;}.ob-parq{flex-direction:column;align-items:flex-start;}.ob-parq-toggle{width:100%;}.ob-parq-btn{flex:1;text-align:center;}}
+
+  /* ── iOS zoom prevention: force all interactive elements to 16px minimum ── */
+  @supports (-webkit-touch-callout: none) {
+    input, select, textarea { font-size: 16px !important; }
+  }
 </style>
 </head>
 <body>
@@ -1081,6 +1086,7 @@
           <div class="summary-stat"><div class="stat-label">Total Steps</div><div class="stat-main text-sage" id="cpWkSteps">0</div><div class="stat-detail" id="cpWkStepsDetail">—</div></div>
           <div class="summary-stat"><div class="stat-label">Avg Sleep</div><div class="stat-main" id="cpWkSleep">—</div><div class="stat-detail" id="cpWkSleepDetail">—</div></div>
         </div>
+        <div class="card" id="cpWkCardioBreakdown" style="display:none;"><h3>Cardio Breakdown</h3><div id="cpWkCardioList" style="margin-top:10px;"></div></div>
         <div class="card"><h3>Daily Workout Hours</h3><div id="cpWkDailyHours"></div><div class="bar-legend"><span><span class="dot" style="background:var(--ember);"></span>Strength</span><span><span class="dot" style="background:var(--ocean);"></span>Running</span><span><span class="dot" style="background:var(--sage);"></span>Other Cardio</span></div></div>
         <div class="card"><h3>Daily Running KM</h3><div class="chart-container"><canvas id="cpWkRunChart"></canvas></div></div>
         <div class="card"><h3>Daily Steps</h3><div class="chart-container"><canvas id="cpWkStepsChart"></canvas></div></div>
@@ -1715,6 +1721,7 @@
             <div class="summary-stat"><div class="stat-label">Total Steps</div><div class="stat-main text-sage" id="dtWkSteps">—</div><div class="stat-detail" id="dtWkStepsDetail">—</div></div>
             <div class="summary-stat"><div class="stat-label">Avg Sleep</div><div class="stat-main" id="dtWkSleep">—</div><div class="stat-detail" id="dtWkSleepDetail">—</div></div>
           </div>
+          <div class="card" id="dtWkCardioBreakdown" style="display:none;"><h3>Cardio Breakdown</h3><div id="dtWkCardioList" style="margin-top:10px;"></div></div>
           <div class="card"><h3>Daily Workout Hours</h3><div id="dtWkDailyHours"></div><div class="bar-legend"><span><span class="dot" style="background:var(--ember);"></span>Strength</span><span><span class="dot" style="background:var(--ocean);"></span>Running</span><span><span class="dot" style="background:var(--sage);"></span>Other Cardio</span></div></div>
           <div class="card"><h3>Daily Running KM</h3><div class="chart-container"><canvas id="dtWkRunChart"></canvas></div></div>
           <div class="card"><h3>Daily Steps</h3><div class="chart-container"><canvas id="dtWkStepsChart"></canvas></div></div>
@@ -2802,6 +2809,7 @@ let wlNotes = {};              // { exerciseIndex: string }
 let wlSessionRPE = null;
 let wlRestInterval = null;
 let wlRestRemaining = 0;       // seconds remaining on rest timer
+let wlRestEndTime = 0;         // Date.now() timestamp when rest finishes
 let wlPausedSessionData = null; // saved state for resume
 
 function openWorkoutLogger() {
@@ -3371,28 +3379,85 @@ function wlToggleSet(exIdx, setIdx) {
 function wlStartRestTimer(seconds) {
   // Clear any existing rest timer
   if (wlRestInterval) { clearInterval(wlRestInterval); wlRestInterval = null; }
+  // Use real clock time so the timer continues even when the app is backgrounded
+  wlRestEndTime = Date.now() + (seconds * 1000);
   wlRestRemaining = seconds;
   const el = document.getElementById('wlRestTimer');
   if (!el) return;
   // Update display immediately
-  const rm = Math.floor(wlRestRemaining / 60);
-  const rs = wlRestRemaining % 60;
+  const rm = Math.floor(seconds / 60);
+  const rs = seconds % 60;
   el.textContent = `${String(rm).padStart(2,'0')}:${String(rs).padStart(2,'0')}`;
   el.classList.add('counting');
   wlRestInterval = setInterval(() => {
-    wlRestRemaining--;
-    if (wlRestRemaining <= 0) {
-      wlRestRemaining = 0;
+    const remaining = Math.max(0, Math.ceil((wlRestEndTime - Date.now()) / 1000));
+    wlRestRemaining = remaining;
+    if (remaining <= 0) {
       clearInterval(wlRestInterval);
       wlRestInterval = null;
+      wlRestRemaining = 0;
       el.textContent = '00:00';
       el.classList.remove('counting');
+      // Vibrate to alert user rest is over (if supported)
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      _playRestDing();
       return;
     }
-    const m = Math.floor(wlRestRemaining / 60);
-    const s = wlRestRemaining % 60;
+    const m = Math.floor(remaining / 60);
+    const s = remaining % 60;
     el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  }, 1000);
+  }, 250); // Tick faster (250ms) so display catches up quickly after resume
+}
+
+// When the app comes back to the foreground, immediately sync the rest timer
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && wlRestInterval && wlRestEndTime) {
+    const remaining = Math.max(0, Math.ceil((wlRestEndTime - Date.now()) / 1000));
+    wlRestRemaining = remaining;
+    const el = document.getElementById('wlRestTimer');
+    if (!el) return;
+    if (remaining <= 0) {
+      clearInterval(wlRestInterval);
+      wlRestInterval = null;
+      wlRestRemaining = 0;
+      el.textContent = '00:00';
+      el.classList.remove('counting');
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      _playRestDing();
+    } else {
+      const m = Math.floor(remaining / 60);
+      const s = remaining % 60;
+      el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+  }
+});
+
+// Play a short chime when rest timer completes (Web Audio API — no files needed)
+function _playRestDing() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // First tone — high ding
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(880, ctx.currentTime);       // A5
+    gain1.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+    osc1.connect(gain1); gain1.connect(ctx.destination);
+    osc1.start(ctx.currentTime); osc1.stop(ctx.currentTime + 0.4);
+    // Second tone — slightly higher, delayed
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.15); // D6
+    gain2.gain.setValueAtTime(0, ctx.currentTime);
+    gain2.gain.setValueAtTime(0.3, ctx.currentTime + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+    osc2.connect(gain2); gain2.connect(ctx.destination);
+    osc2.start(ctx.currentTime + 0.15); osc2.stop(ctx.currentTime + 0.6);
+    // Clean up after sound finishes
+    setTimeout(() => ctx.close(), 800);
+  } catch (e) { /* Audio not available — fail silently */ }
 }
 
 function wlAddSet(exIdx) {
@@ -3521,9 +3586,38 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
   if (!PROGRESS_DATA[cid]) PROGRESS_DATA[cid] = { strength: [], cardio: [], measurements: [], wearable: [], weekly: [] };
   exerciseLogs.forEach(ex => {
     if (ex.isCardio) {
+      // Extract aggregate distance and time from cardio sets for progress charting
+      let totalDist = 0, totalTimeSec = 0;
+      const isSled = _isSledExercise(ex.name);
+      (ex.sets || []).forEach(s => {
+        if (isSled) {
+          // Sled: reps = distance (m), weight = weight (kg)
+          const d = parseFloat(s.reps) || 0;
+          totalDist += d;
+        } else {
+          // Standard cardio: reps = distance, weight = time (mm:ss or seconds)
+          const d = parseFloat(s.reps) || 0;
+          totalDist += d;
+          const timeStr = String(s.weight || '');
+          if (timeStr.includes(':')) {
+            const tp = timeStr.split(':');
+            totalTimeSec += (parseInt(tp[0])||0)*60 + (parseInt(tp[1])||0);
+          } else {
+            totalTimeSec += (parseFloat(timeStr)||0) * 60;
+          }
+        }
+      });
+      const distUnit = isSled ? 'm' : (totalDist > 100 ? 'm' : 'km');
+      const timeMins = Math.floor(totalTimeSec/60);
+      const timeSecs = totalTimeSec % 60;
+      const timeStr = totalTimeSec > 0 ? `${timeMins}:${String(timeSecs).padStart(2,'0')}` : '';
       PROGRESS_DATA[cid].cardio.push({
         date: today,
+        activity: ex.name,
         exercise: ex.name,
+        distance: totalDist > 0 ? totalDist : null,
+        unit: distUnit,
+        time: timeStr || null,
         sets: ex.sets,
         rpe: wlSessionRPE
       });
@@ -4167,7 +4261,29 @@ function _buildWeekFromWorkoutLog() {
         });
       });
     });
-    return { day: name, strength, running, otherCardio, runKm: Math.round(dayRunKm * 100) / 100, steps: 0, sleep: 0 };
+    // Collect individual cardio sessions with details
+    const cardioSessions = [];
+    dayWorkouts.forEach(w => {
+      (w.exercises || []).forEach(e => {
+        if (_isCardioExercise(e.name) || _isSledExercise(e.name)) {
+          let dist = 0, timeSec = 0;
+          const isSled = _isSledExercise(e.name);
+          (e.sets || []).forEach(s => {
+            dist += parseFloat(s.reps) || 0;
+            if (!isSled) {
+              const ts = String(s.weight || '');
+              if (ts.includes(':')) { const p = ts.split(':'); timeSec += (parseInt(p[0])||0)*60 + (parseInt(p[1])||0); }
+              else timeSec += (parseFloat(ts)||0)*60;
+            }
+          });
+          if (dist > 0 || timeSec > 0) {
+            const unit = isSled ? 'm' : (dist > 100 ? 'm' : 'km');
+            cardioSessions.push({ name: e.name, distance: dist, unit, timeSec });
+          }
+        }
+      });
+    });
+    return { day: name, strength, running, otherCardio, runKm: Math.round(dayRunKm * 100) / 100, steps: 0, sleep: 0, cardioSessions };
   });
   return { weekStart, days };
 }
@@ -4234,6 +4350,40 @@ function renderCPWeeklySummary() {
 
   // Daily sleep chart
   renderBarChartSimple('cpWkSleepChart', dayLabels, days.map(d => d.sleep), 'Sleep (hours)', '#9B8EC4');
+
+  // Cardio breakdown — aggregate all cardio sessions for the week by exercise name
+  _renderCardioBreakdown(days, 'cpWkCardioBreakdown', 'cpWkCardioList');
+}
+
+function _renderCardioBreakdown(days, containerId, listId) {
+  const allCardio = days.flatMap(d => d.cardioSessions || []);
+  const cardioByName = {};
+  allCardio.forEach(c => {
+    if (!cardioByName[c.name]) cardioByName[c.name] = { distance: 0, unit: c.unit, timeSec: 0, count: 0 };
+    cardioByName[c.name].distance += c.distance;
+    cardioByName[c.name].timeSec += c.timeSec;
+    cardioByName[c.name].count++;
+  });
+  const container = document.getElementById(containerId);
+  const list = document.getElementById(listId);
+  if (!container || !list) return;
+  const names = Object.keys(cardioByName);
+  if (!names.length) { container.style.display = 'none'; return; }
+  container.style.display = '';
+  list.innerHTML = names.map(name => {
+    const c = cardioByName[name];
+    const dist = c.distance > 0 ? `${c.distance % 1 === 0 ? c.distance : c.distance.toFixed(1)} ${c.unit}` : '—';
+    const mins = Math.floor(c.timeSec/60);
+    const secs = c.timeSec % 60;
+    const time = c.timeSec > 0 ? `${mins}:${String(secs).padStart(2,'0')}` : '—';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--slate-raised);border-radius:10px;margin-bottom:6px;">
+      <div><div style="font-size:13px;font-weight:500;color:var(--text-heading);">${name}</div><div style="font-size:11px;color:var(--text-dim);">${c.count} session${c.count>1?'s':''}</div></div>
+      <div style="display:flex;gap:16px;text-align:right;">
+        <div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Distance</div><div style="font-size:14px;font-weight:600;color:var(--ocean);font-family:'Space Grotesk',sans-serif;">${dist}</div></div>
+        <div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Time</div><div style="font-size:14px;font-weight:600;color:var(--sage-text);font-family:'Space Grotesk',sans-serif;">${time}</div></div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function _getClientConversation() {
@@ -4620,8 +4770,8 @@ function initDetailProgress(clientId) {
   // Strength selectors
   const exes = [...new Set(pd.strength.map(e=>e.exercise))];
   document.getElementById('dtStrEx').innerHTML = exes.map(e => `<option value="${e}">${e}</option>`).join('');
-  // Cardio selectors
-  const acts = [...new Set(pd.cardio.map(e=>e.activity))];
+  // Cardio selectors — handle both 'activity' (manual log) and 'exercise' (workout logger) field names
+  const acts = [...new Set(pd.cardio.map(e => e.activity || e.exercise || '').filter(a => a && a !== 'undefined'))];
   document.getElementById('dtCardActivity').innerHTML = acts.map(a => `<option value="${a}">${a}</option>`).join('');
   // Render all
   renderDetailStrChart();
@@ -4704,7 +4854,7 @@ function renderDetailCardChart() {
   if (!pd) return;
   const act = document.getElementById('dtCardActivity').value;
   const met = document.getElementById('dtCardMetric')?.value || 'time';
-  const entries = pd.cardio.filter(e => e.activity === act).reverse();
+  const entries = pd.cardio.filter(e => (e.activity || e.exercise) === act).reverse();
   const labels = entries.map(e => cpFormatDate(e.date));
   let data, label, colour;
   if (met === 'time') { data = entries.map(e => cpTimeToSec(e.time)); label = 'Time (sec)'; colour = '#4A9DC8'; }
@@ -4717,8 +4867,9 @@ function renderDetailCardHistory(clientId) {
   const pd = PROGRESS_DATA[clientId || currentDetailClient?.id];
   if (!pd) return;
   document.getElementById('dtCardHistory').innerHTML = pd.cardio.map(e => {
-    const distStr = e.distance ? `${e.distance} ${e.unit}` : '—';
-    return `<tr><td class="val">${cpFormatDate(e.date)}</td><td class="val">${e.activity}</td><td>${distStr}</td><td class="val">${e.time||'—'}</td><td>${e.avgHR?e.avgHR+' bpm':'—'}</td><td>${e.rpe||'—'}</td></tr>`;
+    const actName = e.activity || e.exercise || '—';
+    const distStr = e.distance ? `${e.distance} ${e.unit || 'km'}` : '—';
+    return `<tr><td class="val">${cpFormatDate(e.date)}</td><td class="val">${actName}</td><td>${distStr}</td><td class="val">${e.time||'—'}</td><td>${e.avgHR?e.avgHR+' bpm':'—'}</td><td>${e.rpe||'—'}</td></tr>`;
   }).join('');
 }
 
@@ -4803,7 +4954,29 @@ function _buildWeekFromWorkoutLogForClient(clientId) {
       if (hasRunning) running += durH; else if (hasCardio) otherCardio += durH; else strength += durH;
       runExercises.forEach(e => { (e.sets || []).forEach(s => { const distStr = String(s.reps || s.weight || ''); const numMatch = distStr.match(/([\d.]+)/); if (numMatch) { let km = parseFloat(numMatch[1]); const lower = distStr.toLowerCase(); if (lower.includes('mi')) km *= 1.60934; else if (lower.includes('m') && !lower.includes('km')) km /= 1000; dayRunKm += km; } }); });
     });
-    return { day: name, strength, running, otherCardio, runKm: Math.round(dayRunKm*100)/100, steps: 0, sleep: 0 };
+    // Collect individual cardio sessions
+    const cardioSessions = [];
+    dayWorkouts.forEach(w => {
+      (w.exercises || []).forEach(e => {
+        if (_isCardioExercise(e.name) || _isSledExercise(e.name)) {
+          let dist = 0, timeSec = 0;
+          const isSled = _isSledExercise(e.name);
+          (e.sets || []).forEach(s => {
+            dist += parseFloat(s.reps) || 0;
+            if (!isSled) {
+              const ts = String(s.weight || '');
+              if (ts.includes(':')) { const p = ts.split(':'); timeSec += (parseInt(p[0])||0)*60 + (parseInt(p[1])||0); }
+              else timeSec += (parseFloat(ts)||0)*60;
+            }
+          });
+          if (dist > 0 || timeSec > 0) {
+            const unit = isSled ? 'm' : (dist > 100 ? 'm' : 'km');
+            cardioSessions.push({ name: e.name, distance: dist, unit, timeSec });
+          }
+        }
+      });
+    });
+    return { day: name, strength, running, otherCardio, runKm: Math.round(dayRunKm*100)/100, steps: 0, sleep: 0, cardioSessions };
   });
   return { weekStart, days };
 }
@@ -4847,6 +5020,9 @@ function renderDTWeeklySummary() {
   renderBarChartSimple('dtWkRunChart', dayLabels, days.map(d=>d.runKm), 'Running (km)', '#4A9DC8');
   renderBarChartSimple('dtWkStepsChart', dayLabels, days.map(d=>d.steps), 'Steps', '#8BB07E');
   renderBarChartSimple('dtWkSleepChart', dayLabels, days.map(d=>d.sleep), 'Sleep (hours)', '#9B8EC4');
+
+  // Cardio breakdown
+  _renderCardioBreakdown(days, 'dtWkCardioBreakdown', 'dtWkCardioList');
 }
 
 function updateCheckinDay() {
@@ -5288,6 +5464,7 @@ function selectFlow(btn, val) {
 function selectImpact(btn, val) {
   btn.parentElement.querySelectorAll('.flow-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
+  btn.dataset.impactVal = val;
 }
 
 function selectPerf(btn, val) {
@@ -5314,16 +5491,19 @@ function submitCycleLog() {
   const energy = parseInt(document.getElementById('cycleEnergy').value) || 3;
   const mood = parseInt(document.getElementById('cycleMood').value) || 3;
   const recovery = parseInt(document.getElementById('cycleRecovery').value) || 3;
-  // Impact
+  // Impact — prefer data attribute set by selectImpact(), fall back to DOM search
   let impact = 'none';
-  const impactBtns = document.querySelectorAll('#cycleContent [onclick*="selectImpact"] .flow-btn.selected, #cycleContent .flow-btn.selected');
-  // More targeted: find the impact section
-  document.querySelectorAll('#cycleContent div').forEach(div => {
-    if (div.textContent.includes('affect today')) {
-      const sel = div.parentElement.querySelector('.flow-btn.selected');
-      if (sel) impact = sel.textContent.toLowerCase().replace('no impact','none');
-    }
-  });
+  const impactSel = document.querySelector('#cycleContent .flow-btn.selected[data-impact-val]');
+  if (impactSel) {
+    impact = impactSel.dataset.impactVal;
+  } else {
+    // Fallback: find the impact section by looking for buttons with onclick containing selectImpact
+    const impactBtns = document.querySelectorAll('#cycleContent [onclick*="selectImpact"]');
+    impactBtns.forEach(btn => { if (btn.classList.contains('selected')) {
+      const match = btn.getAttribute('onclick').match(/selectImpact\(this,'(\w+)'\)/);
+      if (match) impact = match[1];
+    }});
+  }
   // Symptoms
   const symptoms = [...document.querySelectorAll('.symptom-chip.selected')].map(c => c.textContent);
 
@@ -5456,9 +5636,11 @@ function renderPTCycleHealth(clientId) {
   const burdenLabel = !hasBurdenData ? 'No data' : burden <= 3 ? 'Low' : burden <= 6 ? 'Moderate' : 'High';
   const burdenDisplay = hasBurdenData ? burden : '—';
 
-  // Training impact from last entry
+  // Training impact from last entry (with safe fallbacks)
   const impactMap = { none:'No Impact', mild:'Mild', moderate:'Moderate', high:'High' };
   const impactColour = { none:'var(--sage)', mild:'var(--ocean)', moderate:'var(--warning)', high:'var(--danger)' };
+  const impactKey = (lastEntry && lastEntry.impact && impactMap[lastEntry.impact]) ? lastEntry.impact : 'none';
+  const hasImpactData = !!(lastEntry && lastEntry.impact && impactMap[lastEntry.impact]);
 
   // Medical flags
   let flags = [];
@@ -5531,9 +5713,9 @@ function renderPTCycleHealth(clientId) {
       <div style="background:var(--slate-raised);border-radius:10px;padding:16px;">
         <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;">Training Impact (latest)</div>
         <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;color:${impactColour[lastEntry?.impact||'none']};">${impactMap[lastEntry?.impact||'none']}</span>
+          <span style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:600;color:${impactColour[impactKey]};">${hasImpactData ? impactMap[impactKey] : (lastEntry ? 'No Impact' : '—')}</span>
         </div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;">From check-in: ${lastEntry?.date || '—'}</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;">${lastEntry ? 'From check-in: ' + lastEntry.date : 'No cycle data logged yet'}</div>
       </div>
     </div>
 
@@ -6325,9 +6507,9 @@ function loadNutritionClient() {
 
     <!-- ═══ MODE TOGGLE: Calculated Estimate / Goal-Based Ranges ═══ -->
     <div class="card" style="margin-bottom:16px;">
-      <div style="display:flex;background:var(--slate-deep);border-radius:10px;padding:4px;margin-bottom:16px;border:1px solid var(--slate-border);">
-        <button id="nutModeCalc" class="btn btn-sm" style="flex:1;padding:10px 0;border-radius:8px;font-size:13px;font-family:'Space Grotesk',sans-serif;border:none;cursor:pointer;transition:all 0.2s;" onclick="nutSetMode('calculated')">Calculated Estimate</button>
-        <button id="nutModeRange" class="btn btn-sm" style="flex:1;padding:10px 0;border-radius:8px;font-size:13px;font-family:'Space Grotesk',sans-serif;border:none;cursor:pointer;transition:all 0.2s;" onclick="nutSetMode('ranges')">Goal-Based Ranges</button>
+      <div style="display:flex;gap:4px;background:var(--slate-deep);border-radius:10px;padding:4px;margin-bottom:16px;border:1px solid var(--slate-border);">
+        <button id="nutModeCalc" style="flex:1;padding:10px 4px;border-radius:8px;font-size:12px;font-weight:600;font-family:'Space Grotesk',sans-serif;border:none;cursor:pointer;transition:all 0.2s;white-space:nowrap;text-align:center;" onclick="nutSetMode('calculated')">Calculated Estimate</button>
+        <button id="nutModeRange" style="flex:1;padding:10px 4px;border-radius:8px;font-size:12px;font-weight:600;font-family:'Space Grotesk',sans-serif;border:none;cursor:pointer;transition:all 0.2s;white-space:nowrap;text-align:center;" onclick="nutSetMode('ranges')">Goal-Based Ranges</button>
       </div>
 
       <!-- ── CALCULATED ESTIMATE VIEW ── -->
