@@ -1111,10 +1111,38 @@
         <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Carbs</div><div class="kpi-value text-sage" id="nutClientCarb">—<span style="font-size:14px;color:var(--text-dim);">g</span></div><div class="kpi-sub" id="nutClientCarbSub"></div></div>
         <div class="kpi" style="border-top:3px solid var(--warning);"><div class="kpi-label">Fat</div><div class="kpi-value text-warning" id="nutClientFat">—<span style="font-size:14px;color:var(--text-dim);">g</span></div><div class="kpi-sub" id="nutClientFatSub"></div></div>
       </div>
+      <!-- Today's intake + Log Food CTA -->
+      <div class="card" style="padding:16px;border:1px solid var(--ember);border-radius:12px;background:linear-gradient(135deg, rgba(232,97,45,0.08), transparent);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div>
+            <h3 style="margin:0;font-size:15px;">Today's Intake</h3>
+            <p style="font-size:12px;color:var(--text-dim);margin-top:2px;" id="nutTodayDate"></p>
+          </div>
+          <button onclick="showClientPage('clientFoodDiary')" class="btn btn-ember" style="padding:10px 20px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+            ${ic('plus','#fff',16)} Log Food
+          </button>
+        </div>
+        <div id="nutTodayIntake">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;text-align:center;">
+            <div><div style="font-size:18px;font-weight:700;color:var(--ember);font-family:'Space Grotesk';" id="nutTodayCal">0</div><div style="font-size:10px;color:var(--text-dim);">kcal</div></div>
+            <div><div style="font-size:16px;font-weight:600;color:var(--ocean);font-family:'Space Grotesk';" id="nutTodayPro">0g</div><div style="font-size:10px;color:var(--text-dim);">protein</div></div>
+            <div><div style="font-size:16px;font-weight:600;color:var(--sage-text);font-family:'Space Grotesk';" id="nutTodayCarb">0g</div><div style="font-size:10px;color:var(--text-dim);">carbs</div></div>
+            <div><div style="font-size:16px;font-weight:600;color:var(--warning);font-family:'Space Grotesk';" id="nutTodayFat">0g</div><div style="font-size:10px;color:var(--text-dim);">fat</div></div>
+          </div>
+          <div style="height:6px;background:var(--slate-deep);border-radius:3px;overflow:hidden;margin-top:10px;">
+            <div id="nutTodayCalBar" style="height:100%;background:var(--ember);border-radius:3px;transition:width 0.3s;width:0%;"></div>
+          </div>
+          <div style="text-align:right;margin-top:4px;"><span style="font-size:11px;color:var(--text-dim);" id="nutTodayCalPct"></span></div>
+        </div>
+        <div style="text-align:center;margin-top:8px;">
+          <a onclick="showClientPage('clientFoodDiary')" style="font-size:12px;color:var(--ocean-text);cursor:pointer;text-decoration:underline;">View full diary &rarr;</a>
+        </div>
+      </div>
+
       <div id="nutClientNotes" style="display:none;" class="card"></div>
       <div class="card">
-        <h3>Daily Nutrition Framework</h3>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;" id="nutritionMeals"></div>
+        <h3 style="margin-bottom:14px;">Daily Nutrition Framework</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="nutritionMeals"></div>
       </div>
       <p style="font-size:11px;color:var(--text-dim);text-align:center;padding:12px;background:var(--slate-card);border-radius:8px;border:1px dashed var(--slate-border);margin-top:4px;">
         This guidance is for general information only. Adam Heayberd is not a registered nutritionist or dietitian. Please consult a qualified professional for specific dietary needs.
@@ -2573,6 +2601,7 @@ function showClientPage(id) {
   if (nav) nav.classList.add('active');
   if (id === 'clientProgress') initClientProgress();
   if (id === 'clientFoodDiary') initFoodDiary();
+  if (id === 'clientNutrition') updateNutTodayIntake();
   if (id === 'clientCheckin') resetCheckinWizard();
   if (id === 'clientNotifications') renderClientNotifFullList();
   if (id === 'clientOnboarding') renderClientOnboardingForm();
@@ -2827,7 +2856,11 @@ function initClientApp() {
     if (nutritionEl) nutritionEl.innerHTML = meals.map((m, i) => {
       const colour = mealColours[i % mealColours.length];
       const mealCal = Math.round(cal * (m.pct || 25) / 100);
-      return `<div style="background:var(--slate-raised);padding:16px;border-radius:10px;border-left:3px solid ${colour};"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><h4 style="color:${colour};margin-bottom:0;">${m.name}</h4><span style="font-size:12px;color:${colour};font-family:'Space Grotesk';font-weight:600;">~${mealCal} kcal</span></div><p style="font-size:13px;color:var(--text-body);">${m.desc}</p></div>`;
+      return `<div style="background:var(--slate-raised);padding:14px;border-radius:10px;border-left:3px solid ${colour};">
+        <h4 style="color:${colour};margin:0 0 2px 0;font-size:15px;">${m.name}</h4>
+        <div style="font-size:12px;color:${colour};font-family:'Space Grotesk',sans-serif;font-weight:600;margin-bottom:8px;">~${mealCal} kcal</div>
+        <p style="font-size:12px;color:var(--text-body);line-height:1.5;margin:0;">${m.desc}</p>
+      </div>`;
     }).join('');
   } else {
     // Default placeholder when no nutrition assigned
@@ -5916,6 +5949,37 @@ function _fdGetRecents() {
     if (seen.size >= 20) break;
   }
   return [...seen.values()];
+}
+
+function updateNutTodayIntake() {
+  const todayStr = _fdDateStr(new Date());
+  const totals = _fdDayTotals(todayStr);
+  const targets = _fdGetTargets();
+
+  // Date label
+  const dateEl = document.getElementById('nutTodayDate');
+  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'short'});
+
+  // Values
+  const calEl = document.getElementById('nutTodayCal');
+  if (calEl) calEl.textContent = totals.cal;
+  const proEl = document.getElementById('nutTodayPro');
+  if (proEl) proEl.textContent = totals.protein + 'g';
+  const carbEl = document.getElementById('nutTodayCarb');
+  if (carbEl) carbEl.textContent = totals.carbs + 'g';
+  const fatEl = document.getElementById('nutTodayFat');
+  if (fatEl) fatEl.textContent = totals.fat + 'g';
+
+  // Progress bar
+  const bar = document.getElementById('nutTodayCalBar');
+  const pctEl = document.getElementById('nutTodayCalPct');
+  if (bar && targets && targets.cal) {
+    const pct = Math.min(100, totals.cal / targets.cal * 100);
+    bar.style.width = pct.toFixed(1) + '%';
+    if (pctEl) pctEl.textContent = Math.round(pct) + '% of daily target';
+  } else if (pctEl) {
+    pctEl.textContent = targets ? '0% of daily target' : 'No targets set';
+  }
 }
 
 function initFoodDiary() {
