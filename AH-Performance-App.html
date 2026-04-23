@@ -1119,7 +1119,7 @@
             <p style="font-size:12px;color:var(--text-dim);margin-top:2px;" id="nutTodayDate"></p>
           </div>
           <button onclick="showClientPage('clientFoodDiary')" class="btn btn-ember" style="padding:10px 20px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
-            ${ic('plus','#fff',16)} Log Food
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Log Food
           </button>
         </div>
         <div id="nutTodayIntake">
@@ -1211,9 +1211,9 @@
         <div style="display:flex;gap:8px;margin-bottom:16px;">
           <div style="flex:1;position:relative;">
             <input type="text" id="fdSearchInput" placeholder="Search for a food..." style="width:100%;padding:12px 12px 12px 38px;border-radius:10px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:16px;" oninput="fdSearchFood(this.value)">
-            <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:0.4;">${ic('search','currentColor',16)}</span>
+            <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:0.4;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
           </div>
-          <button onclick="fdStartBarcodeScan()" style="width:48px;height:48px;border-radius:10px;border:1px solid var(--slate-border);background:var(--slate-card);cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Scan barcode">${ic('barcode','var(--ember)',20)}</button>
+          <button onclick="fdStartBarcodeScan()" style="width:48px;height:48px;border-radius:10px;border:1px solid var(--slate-border);background:var(--slate-card);cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Scan barcode"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8612D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="2" height="16"/><rect x="6" y="4" width="1" height="16"/><rect x="9" y="4" width="2" height="16"/><rect x="14" y="4" width="1" height="16"/><rect x="17" y="4" width="3" height="16"/><rect x="22" y="4" width="1" height="16"/></svg></button>
         </div>
 
         <!-- Tabs: Recents / Search Results -->
@@ -1227,7 +1227,7 @@
         <!-- Manual entry button -->
         <div style="margin-top:16px;text-align:center;">
           <button onclick="fdShowManualEntry()" class="btn" style="background:var(--slate-raised);color:var(--text-body);border:1px solid var(--slate-border);width:100%;padding:14px;border-radius:10px;font-size:14px;cursor:pointer;">
-            ${ic('plus','var(--ember)',16)} &nbsp;Add Custom Food
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8612D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> &nbsp;Add Custom Food
           </button>
         </div>
       </div>
