@@ -2298,9 +2298,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (res.ok) {
         const state = await res.json();
         if (state && state.savedAt && state.savedAt > (_lastAppliedSavedAt || 0)) {
-          // Safety: don't apply if server has fewer clients than we currently have
+          // Safety: NEVER apply if server has fewer clients than we currently have
           const serverClientCount = (state.clients || []).length;
-          if (CLIENTS.length > 1 && serverClientCount < CLIENTS.length) {
+          if (CLIENTS.length > 0 && serverClientCount < CLIENTS.length) {
             console.warn('AH Performance: Auto-sync blocked — server has ' + serverClientCount + ' clients, we have ' + CLIENTS.length + '. Re-pushing our data.');
             saveAppState(); // Push our richer data back to server
             return;
@@ -2351,10 +2351,16 @@ function _buildState() {
 function _applyState(state, _source) {
   if (!state || !state.savedAt) return;
   // SAFETY: never replace existing clients with fewer clients (protects against data wipe)
-  if (CLIENTS.length > 1 && (!state.clients || state.clients.length < CLIENTS.length)) {
-    console.warn('AH Performance: BLOCKED state apply — would reduce clients from ' + CLIENTS.length + ' to ' + (state.clients ? state.clients.length : 0) + ' (source: ' + (_source||'unknown') + ')');
+  const incomingClients = (state.clients || []).length;
+  if (CLIENTS.length > 0 && incomingClients < CLIENTS.length) {
+    console.warn('AH Performance: BLOCKED state apply — would reduce clients from ' + CLIENTS.length + ' to ' + incomingClients + ' (source: ' + (_source||'unknown') + ')');
     return;
   }
+  // Save emergency snapshot BEFORE applying (can recover from this if something goes wrong)
+  try {
+    const emergencySnap = JSON.stringify(_buildState());
+    localStorage.setItem('ahPerformanceState_emergency', emergencySnap);
+  } catch(e) {}
   if (state.clients && state.clients.length) { CLIENTS.length = 0; state.clients.forEach(c => CLIENTS.push(c)); }
   if (state.users) {
     // Merge: keep defaults + add any from stored state
@@ -2399,11 +2405,12 @@ function _applyState(state, _source) {
 function saveAppState() {
   const state = _buildState();
   const stateJSON = JSON.stringify(state);
-  // Save to localStorage FIRST (most reliable — survives server resets)
+  const clientCount = (state.clients || []).length;
+  // Save to ALL localStorage slots (triple redundancy)
   try {
     localStorage.setItem('ahPerformanceState', stateJSON);
-    // Rotate backup: keep previous save as backup in case current save is corrupted
     localStorage.setItem('ahPerformanceState_backup', stateJSON);
+    localStorage.setItem('ahPerformanceState_emergency', stateJSON);
   } catch (e) {}
   // Then save to server (for cross-device sync)
   try {
@@ -2411,17 +2418,35 @@ function saveAppState() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: stateJSON
+    }).then(r => r.json()).then(data => {
+      // If server rejected the save (would reduce clients), re-fetch server data
+      if (data && data.ok === false && data.currentClients > clientCount) {
+        console.warn('AH Performance: Server has more clients (' + data.currentClients + ') than us (' + clientCount + '). Fetching server data...');
+        fetch('/api/state').then(r => r.json()).then(serverState => {
+          if (serverState && serverState.savedAt) {
+            _applyState(serverState, 'server-recovery');
+            saveAppState(); // Re-save with merged data
+          }
+        }).catch(() => {});
+      }
     }).catch(() => {});
   } catch (e) {}
 }
 
 async function loadAppState() {
-  // Load from BOTH sources and use whichever has the MOST data.
-  // This prevents data loss when the server resets (e.g. Render redeploy).
+  // ═══════════════════════════════════════════════════════════
+  //  FOUR-SOURCE LOADING: server, localStorage, backup, emergency
+  //  Always picks the source with the MOST clients.
+  //  NEVER allows data to be lost — even across deploys.
+  // ═══════════════════════════════════════════════════════════
+
+  // 1. Load from ALL available sources
   let serverState = null;
   let localState = null;
+  let backupState = null;
+  let emergencyState = null;
 
-  // Try server
+  // Source A: Server
   try {
     const res = await fetch('/api/state');
     if (res.ok) {
@@ -2430,7 +2455,7 @@ async function loadAppState() {
     }
   } catch (e) {}
 
-  // Try localStorage (primary + backup)
+  // Source B: localStorage (primary)
   try {
     const raw = localStorage.getItem('ahPerformanceState');
     if (raw) {
@@ -2439,8 +2464,7 @@ async function loadAppState() {
     }
   } catch (e) {}
 
-  // Also check backup slot
-  let backupState = null;
+  // Source C: localStorage backup
   try {
     const raw = localStorage.getItem('ahPerformanceState_backup');
     if (raw) {
@@ -2449,12 +2473,21 @@ async function loadAppState() {
     }
   } catch (e) {}
 
-  // Pick the RICHEST state (most clients), then break ties by newest timestamp.
-  // This prevents an empty server state from ever winning over real local data.
+  // Source D: Emergency snapshot (written before every _applyState)
+  try {
+    const raw = localStorage.getItem('ahPerformanceState_emergency');
+    if (raw) {
+      const state = JSON.parse(raw);
+      if (state && state.savedAt) emergencyState = state;
+    }
+  } catch (e) {}
+
+  // 2. Gather all valid candidates
   const candidates = [
     { state: serverState, source: 'server' },
     { state: localState, source: 'localStorage' },
-    { state: backupState, source: 'backup' }
+    { state: backupState, source: 'backup' },
+    { state: emergencyState, source: 'emergency' }
   ].filter(c => c.state && c.state.savedAt);
 
   if (candidates.length === 0) {
@@ -2462,37 +2495,40 @@ async function loadAppState() {
     return;
   }
 
-  // Sort: most clients first, then newest savedAt
+  // 3. Sort: MOST clients wins, then newest savedAt breaks ties
   candidates.sort((a, b) => {
     const aClients = (a.state.clients || []).length;
     const bClients = (b.state.clients || []).length;
-    if (aClients !== bClients) return bClients - aClients; // more clients wins
-    return b.state.savedAt - a.state.savedAt; // newer wins
+    if (aClients !== bClients) return bClients - aClients;
+    return b.state.savedAt - a.state.savedAt;
   });
 
   const chosen = candidates[0].state;
   const source = candidates[0].source;
+  const clientCount = (chosen.clients || []).length;
+
+  console.log('AH Performance: State candidates: ' + candidates.map(c =>
+    c.source + '(' + (c.state.clients||[]).length + ' clients)'
+  ).join(', ') + ' → chose ' + source);
 
   _applyState(chosen, source);
   console.log('AH Performance: State loaded from ' + source + ' (' + CLIENTS.length + ' clients, ' + USERS.length + ' users, saved ' + new Date(chosen.savedAt).toLocaleString() + ')');
 
-  // Always save a backup copy to localStorage
-  try { localStorage.setItem('ahPerformanceState_backup', JSON.stringify(chosen)); } catch (e) {}
+  // 4. Sync ALL storage locations to the winning state
+  const chosenJSON = JSON.stringify(chosen);
+  try { localStorage.setItem('ahPerformanceState', chosenJSON); } catch (e) {}
+  try { localStorage.setItem('ahPerformanceState_backup', chosenJSON); } catch (e) {}
 
-  // If server didn't have the best data, re-push to server so it's synced
+  // Re-push to server if it didn't have the best data
   if (source !== 'server') {
     try {
       fetch('/api/state', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(chosen)
-      }).then(() => console.log('AH Performance: Restored server state from ' + source))
+        body: chosenJSON
+      }).then(() => console.log('AH Performance: Restored server state from ' + source + ' (' + clientCount + ' clients)'))
         .catch(() => {});
     } catch (e) {}
-  }
-  // If localStorage didn't have the best data, update it
-  if (source !== 'localStorage') {
-    try { localStorage.setItem('ahPerformanceState', JSON.stringify(chosen)); } catch (e) {}
   }
 }
 
@@ -2514,10 +2550,10 @@ function buildSidebars() {
     <div class="nav-item" onclick="showClientPage('clientProgress')"><span class="nav-ic">${ic('progress','currentColor')}</span><span>My Progress</span></div>
     <div class="nav-item" onclick="showClientPage('clientNutrition')"><span class="nav-ic">${ic('nutrition','currentColor')}</span><span>Nutrition</span></div>
     <div class="nav-item" onclick="showClientPage('clientFoodDiary')"><span class="nav-ic">${ic('foodDiary','currentColor')}</span><span>Food Diary</span></div>
-    <div class="nav-item" onclick="showClientPage('clientMessages')"><span class="nav-ic">${ic('messages','currentColor')}</span><span>Messages</span><span class="badge" id="clientMsgBadge">2</span></div>
+    <div class="nav-item" onclick="showClientPage('clientMessages')"><span class="nav-ic">${ic('messages','currentColor')}</span><span>Messages</span><span class="badge hidden" id="clientMsgBadge"></span></div>
     <div class="nav-item" onclick="showClientPage('clientCheckin')"><span class="nav-ic">${ic('checkin','currentColor')}</span><span>Check In</span><span class="badge checkin-badge hidden" id="clientCheckinBadge">Due</span></div>
     <div class="nav-item" onclick="showClientPage('clientWellbeing')"><span class="nav-ic">${ic('wellbeing','currentColor')}</span><span>Wellbeing</span></div>
-    <div class="nav-item" onclick="showClientPage('clientNotifications')"><span class="nav-ic">${ic('bell','currentColor')}</span><span>Notifications</span><span class="badge" id="clientNotifSidebarBadge">2</span></div>
+    <div class="nav-item" onclick="showClientPage('clientNotifications')"><span class="nav-ic">${ic('bell','currentColor')}</span><span>Notifications</span><span class="badge hidden" id="clientNotifSidebarBadge"></span></div>
     <div class="nav-item logout-item" onclick="logout()"><span class="nav-ic">${ic('logout','currentColor')}</span><span>Log out</span></div>`;
 
   // PT sidebar
@@ -2527,7 +2563,7 @@ function buildSidebars() {
     <div class="sidebar-section">Dashboard</div>
     <div class="nav-item active" onclick="showPTPage('ptDash')"><span class="nav-ic">${ic('dashboard','currentColor')}</span><span>Overview</span></div>
     <div class="nav-item" onclick="showPTPage('ptClients')"><span class="nav-ic">${ic('clients','currentColor')}</span><span>Clients</span></div>
-    <div class="nav-item" onclick="showPTPage('ptMessages')"><span class="nav-ic">${ic('messages','currentColor')}</span><span>Messages</span><span class="badge" id="ptMsgSidebarBadge">3</span></div>
+    <div class="nav-item" onclick="showPTPage('ptMessages')"><span class="nav-ic">${ic('messages','currentColor')}</span><span>Messages</span><span class="badge hidden" id="ptMsgSidebarBadge"></span></div>
     <div class="sidebar-section">Tools</div>
     <div class="nav-item" onclick="showPTPage('ptProgrammes')"><span class="nav-ic">${ic('programme','currentColor')}</span><span>Programmes</span></div>
     <div class="nav-item" onclick="showPTPage('ptNutrition')"><span class="nav-ic">${ic('nutrition','currentColor')}</span><span>Nutrition</span></div>
@@ -2606,8 +2642,8 @@ function login(role) {
   currentRole = role;
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('onboardingLanding').style.display = 'none';
-  if (role === 'client') { document.getElementById('clientApp').classList.add('active'); initClientApp(); showClientPage('clientDash'); mobileNav('clientDash'); }
-  else { document.getElementById('ptApp').classList.add('active'); initPTApp(); showPTPage('ptDash'); }
+  if (role === 'client') { document.getElementById('clientApp').classList.add('active'); initClientApp(); showClientPage('clientDash'); mobileNav('clientDash'); updateSidebarBadges(); }
+  else { document.getElementById('ptApp').classList.add('active'); initPTApp(); showPTPage('ptDash'); updateSidebarBadges(); }
 }
 
 function logout() {
