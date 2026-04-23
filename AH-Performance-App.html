@@ -2298,7 +2298,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (res.ok) {
         const state = await res.json();
         if (state && state.savedAt && state.savedAt > (_lastAppliedSavedAt || 0)) {
-          _applyState(state);
+          // Safety: don't apply if server has fewer clients than we currently have
+          const serverClientCount = (state.clients || []).length;
+          if (CLIENTS.length > 1 && serverClientCount < CLIENTS.length) {
+            console.warn('AH Performance: Auto-sync blocked — server has ' + serverClientCount + ' clients, we have ' + CLIENTS.length + '. Re-pushing our data.');
+            saveAppState(); // Push our richer data back to server
+            return;
+          }
+          _applyState(state, 'auto-sync');
           _lastAppliedSavedAt = state.savedAt;
           // Re-render current view
           if (currentRole === 'client') {
@@ -2341,8 +2348,13 @@ function _buildState() {
   };
 }
 
-function _applyState(state) {
+function _applyState(state, _source) {
   if (!state || !state.savedAt) return;
+  // SAFETY: never replace existing clients with fewer clients (protects against data wipe)
+  if (CLIENTS.length > 1 && (!state.clients || state.clients.length < CLIENTS.length)) {
+    console.warn('AH Performance: BLOCKED state apply — would reduce clients from ' + CLIENTS.length + ' to ' + (state.clients ? state.clients.length : 0) + ' (source: ' + (_source||'unknown') + ')');
+    return;
+  }
   if (state.clients && state.clients.length) { CLIENTS.length = 0; state.clients.forEach(c => CLIENTS.push(c)); }
   if (state.users) {
     // Merge: keep defaults + add any from stored state
@@ -2386,20 +2398,25 @@ function _applyState(state) {
 
 function saveAppState() {
   const state = _buildState();
-  // Save to server (shared across devices)
+  const stateJSON = JSON.stringify(state);
+  // Save to localStorage FIRST (most reliable — survives server resets)
+  try {
+    localStorage.setItem('ahPerformanceState', stateJSON);
+    // Rotate backup: keep previous save as backup in case current save is corrupted
+    localStorage.setItem('ahPerformanceState_backup', stateJSON);
+  } catch (e) {}
+  // Then save to server (for cross-device sync)
   try {
     fetch('/api/state', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state)
+      body: stateJSON
     }).catch(() => {});
   } catch (e) {}
-  // Also save to localStorage as fallback
-  try { localStorage.setItem('ahPerformanceState', JSON.stringify(state)); } catch (e) {}
 }
 
 async function loadAppState() {
-  // Load from BOTH sources and use whichever is newest.
+  // Load from BOTH sources and use whichever has the MOST data.
   // This prevents data loss when the server resets (e.g. Render redeploy).
   let serverState = null;
   let localState = null;
@@ -2413,7 +2430,7 @@ async function loadAppState() {
     }
   } catch (e) {}
 
-  // Try localStorage
+  // Try localStorage (primary + backup)
   try {
     const raw = localStorage.getItem('ahPerformanceState');
     if (raw) {
@@ -2422,36 +2439,60 @@ async function loadAppState() {
     }
   } catch (e) {}
 
-  // Pick the newest state (or whichever exists)
-  let chosen = null;
-  let source = 'none';
-  if (serverState && localState) {
-    if (serverState.savedAt >= localState.savedAt) {
-      chosen = serverState; source = 'server';
-    } else {
-      chosen = localState; source = 'localStorage (newer)';
+  // Also check backup slot
+  let backupState = null;
+  try {
+    const raw = localStorage.getItem('ahPerformanceState_backup');
+    if (raw) {
+      const state = JSON.parse(raw);
+      if (state && state.savedAt) backupState = state;
     }
-  } else if (serverState) {
-    chosen = serverState; source = 'server';
-  } else if (localState) {
-    chosen = localState; source = 'localStorage';
+  } catch (e) {}
+
+  // Pick the RICHEST state (most clients), then break ties by newest timestamp.
+  // This prevents an empty server state from ever winning over real local data.
+  const candidates = [
+    { state: serverState, source: 'server' },
+    { state: localState, source: 'localStorage' },
+    { state: backupState, source: 'backup' }
+  ].filter(c => c.state && c.state.savedAt);
+
+  if (candidates.length === 0) {
+    console.log('AH Performance: No saved state found — starting fresh');
+    return;
   }
 
-  if (chosen) {
-    _applyState(chosen);
-    console.log('AH Performance: State loaded from ' + source + ' (' + CLIENTS.length + ' clients, ' + USERS.length + ' users, saved ' + new Date(chosen.savedAt).toLocaleString() + ')');
+  // Sort: most clients first, then newest savedAt
+  candidates.sort((a, b) => {
+    const aClients = (a.state.clients || []).length;
+    const bClients = (b.state.clients || []).length;
+    if (aClients !== bClients) return bClients - aClients; // more clients wins
+    return b.state.savedAt - a.state.savedAt; // newer wins
+  });
 
-    // If localStorage had newer data, re-push to server so it's synced
-    if (source.includes('localStorage')) {
-      try {
-        fetch('/api/state', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(chosen)
-        }).then(() => console.log('AH Performance: Restored server state from localStorage'))
-          .catch(() => {});
-      } catch (e) {}
-    }
+  const chosen = candidates[0].state;
+  const source = candidates[0].source;
+
+  _applyState(chosen, source);
+  console.log('AH Performance: State loaded from ' + source + ' (' + CLIENTS.length + ' clients, ' + USERS.length + ' users, saved ' + new Date(chosen.savedAt).toLocaleString() + ')');
+
+  // Always save a backup copy to localStorage
+  try { localStorage.setItem('ahPerformanceState_backup', JSON.stringify(chosen)); } catch (e) {}
+
+  // If server didn't have the best data, re-push to server so it's synced
+  if (source !== 'server') {
+    try {
+      fetch('/api/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chosen)
+      }).then(() => console.log('AH Performance: Restored server state from ' + source))
+        .catch(() => {});
+    } catch (e) {}
+  }
+  // If localStorage didn't have the best data, update it
+  if (source !== 'localStorage') {
+    try { localStorage.setItem('ahPerformanceState', JSON.stringify(chosen)); } catch (e) {}
   }
 }
 
