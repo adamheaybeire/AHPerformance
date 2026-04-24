@@ -446,6 +446,8 @@
   .wl-check-btn.checked{background:var(--sage);border-color:var(--sage);color:white;}
   .wl-add-set{background:none;border:1px dashed var(--slate-border);border-radius:8px;padding:8px;width:100%;color:var(--text-dim);font-size:11px;cursor:pointer;margin-top:4px;-webkit-tap-highlight-color:transparent;}
   .wl-add-set:active{background:var(--slate-raised);}
+  .wl-remove-set-btn{width:28px;height:28px;border-radius:8px;border:none;background:transparent;color:var(--text-dim);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;opacity:0.5;transition:all 0.15s;margin-left:-4px;}
+  .wl-remove-set-btn:active{opacity:1;color:#e74c3c;background:rgba(231,76,60,0.1);}
   .wl-notes-input{width:100%;padding:8px 10px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-body);font-size:16px;resize:none;min-height:32px;font-family:Inter,sans-serif;}
   .wl-notes-input:focus{border-color:var(--ocean);outline:none;}
   /* Timer bar — flexbox child above footer */
@@ -1200,7 +1202,7 @@
 
     <!-- Food Diary: Log Overlay -->
     <div id="fdLogOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--slate-bg);z-index:9999;overflow-y:auto;">
-      <div style="max-width:500px;margin:0 auto;padding:16px;">
+      <div style="max-width:500px;margin:0 auto;padding:16px;padding-top:calc(16px + env(safe-area-inset-top, 0px));">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
           <button onclick="fdCloseLog()" style="background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:8px;">&larr; Back</button>
           <h3 id="fdLogMealTitle" style="margin:0;font-size:16px;">Log Food</h3>
@@ -1235,7 +1237,7 @@
 
     <!-- Food Diary: Product Detail Overlay -->
     <div id="fdProductOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--slate-bg);z-index:10000;overflow-y:auto;">
-      <div style="max-width:500px;margin:0 auto;padding:16px;">
+      <div style="max-width:500px;margin:0 auto;padding:16px;padding-top:calc(16px + env(safe-area-inset-top, 0px));">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
           <button onclick="fdCloseProduct()" style="background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:8px;">&larr; Back</button>
           <h3 id="fdProductTitle" style="margin:0;font-size:16px;max-width:60%;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Product</h3>
@@ -1296,7 +1298,7 @@
 
     <!-- Food Diary: Manual Entry Overlay -->
     <div id="fdManualOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--slate-bg);z-index:10000;overflow-y:auto;">
-      <div style="max-width:500px;margin:0 auto;padding:16px;">
+      <div style="max-width:500px;margin:0 auto;padding:16px;padding-top:calc(16px + env(safe-area-inset-top, 0px));">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
           <button onclick="fdCloseManual()" style="background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:8px;">&larr; Back</button>
           <h3 style="margin:0;font-size:16px;">Add Custom Food</h3>
@@ -2361,7 +2363,14 @@ function _applyState(state, _source) {
     const emergencySnap = JSON.stringify(_buildState());
     localStorage.setItem('ahPerformanceState_emergency', emergencySnap);
   } catch(e) {}
-  if (state.clients && state.clients.length) { CLIENTS.length = 0; state.clients.forEach(c => CLIENTS.push(c)); }
+  if (state.clients && state.clients.length) {
+    CLIENTS.length = 0; state.clients.forEach(c => CLIENTS.push(c));
+    // Re-link currentDetailClient to the new object in CLIENTS (prevents stale reference bug)
+    if (currentDetailClient) {
+      const updated = CLIENTS.find(c => c.id === currentDetailClient.id);
+      if (updated) currentDetailClient = updated;
+    }
+  }
   if (state.users) {
     // Merge: keep defaults + add any from stored state
     const newUsers = state.users.filter(u => !USERS.some(existing => existing.email === u.email));
@@ -2788,8 +2797,8 @@ function initClientApp() {
   const checkinDay = clientData?.checkinDay || clientData?.nextCheckin || 'Monday';
   document.getElementById('dashCheckinTile').innerHTML = `<div style="background:var(--ember-soft);border:1px solid rgba(224,122,58,0.15);border-radius:14px;padding:16px 18px;">
     <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--ember);margin-bottom:6px;font-family:'Space Grotesk',sans-serif;">Check-in Due</div>
-    <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:500;color:var(--text-bright);">${checkinDay} by 8pm</div>
-    <div style="font-size:11px;color:var(--text-body);">Weight · Photos · How you're feeling</div>
+    <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:500;color:var(--text-bright);">${checkinDay} morning</div>
+    <div style="font-size:11px;color:var(--text-body);">Weight · Photos · How you're feeling · First thing AM</div>
   </div>`;
 
   // ─── WELLBEING TILE ───
@@ -3561,6 +3570,7 @@ function renderWLActiveSession() {
           <input type="number" class="wl-set-input" inputmode="decimal" placeholder="kg" value="${weightVal}" onchange="wlUpdateSet(${i},${si},'weight',this.value)">
           <input type="text" class="wl-set-input" inputmode="decimal" placeholder="m" value="${distVal}" onchange="wlUpdateSet(${i},${si},'reps',this.value)">
           <button class="wl-check-btn ${set.done ? 'checked' : ''}" onclick="wlToggleSet(${i},${si})">\u2713</button>
+          ${sets.length > 1 ? `<button class="wl-remove-set-btn" onclick="wlRemoveSet(${i},${si})" title="Remove set">&times;</button>` : ''}
         </div>`;
       });
       html += `<button class="wl-add-set" onclick="wlAddSet(${i})">+ Add Set</button>`;
@@ -3576,6 +3586,7 @@ function renderWLActiveSession() {
           <input type="text" class="wl-set-input" inputmode="numeric" placeholder="mm:ss" value="${timeVal}" onblur="wlFormatTimeInput(this)" onchange="wlUpdateSet(${i},${si},'weight',this.value)">
           <input type="text" class="wl-set-input" inputmode="decimal" placeholder="km / m" value="${distVal}" onchange="wlUpdateSet(${i},${si},'reps',this.value)">
           <button class="wl-check-btn ${set.done ? 'checked' : ''}" onclick="wlToggleSet(${i},${si})">\u2713</button>
+          ${sets.length > 1 ? `<button class="wl-remove-set-btn" onclick="wlRemoveSet(${i},${si})" title="Remove set">&times;</button>` : ''}
         </div>`;
       });
       html += `<button class="wl-add-set" onclick="wlAddSet(${i})">+ Add Set</button>`;
@@ -3587,6 +3598,7 @@ function renderWLActiveSession() {
           <input type="number" class="wl-set-input" inputmode="decimal" placeholder="${set.weight || '—'}" value="${set.done && set.weight !== '' ? set.weight : ''}" onchange="wlUpdateSet(${i},${si},'weight',this.value)">
           <input type="number" class="wl-set-input" inputmode="numeric" placeholder="${set.reps || '—'}" value="${set.done && set.reps !== '' ? set.reps : ''}" onchange="wlUpdateSet(${i},${si},'reps',this.value)">
           <button class="wl-check-btn ${set.done ? 'checked' : ''}" onclick="wlToggleSet(${i},${si})">\u2713</button>
+          ${sets.length > 1 ? `<button class="wl-remove-set-btn" onclick="wlRemoveSet(${i},${si})" title="Remove set">&times;</button>` : ''}
         </div>`;
       });
       html += `<button class="wl-add-set" onclick="wlAddSet(${i})">+ Add Set</button>`;
@@ -3860,6 +3872,12 @@ function wlAddSet(exIdx) {
   if (!wlSetData[exIdx]) wlSetData[exIdx] = [];
   const lastSet = wlSetData[exIdx].length > 0 ? wlSetData[exIdx][wlSetData[exIdx].length - 1] : {};
   wlSetData[exIdx].push({ weight: lastSet.weight || '', reps: lastSet.reps || '', done: false });
+  renderWLActiveSession();
+}
+
+function wlRemoveSet(exIdx, setIdx) {
+  if (!wlSetData[exIdx] || wlSetData[exIdx].length <= 1) return; // keep at least 1 set
+  wlSetData[exIdx].splice(setIdx, 1);
   renderWLActiveSession();
 }
 
@@ -6062,6 +6080,12 @@ function updateNutTodayIntake() {
 function initFoodDiary() {
   _fdSelectedDate = new Date();
   _fdWeekStart = _fdGetWeekStart(new Date());
+  // Move overlay divs to document.body so they escape the .main scroll container
+  // (iOS Safari treats position:fixed inside overflow:auto as position:absolute)
+  ['fdLogOverlay','fdProductOverlay','fdManualOverlay','fdScanOverlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.parentElement !== document.body) document.body.appendChild(el);
+  });
   renderFoodDiary();
 }
 
