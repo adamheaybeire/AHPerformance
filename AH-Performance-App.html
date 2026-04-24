@@ -6080,12 +6080,7 @@ function updateNutTodayIntake() {
 function initFoodDiary() {
   _fdSelectedDate = new Date();
   _fdWeekStart = _fdGetWeekStart(new Date());
-  // Move overlay divs to document.body so they escape the .main scroll container
-  // (iOS Safari treats position:fixed inside overflow:auto as position:absolute)
-  ['fdLogOverlay','fdProductOverlay','fdManualOverlay','fdScanOverlay'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el && el.parentElement !== document.body) document.body.appendChild(el);
-  });
+  _fdEnsureOverlaysOnBody();
   renderFoodDiary();
 }
 
@@ -6233,7 +6228,18 @@ function renderFoodDiary() {
   }
 }
 
+function _fdEnsureOverlaysOnBody() {
+  // Move overlay divs to document.body so they escape the .main scroll container.
+  // iOS Safari treats position:fixed inside overflow:auto as position:absolute,
+  // which causes overlays to render behind page content and freezes the app.
+  ['fdLogOverlay','fdProductOverlay','fdManualOverlay','fdScanOverlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.parentElement !== document.body) document.body.appendChild(el);
+  });
+}
+
 function fdOpenLog(mealKey) {
+  _fdEnsureOverlaysOnBody();
   _fdCurrentMeal = mealKey;
   const mealNames = { breakfast:'Breakfast', lunch:'Lunch', dinner:'Dinner', snacks:'Snacks' };
   document.getElementById('fdLogMealTitle').textContent = 'Log ' + mealNames[mealKey];
