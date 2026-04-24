@@ -2171,7 +2171,7 @@ const ICONS = {
   camera: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
   heart: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
   settings: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
-  foodDiary: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15c0-1 .6-2 2-2s2 .5 2 1.5c0 1.5-2 2-2 3.5"/><circle cx="11" cy="19.5" r="0.5" fill="${c}"/></svg>`,
+  foodDiary: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`,
   barcode: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="2" height="16"/><rect x="6" y="4" width="1" height="16"/><rect x="9" y="4" width="2" height="16"/><rect x="14" y="4" width="1" height="16"/><rect x="17" y="4" width="3" height="16"/><rect x="22" y="4" width="1" height="16"/></svg>`,
   search: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
   plus: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
@@ -6080,7 +6080,6 @@ function updateNutTodayIntake() {
 function initFoodDiary() {
   _fdSelectedDate = new Date();
   _fdWeekStart = _fdGetWeekStart(new Date());
-  _fdEnsureOverlaysOnBody();
   renderFoodDiary();
 }
 
@@ -6228,25 +6227,46 @@ function renderFoodDiary() {
   }
 }
 
-function _fdEnsureOverlaysOnBody() {
-  // Move overlay divs to document.body so they escape the .main scroll container.
-  // iOS Safari treats position:fixed inside overflow:auto as position:absolute,
-  // which causes overlays to render behind page content and freezes the app.
-  ['fdLogOverlay','fdProductOverlay','fdManualOverlay','fdScanOverlay'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el && el.parentElement !== document.body) document.body.appendChild(el);
-  });
+function _fdShowOverlay(id) {
+  // On iOS, position:fixed inside overflow:auto is broken.
+  // Solution: move overlay to body, HIDE the .main and mobile tab bar so nothing
+  // renders behind or above the overlay, and lock body scroll.
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.parentElement !== document.body) document.body.appendChild(el);
+  el.style.display = '';
+  // Hide the app content and tab bar so nothing competes with the overlay
+  const mainEl = document.querySelector('#clientApp .main');
+  const tabBar = document.getElementById('clientMobileNav');
+  if (mainEl) mainEl.style.display = 'none';
+  if (tabBar) tabBar.style.display = 'none';
+  document.body.style.overflow = 'hidden';
+}
+
+function _fdHideOverlay(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+  // Only restore app content if ALL food diary overlays are hidden
+  const anyOpen = ['fdLogOverlay','fdProductOverlay','fdManualOverlay','fdScanOverlay'].some(
+    oid => { const o = document.getElementById(oid); return o && o.style.display !== 'none'; }
+  );
+  if (!anyOpen) {
+    const mainEl = document.querySelector('#clientApp .main');
+    const tabBar = document.getElementById('clientMobileNav');
+    if (mainEl) mainEl.style.display = '';
+    if (tabBar) tabBar.style.display = '';
+    document.body.style.overflow = '';
+  }
 }
 
 function fdOpenLog(mealKey) {
-  _fdEnsureOverlaysOnBody();
   _fdCurrentMeal = mealKey;
   const mealNames = { breakfast:'Breakfast', lunch:'Lunch', dinner:'Dinner', snacks:'Snacks' };
   document.getElementById('fdLogMealTitle').textContent = 'Log ' + mealNames[mealKey];
   document.getElementById('fdSearchInput').value = '';
   document.getElementById('fdSearchResults').style.display = 'none';
   document.getElementById('fdRecentsList').style.display = '';
-  document.getElementById('fdLogOverlay').style.display = '';
+  _fdShowOverlay('fdLogOverlay');
 
   // Render recents
   const recents = _fdGetRecents();
@@ -6268,7 +6288,7 @@ function fdOpenLog(mealKey) {
 }
 
 function fdCloseLog() {
-  document.getElementById('fdLogOverlay').style.display = 'none';
+  _fdHideOverlay('fdLogOverlay');
 }
 
 function fdSelectRecent(food) {
@@ -6295,7 +6315,7 @@ function fdShowProduct(defaultServing) {
   document.getElementById('fdProductTitle').textContent = p.name;
   document.getElementById('fdProductBrand').textContent = p.brand || '';
   document.getElementById('fdServingSize').value = defaultServing || 100;
-  document.getElementById('fdProductOverlay').style.display = '';
+  _fdShowOverlay('fdProductOverlay');
   fdUpdateServing();
 }
 
@@ -6341,7 +6361,7 @@ function fdUpdateServing() {
 }
 
 function fdCloseProduct() {
-  document.getElementById('fdProductOverlay').style.display = 'none';
+  _fdHideOverlay('fdProductOverlay');
 }
 
 function fdAddProduct() {
@@ -6384,7 +6404,7 @@ function fdRemoveItem(mealKey, idx) {
 
 // ─── Manual entry ───
 function fdShowManualEntry() {
-  document.getElementById('fdManualOverlay').style.display = '';
+  _fdShowOverlay('fdManualOverlay');
   document.getElementById('fdManualName').value = '';
   document.getElementById('fdManualServing').value = '100';
   document.getElementById('fdManualCal').value = '';
@@ -6394,7 +6414,7 @@ function fdShowManualEntry() {
 }
 
 function fdCloseManual() {
-  document.getElementById('fdManualOverlay').style.display = 'none';
+  _fdHideOverlay('fdManualOverlay');
 }
 
 function fdAddManualFood() {
@@ -6483,8 +6503,7 @@ function fdSelectSearchResult(product) {
 
 // ─── Barcode Scanner ───
 function fdStartBarcodeScan() {
-  const overlay = document.getElementById('fdScanOverlay');
-  overlay.style.display = '';
+  _fdShowOverlay('fdScanOverlay');
   const video = document.getElementById('fdScanVideo');
   const status = document.getElementById('fdScanStatus');
   status.textContent = 'Starting camera...';
@@ -6537,7 +6556,7 @@ function fdStopScan() {
     _fdScanStream = null;
   }
   _fdBarcodeDetector = null;
-  document.getElementById('fdScanOverlay').style.display = 'none';
+  _fdHideOverlay('fdScanOverlay');
 }
 
 function fdLookupBarcode(code) {
