@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<link rel="modulepreload" href="https://fastly.jsdelivr.net/npm/barcode-detector@3/dist/es/polyfill.min.js">
 <title>AH Performance</title>
 
 <!-- PWA Meta Tags -->
@@ -1349,7 +1350,11 @@
         <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:250px;height:150px;border:2px solid var(--ember);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,0.5);"></div>
         <div style="position:absolute;top:20px;left:0;right:0;text-align:center;color:#fff;font-size:14px;font-weight:500;">Point at a barcode</div>
         <button onclick="fdStopScan()" style="position:absolute;top:20px;right:20px;background:rgba(0,0,0,0.6);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;">✕</button>
-        <div id="fdScanStatus" style="position:absolute;bottom:40px;left:0;right:0;text-align:center;color:#fff;font-size:13px;"></div>
+        <div id="fdScanStatus" style="position:absolute;bottom:80px;left:0;right:0;text-align:center;color:#fff;font-size:13px;"></div>
+        <div style="position:absolute;bottom:20px;left:20px;right:20px;display:flex;gap:8px;">
+          <input type="text" id="fdManualBarcode" inputmode="numeric" placeholder="Or type barcode number..." style="flex:1;padding:12px;border-radius:10px;border:none;background:rgba(255,255,255,0.15);color:#fff;font-size:14px;text-align:center;">
+          <button onclick="fdManualBarcodeLookup()" style="padding:12px 18px;border-radius:10px;border:none;background:var(--ember);color:#fff;font-weight:600;font-size:13px;cursor:pointer;">Go</button>
+        </div>
       </div>
     </div>
 
@@ -6502,33 +6507,49 @@ function fdSelectSearchResult(product) {
 }
 
 // ─── Barcode Scanner ───
-function fdStartBarcodeScan() {
+async function fdStartBarcodeScan() {
   _fdShowOverlay('fdScanOverlay');
   const video = document.getElementById('fdScanVideo');
   const status = document.getElementById('fdScanStatus');
+
+  // If native BarcodeDetector isn't available, load the polyfill (ZXing WebAssembly)
+  if (!('BarcodeDetector' in window)) {
+    status.textContent = 'Loading barcode scanner...';
+    try {
+      await import('https://fastly.jsdelivr.net/npm/barcode-detector@3/dist/es/polyfill.min.js');
+      console.log('AH Performance: BarcodeDetector polyfill loaded');
+    } catch (e) {
+      console.warn('BarcodeDetector polyfill failed:', e);
+      // Try alternative CDN
+      try {
+        await import('https://unpkg.com/barcode-detector@3/dist/es/polyfill.min.js');
+        console.log('AH Performance: BarcodeDetector polyfill loaded (unpkg)');
+      } catch (e2) {
+        status.textContent = 'Could not load barcode scanner. Try searching for the food instead.';
+        setTimeout(() => fdStopScan(), 3000);
+        return;
+      }
+    }
+  }
+
   status.textContent = 'Starting camera...';
 
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } })
-    .then(stream => {
-      _fdScanStream = stream;
-      video.srcObject = stream;
-      video.play();
-      status.textContent = 'Scanning...';
-
-      // Try native BarcodeDetector first
-      if ('BarcodeDetector' in window) {
-        _fdBarcodeDetector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e'] });
-        _fdScanLoop();
-      } else {
-        status.textContent = 'Barcode scanning not supported on this device. Try searching instead.';
-        setTimeout(() => fdStopScan(), 3000);
-      }
-    })
-    .catch(err => {
-      status.textContent = 'Camera access denied. Please allow camera access and try again.';
-      console.warn('Camera error:', err);
-      setTimeout(() => fdStopScan(), 3000);
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
     });
+    _fdScanStream = stream;
+    video.srcObject = stream;
+    video.play();
+    status.textContent = 'Point at a barcode...';
+
+    _fdBarcodeDetector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e'] });
+    _fdScanLoop();
+  } catch (err) {
+    status.textContent = 'Camera access denied. Please allow camera access and try again.';
+    console.warn('Camera error:', err);
+    setTimeout(() => fdStopScan(), 3000);
+  }
 }
 
 function _fdScanLoop() {
@@ -6548,6 +6569,17 @@ function _fdScanLoop() {
   }).catch(() => {
     requestAnimationFrame(_fdScanLoop);
   });
+}
+
+function fdManualBarcodeLookup() {
+  const input = document.getElementById('fdManualBarcode');
+  const code = (input ? input.value : '').trim().replace(/\D/g, '');
+  if (!code || code.length < 8) {
+    document.getElementById('fdScanStatus').textContent = 'Please enter a valid barcode (8+ digits)';
+    return;
+  }
+  fdStopScan();
+  fdLookupBarcode(code);
 }
 
 function fdStopScan() {
