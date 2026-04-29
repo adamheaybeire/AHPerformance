@@ -24,7 +24,7 @@
     --ember:#E07A3A;--ember-hover:#C96A30;--ember-soft:rgba(224,122,58,0.10);--ember-glow:rgba(224,122,58,0.18);
     --sage:#8BB07E;--sage-soft:rgba(139,176,126,0.12);--sage-border:rgba(139,176,126,0.25);--sage-text:#9FC294;
     --ocean:#4A9DC8;--ocean-soft:rgba(74,157,200,0.12);--ocean-border:rgba(74,157,200,0.25);--ocean-text:#6BB0D4;
-    --slate-deep:#13232E;--slate-card:#182A36;--slate-raised:#1D3140;--slate-border:#243848;--slate-hover:#2A4555;
+    --slate-bg:#0B1117;--slate-deep:#13232E;--slate-card:#182A36;--slate-raised:#1D3140;--slate-border:#243848;--slate-hover:#2A4555;
     --text-bright:#F0EDE8;--text-body:#8CA0AD;--text-muted:#5A7585;--text-dim:#3A5565;
     --danger:#D45B5B;--danger-soft:rgba(212,91,91,0.10);
     --warning:#E0A93A;--warning-soft:rgba(224,169,58,0.10);
@@ -2181,6 +2181,7 @@ const ICONS = {
   search: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
   plus: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
   trash: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
+  edit: (c='currentColor',s=18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
 };
 
 function ic(name, colour, size) { return ICONS[name] ? ICONS[name](colour, size) : ''; }
@@ -2279,6 +2280,7 @@ let charts = {};
 let currentProgrammeWeek = 1;
 let currentDetailClient = null;
 let _lastAppliedSavedAt = 0;
+let _stateFullyLoaded = false; // Guard: prevents saves before state has loaded
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Register PWA Service Worker
@@ -2420,6 +2422,11 @@ function _applyState(state, _source) {
 }
 
 function saveAppState() {
+  // GUARD: Never save before state has fully loaded — prevents overwriting real data with demo/empty data
+  if (!_stateFullyLoaded) {
+    console.warn('AH Performance: saveAppState blocked — state not yet loaded');
+    return;
+  }
   const state = _buildState();
   const stateJSON = JSON.stringify(state);
   const clientCount = (state.clients || []).length;
@@ -2509,6 +2516,7 @@ async function loadAppState() {
 
   if (candidates.length === 0) {
     console.log('AH Performance: No saved state found — starting fresh');
+    _stateFullyLoaded = true; // Safe to save even with fresh state
     return;
   }
 
@@ -2547,11 +2555,16 @@ async function loadAppState() {
         .catch(() => {});
     } catch (e) {}
   }
+
+  // Mark state as fully loaded — saveAppState is now safe to call
+  _stateFullyLoaded = true;
+  console.log('AH Performance: State fully loaded — saves are now enabled');
 }
 
 // Auto-save after important operations (debounced)
 let _saveTimeout = null;
 function scheduleSave() {
+  if (!_stateFullyLoaded) return; // Don't schedule saves before state is loaded
   if (_saveTimeout) clearTimeout(_saveTimeout);
   _saveTimeout = setTimeout(saveAppState, 500);
 }
@@ -3343,7 +3356,12 @@ function startWorkoutSession(weekKey, sessionIdx) {
       const isCardio = _isCardioExercise(ex.n);
       const sets = [];
       for (let s = 0; s < prescribed.sets; s++) {
-        sets.push({ weight: (!isCardio && ex.w && ex.w !== '—') ? parseFloat(ex.w) || '' : '', reps: prescribed.reps || '', done: false });
+        if (isCardio) {
+          // Cardio: weight=time, reps=distance. Prescribed value (e.g. "60min") goes into time (weight)
+          sets.push({ weight: prescribed.reps || '', reps: '', done: false });
+        } else {
+          sets.push({ weight: (ex.w && ex.w !== '—') ? parseFloat(ex.w) || '' : '', reps: prescribed.reps || '', done: false });
+        }
       }
       wlSetData[i] = sets;
     });
@@ -3616,9 +3634,9 @@ function renderWLActiveSession() {
       // Cardio: multi-set Time + Distance rows with Add Set
       html += `<div class="wl-set-row header wl-cardio-header"><span>Set</span><span>Time</span><span>Distance</span><span></span></div>`;
       sets.forEach((set, si) => {
-        // Pre-populate distance from coach's prescription (e.g. "5 × 1km" → set.reps = "1km")
+        // For cardio: weight=time, reps=distance. Show pre-filled values even before set is done
         const distVal = (set.reps !== '' && set.reps !== undefined && set.reps !== null) ? set.reps : '';
-        const timeVal = (set.done && set.weight !== '' && set.weight !== undefined) ? set.weight : '';
+        const timeVal = (set.weight !== '' && set.weight !== undefined && set.weight !== null) ? set.weight : '';
         html += `<div class="wl-set-row wl-cardio-row" id="wlSet${i}_${si}">
           <div class="wl-set-num ${set.done ? 'done' : ''}">${si + 1}</div>
           <input type="text" class="wl-set-input" inputmode="numeric" placeholder="mm:ss" value="${timeVal}" onblur="wlFormatTimeInput(this)" onchange="wlUpdateSet(${i},${si},'weight',this.value)">
@@ -6261,7 +6279,7 @@ function renderFoodDiary() {
                 <div style="font-size:12px;font-weight:600;color:var(--ember);font-family:'Space Grotesk';">${Math.round(f.cal||0)}</div>
                 <div style="font-size:9px;color:var(--text-dim);">kcal</div>
               </div>
-              <button onclick="fdEditItem('${key}',${idx})" style="background:none;border:none;cursor:pointer;opacity:0.4;padding:4px;" title="Edit">${ic('edit','var(--text-muted)',14)}</button>
+              <button onclick="fdEditItem('${key}',${idx})" style="background:none;border:none;cursor:pointer;opacity:0.6;padding:4px;" title="Edit">${ic('edit','var(--ocean)',14)}</button>
               <button onclick="fdRemoveItem('${key}',${idx})" style="background:none;border:none;cursor:pointer;opacity:0.4;padding:4px;" title="Remove">${ic('trash','var(--text-muted)',14)}</button>
             </div>
           </div>`;
