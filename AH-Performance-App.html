@@ -3523,6 +3523,16 @@ function _isCardioExercise(name) {
   return cardioKeywords.some(k => n.includes(k));
 }
 
+// Filter for cardio data: removes entries that were incorrectly saved as cardio (e.g. Ab Air Bike, Bicycle Crunch)
+function _filterRealCardio(cardioEntries) {
+  if (!cardioEntries) return [];
+  const abWords = ['crunch','ab air','air bike crunch','bicycle crunch','ab bike'];
+  return cardioEntries.filter(e => {
+    const n = (e.activity || e.exercise || '').toLowerCase();
+    return !abWords.some(k => n.includes(k));
+  });
+}
+
 function _isSledExercise(name) {
   if (!name) return false;
   const n = name.toLowerCase();
@@ -4288,7 +4298,9 @@ function initClientProgress() {
   strFilter.innerHTML = '<option value="">All Exercises</option>' + exes.map(e => `<option value="${e}">${e}</option>`).join('');
 
   // Cardio selectors — handle both 'activity' (manual log) and 'exercise' (workout logger) field names
-  const acts = [...new Set(pd.cardio.map(e => e.activity || e.exercise || '—').filter(a => a && a !== '—'))];
+  // Filter out incorrectly categorised exercises (e.g. Ab Air Bike, Bicycle Crunch)
+  const realCardio = _filterRealCardio(pd.cardio);
+  const acts = [...new Set(realCardio.map(e => e.activity || e.exercise || '—').filter(a => a && a !== '—'))];
   const cardSel = document.getElementById('cpCardActivity');
   cardSel.innerHTML = acts.map(a => `<option value="${a}">${a}</option>`).join('');
   const cardFilter = document.getElementById('cpCardHistoryFilter');
@@ -4447,8 +4459,9 @@ function saveCPCardio() {
   document.getElementById('cpCardMaxHR').value = '';
   document.getElementById('cpCardRPE').value = '';
   document.getElementById('cpCardNotes').value = '';
-  // Update selectors
-  const acts = [...new Set(pd.cardio.map(e => e.activity || e.exercise || '—'))];
+  // Update selectors (filter out incorrectly categorised exercises)
+  const filteredCardio = _filterRealCardio(pd.cardio);
+  const acts = [...new Set(filteredCardio.map(e => e.activity || e.exercise || '—'))];
   document.getElementById('cpCardActivity').innerHTML = acts.map(a => `<option value="${a}">${a}</option>`).join('');
   document.getElementById('cpCardHistoryFilter').innerHTML = '<option value="">All Activities</option>' + acts.map(a => `<option value="${a}">${a}</option>`).join('');
   renderCPCardChart(); renderCPCardHistory();
@@ -4460,7 +4473,7 @@ function renderCPCardChart() {
   if (!pd || !pd.cardio) return;
   const act = document.getElementById('cpCardActivity').value;
   const met = document.getElementById('cpCardMetric').value;
-  const entries = pd.cardio.filter(e => (e.activity || e.exercise) === act).reverse();
+  const entries = _filterRealCardio(pd.cardio).filter(e => (e.activity || e.exercise) === act).reverse();
   const labels = entries.map(e => cpFormatDate(e.date));
   let data, label, colour;
   if (met === 'time') {
@@ -4481,7 +4494,8 @@ function renderCPCardHistory() {
   const pd = cid ? PROGRESS_DATA[cid] : (PROGRESS_DATA[1] || null);
   if (!pd || !pd.cardio) return;
   const filter = document.getElementById('cpCardHistoryFilter').value;
-  const entries = filter ? pd.cardio.filter(e => (e.activity || e.exercise) === filter) : pd.cardio;
+  const realCardio = _filterRealCardio(pd.cardio);
+  const entries = filter ? realCardio.filter(e => (e.activity || e.exercise) === filter) : realCardio;
   document.getElementById('cpCardHistory').innerHTML = entries.map(e => {
     const actName = e.activity || e.exercise || '—';
     const distStr = e.distance ? `${e.distance} ${e.unit || ''}` : '—';
@@ -4604,8 +4618,10 @@ function renderWorkoutHistory() {
         <span style="font-size:11px;color:var(--text-muted);max-width:55%;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${setsStr}</span>
       </div>`;
     }).join('');
-    const typeColor = w.type === 'cardio' ? 'var(--ocean)' : 'var(--ember)';
-    const typeLabel = w.type === 'cardio' ? 'Cardio' : 'Strength';
+    const _wNLower = (w.sessionName || '').toLowerCase();
+    const _looksCardio = w.type === 'cardio' || _wNLower.includes('run') || _wNLower.includes('jog') || _wNLower.includes('sprint') || _wNLower.includes('cycle') || _wNLower.includes('swim') || _wNLower.includes('walk') || _wNLower.includes('row');
+    const typeColor = _looksCardio ? 'var(--ocean)' : 'var(--ember)';
+    const typeLabel = _looksCardio ? 'Cardio' : 'Strength';
     return `<div style="background:var(--slate-card);border:1px solid var(--slate-border);border-radius:12px;overflow:hidden;">
       <div style="padding:12px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="toggleHistoryEntry(${wi})">
         <div>
@@ -4657,8 +4673,10 @@ function editWorkoutEntry(idx) {
     <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">RPE (1-10)</label><input type="number" id="histEditRPE${idx}" value="${w.rpe || ''}" min="1" max="10" style="${fieldStyle}"></div>
   </div>`;
   html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Notes</label><textarea id="histEditNotes${idx}" style="${fieldStyle}resize:vertical;min-height:50px;">${w.notes || ''}</textarea></div>`;
-  // For cardio sessions with no exercises, show distance/time/HR fields
-  if (w.type === 'cardio' && (!w.exercises || w.exercises.length === 0)) {
+  // For cardio sessions or run sessions with no exercises, show distance/time/HR fields
+  const _wNameLower = (w.sessionName || '').toLowerCase();
+  const _isRunOrCardio = w.type === 'cardio' || _wNameLower.includes('run') || _wNameLower.includes('jog') || _wNameLower.includes('sprint') || _wNameLower.includes('cycle') || _wNameLower.includes('swim') || _wNameLower.includes('walk') || _wNameLower.includes('row');
+  if (_isRunOrCardio && (!w.exercises || w.exercises.length === 0)) {
     // Look up matching cardio progress entry for distance/time/HR
     const pd = PROGRESS_DATA[cid];
     const cardioEntry = pd?.cardio?.find(c => c.date === w.date && (c.activity === w.sessionName || c.exercise === w.sessionName));
@@ -4736,8 +4754,10 @@ function saveHistoryEdit(idx) {
   }
   w.rpe = parseInt(document.getElementById(`histEditRPE${idx}`)?.value) || w.rpe;
   w.notes = document.getElementById(`histEditNotes${idx}`)?.value || '';
-  // Update cardio progress entry if this is a generic cardio session
-  if (w.type === 'cardio' && (!w.exercises || w.exercises.length === 0)) {
+  // Update cardio progress entry if this is a generic cardio/run session
+  const _sNameLower = (w.sessionName || '').toLowerCase();
+  const _isSaveRunOrCardio = w.type === 'cardio' || _sNameLower.includes('run') || _sNameLower.includes('jog') || _sNameLower.includes('sprint') || _sNameLower.includes('cycle') || _sNameLower.includes('swim') || _sNameLower.includes('walk') || _sNameLower.includes('row');
+  if (_isSaveRunOrCardio && (!w.exercises || w.exercises.length === 0)) {
     const pd = PROGRESS_DATA[cid];
     if (pd?.cardio) {
       let cardioEntry = pd.cardio.find(c => c.date === w.date && (c.activity === w.sessionName || c.exercise === w.sessionName));
@@ -5379,7 +5399,9 @@ function initDetailProgress(clientId) {
   const exes = [...new Set(pd.strength.map(e=>e.exercise))];
   document.getElementById('dtStrEx').innerHTML = exes.map(e => `<option value="${e}">${e}</option>`).join('');
   // Cardio selectors — handle both 'activity' (manual log) and 'exercise' (workout logger) field names
-  const acts = [...new Set(pd.cardio.map(e => e.activity || e.exercise || '').filter(a => a && a !== 'undefined'))];
+  // Filter out incorrectly categorised exercises (e.g. Ab Air Bike, Bicycle Crunch)
+  const filteredCardio = _filterRealCardio(pd.cardio);
+  const acts = [...new Set(filteredCardio.map(e => e.activity || e.exercise || '').filter(a => a && a !== 'undefined'))];
   document.getElementById('dtCardActivity').innerHTML = acts.map(a => `<option value="${a}">${a}</option>`).join('');
   // Render all
   renderDetailStrChart();
@@ -5462,7 +5484,7 @@ function renderDetailCardChart() {
   if (!pd) return;
   const act = document.getElementById('dtCardActivity').value;
   const met = document.getElementById('dtCardMetric')?.value || 'time';
-  const entries = pd.cardio.filter(e => (e.activity || e.exercise) === act).reverse();
+  const entries = _filterRealCardio(pd.cardio).filter(e => (e.activity || e.exercise) === act).reverse();
   const labels = entries.map(e => cpFormatDate(e.date));
   let data, label, colour;
   if (met === 'time') { data = entries.map(e => cpTimeToSec(e.time)); label = 'Time (sec)'; colour = '#4A9DC8'; }
@@ -5474,7 +5496,7 @@ function renderDetailCardChart() {
 function renderDetailCardHistory(clientId) {
   const pd = PROGRESS_DATA[clientId || currentDetailClient?.id];
   if (!pd) return;
-  document.getElementById('dtCardHistory').innerHTML = pd.cardio.map(e => {
+  document.getElementById('dtCardHistory').innerHTML = _filterRealCardio(pd.cardio).map(e => {
     const actName = e.activity || e.exercise || '—';
     const distStr = e.distance ? `${e.distance} ${e.unit || 'km'}` : '—';
     return `<tr><td class="val">${cpFormatDate(e.date)}</td><td class="val">${actName}</td><td>${distStr}</td><td class="val">${e.time||'—'}</td><td>${e.avgHR?e.avgHR+' bpm':'—'}</td><td>${e.rpe||'—'}</td></tr>`;
