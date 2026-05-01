@@ -494,7 +494,7 @@
 
   /* Scale buttons */
   .scale-buttons{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
-  .scale-btn{background:var(--slate-raised);border:2px solid var(--slate-border);border-radius:12px;padding:16px 8px;text-align:center;cursor:pointer;transition:all 0.15s;color:var(--text-body);}
+  .scale-btn{background:var(--slate-raised);border:2px solid var(--slate-border);border-radius:12px;padding:14px 6px;text-align:center;cursor:pointer;transition:all 0.15s;color:var(--text-body);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70px;}
   .scale-btn:hover{border-color:var(--ember);background:var(--ember-soft);}
   .scale-btn.active{border-color:var(--ember);background:var(--ember-soft);color:var(--text-bright);}
   .scale-num{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;margin-bottom:4px;}
@@ -997,14 +997,14 @@
           </div>
           <div class="form-row four">
             <div class="form-group"><label class="form-label">Waist (cm)</label><input type="number" id="cpMeasWaist" placeholder="" step="0.5"></div>
+            <div class="form-group"><label class="form-label">Stomach (cm)</label><input type="number" id="cpMeasStomach" placeholder="" step="0.5"></div>
             <div class="form-group"><label class="form-label">Hips (cm)</label><input type="number" id="cpMeasHips" placeholder="" step="0.5"></div>
             <div class="form-group"><label class="form-label">Glutes (cm)</label><input type="number" id="cpMeasGlutes" placeholder="" step="0.5"></div>
-            <div class="form-group"><label class="form-label">Arm (cm)</label><input type="number" id="cpMeasArm" placeholder="" step="0.5"></div>
           </div>
           <div class="form-row three">
+            <div class="form-group"><label class="form-label">Arm (cm)</label><input type="number" id="cpMeasArm" placeholder="" step="0.5"></div>
             <div class="form-group"><label class="form-label">Thigh (cm)</label><input type="number" id="cpMeasThigh" placeholder="" step="0.5"></div>
             <div class="form-group"><label class="form-label">Calf (cm)</label><input type="number" id="cpMeasCalf" placeholder="" step="0.5"></div>
-            <div class="form-group">&nbsp;</div>
           </div>
           <div class="btn-row">
             <div style="flex:1;"></div>
@@ -1015,7 +1015,7 @@
           <div class="flex-between mb-12">
             <h3 style="margin-bottom:0;">Trend</h3>
             <select id="cpMeasMetric" onchange="renderCPMeasChart()" style="width:140px;padding:6px 8px;font-size:11px;">
-              <option value="weight">Body Weight</option><option value="chest">Chest</option><option value="waist">Waist</option><option value="hips">Hips</option>
+              <option value="weight">Body Weight</option><option value="chest">Chest</option><option value="waist">Waist</option><option value="stomach">Stomach</option><option value="hips">Hips</option>
               <option value="glutes">Glutes</option><option value="arm">Arm</option><option value="thigh">Thigh</option><option value="calf">Calf</option>
             </select>
           </div>
@@ -1023,7 +1023,7 @@
         </div>
         <div class="card">
           <h3>Measurement History</h3>
-          <table class="prog-table"><thead><tr><th>Date</th><th>Weight</th><th>Chest</th><th>Waist</th><th>Hips</th><th>Glutes</th><th>Arm</th><th>Thigh</th><th>Calf</th></tr></thead>
+          <table class="prog-table"><thead><tr><th>Date</th><th>Weight</th><th>Chest</th><th>Waist</th><th>Stomach</th><th>Hips</th><th>Glutes</th><th>Arm</th><th>Thigh</th><th>Calf</th></tr></thead>
           <tbody id="cpMeasHistory"></tbody></table>
         </div>
         <div class="card">
@@ -1581,15 +1581,16 @@
           <div class="ci-step-number">Step 3 of 6</div>
           <h3>Body Measurements</h3>
           <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Enter your measurements for this week. Measure first thing in the morning for consistency.</p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div><label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Weight (kg)</label><input type="number" step="0.1" id="ciWeight" placeholder="83.2" style="width:100%;"></div>
-            <div><label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Chest (cm)</label><input type="number" step="0.1" id="ciChest" placeholder="102" style="width:100%;"></div>
-            <div><label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Waist (cm)</label><input type="number" step="0.1" id="ciWaist" placeholder="84" style="width:100%;"></div>
-            <div><label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Hips (cm)</label><input type="number" step="0.1" id="ciHips" placeholder="96" style="width:100%;"></div>
-            <div><label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Glutes (cm)</label><input type="number" step="0.1" id="ciGlute" placeholder="102" style="width:100%;"></div>
-            <div><label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Arm (cm)</label><input type="number" step="0.1" id="ciArm" placeholder="35" style="width:100%;"></div>
-            <div><label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Thigh (cm)</label><input type="number" step="0.1" id="ciThigh" placeholder="58" style="width:100%;"></div>
-            <div><label style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Calf (cm)</label><input type="number" step="0.1" id="ciCalf" placeholder="38" style="width:100%;"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;">
+            <div><label style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:3px;">Weight (kg)</label><input type="number" step="0.1" id="ciWeight" placeholder="83.2" style="width:100%;padding:8px 10px;font-size:14px;"></div>
+            <div><label style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:3px;">Chest (cm)</label><input type="number" step="0.1" id="ciChest" placeholder="102" style="width:100%;padding:8px 10px;font-size:14px;"></div>
+            <div><label style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:3px;">Waist (cm)</label><input type="number" step="0.1" id="ciWaist" placeholder="84" style="width:100%;padding:8px 10px;font-size:14px;"></div>
+            <div><label style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:3px;">Stomach (cm)</label><input type="number" step="0.1" id="ciStomach" placeholder="88" style="width:100%;padding:8px 10px;font-size:14px;"></div>
+            <div><label style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:3px;">Hips (cm)</label><input type="number" step="0.1" id="ciHips" placeholder="96" style="width:100%;padding:8px 10px;font-size:14px;"></div>
+            <div><label style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:3px;">Glutes (cm)</label><input type="number" step="0.1" id="ciGlute" placeholder="102" style="width:100%;padding:8px 10px;font-size:14px;"></div>
+            <div><label style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:3px;">Arm (cm)</label><input type="number" step="0.1" id="ciArm" placeholder="35" style="width:100%;padding:8px 10px;font-size:14px;"></div>
+            <div><label style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:3px;">Thigh (cm)</label><input type="number" step="0.1" id="ciThigh" placeholder="58" style="width:100%;padding:8px 10px;font-size:14px;"></div>
+            <div style="grid-column:1/-1;max-width:calc(50% - 5px);"><label style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:3px;">Calf (cm)</label><input type="number" step="0.1" id="ciCalf" placeholder="38" style="width:100%;padding:8px 10px;font-size:14px;"></div>
           </div>
         </div>
 
@@ -1903,7 +1904,7 @@
           <div class="card card-sage">
             <div class="flex-between mb-12"><h3 style="margin-bottom:0;">Body Measurement Trend</h3>
               <select id="dtMeasMetric" onchange="renderDetailMeasChart()" style="width:140px;padding:6px 8px;font-size:11px;">
-                <option value="weight">Body Weight</option><option value="chest">Chest</option><option value="waist">Waist</option><option value="hips">Hips</option>
+                <option value="weight">Body Weight</option><option value="chest">Chest</option><option value="waist">Waist</option><option value="stomach">Stomach</option><option value="hips">Hips</option>
                 <option value="glutes">Glutes</option><option value="arm">Arm</option><option value="thigh">Thigh</option><option value="calf">Calf</option>
               </select>
             </div>
@@ -1911,7 +1912,7 @@
           </div>
           <div class="card">
             <h3>Measurement History</h3>
-            <table class="prog-table"><thead><tr><th>Date</th><th>Weight</th><th>Chest</th><th>Waist</th><th>Hips</th><th>Glutes</th><th>Arm</th><th>Thigh</th><th>Calf</th></tr></thead>
+            <table class="prog-table"><thead><tr><th>Date</th><th>Weight</th><th>Chest</th><th>Waist</th><th>Stomach</th><th>Hips</th><th>Glutes</th><th>Arm</th><th>Thigh</th><th>Calf</th></tr></thead>
             <tbody id="detailMeasTable"></tbody></table>
           </div>
           <div class="card">
@@ -2794,8 +2795,9 @@ function initClientApp() {
   if (progKeys.length) {
     const latestWeek = progWeeks[progKeys[progKeys.length - 1]];
     const sessions = latestWeek?.sessions || [];
-    const todayName = new Date().toLocaleDateString('en-GB',{weekday:'long'});
-    const todaySession = sessions.find(s => s.day === todayName) || sessions[0];
+    const todayFull = new Date().toLocaleDateString('en-GB',{weekday:'long'});
+    const todayAbbr = new Date().toLocaleDateString('en-GB',{weekday:'short'});
+    const todaySession = sessions.find(s => s.day === todayAbbr || s.day === todayFull || s.name === todayFull);
     if (todaySession) {
       const isC = todaySession.type === 'cardio';
       const exCount = todaySession.exercises ? todaySession.exercises.length : 0;
@@ -3511,9 +3513,13 @@ function _updateClientCompliance(clientId) {
 function _isCardioExercise(name) {
   if (!name) return false;
   const n = name.toLowerCase();
+  // EXCLUDE: ab/core exercises that contain cardio-sounding words
+  // "Ab Air Bike", "Bicycle Crunch", "Air Bike Crunch", etc. are NOT cardio
+  const abExclusions = ['crunch','ab air','air bike crunch','bicycle crunch','ab bike'];
+  if (abExclusions.some(k => n.includes(k))) return false;
   // True cardio: time/distance based. Wall balls, burpees, carries are strength-style (weight/reps).
   // Sled push/pull are separate — they use weight+distance, not time.
-  const cardioKeywords = ['run','running','runner','ski erg','skierg','rowing','rower','assault bike','air bike','airbike','echo bike','bike','cycle','cycling','swim','walk','walking','jog','jogging','sprint'];
+  const cardioKeywords = ['outdoor run','indoor run','treadmill','run ','running','runner','ski erg','skierg','rowing','rower','assault bike','air bike','airbike','echo bike','exercise bike','stationary bike','spin bike','cycle','cycling','swim','walk','walking','jog','jogging','sprint','elliptical','cross trainer','stair'];
   return cardioKeywords.some(k => n.includes(k));
 }
 
@@ -3549,7 +3555,32 @@ function renderWLActiveSession() {
           <h3 style="color:var(--ocean);font-size:13px;margin-bottom:6px;">Cardio Session</h3>
           <p style="font-size:12px;color:var(--text-body);line-height:1.6;">${wlCurrentSession.desc || 'Complete your cardio session'}</p>
         </div>
-        <div style="margin-top:12px;"><textarea class="wl-notes-input" id="wlCardioNotes" placeholder="Distance, time, how it felt..."></textarea></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">
+          <div>
+            <label style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Distance</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="number" id="wlCardioDistance" inputmode="decimal" placeholder="0" step="0.1" style="flex:1;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;">
+              <select id="wlCardioDistUnit" style="padding:10px 6px;font-size:12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);">
+                <option value="km">km</option><option value="mi">mi</option><option value="m">m</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Time</label>
+            <input type="text" id="wlCardioTime" inputmode="numeric" placeholder="mm:ss" onblur="wlFormatTimeInput(this)" style="width:100%;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;box-sizing:border-box;">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+          <div>
+            <label style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Avg HR</label>
+            <input type="number" id="wlCardioAvgHR" inputmode="numeric" placeholder="bpm" style="width:100%;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Max HR</label>
+            <input type="number" id="wlCardioMaxHR" inputmode="numeric" placeholder="bpm" style="width:100%;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;box-sizing:border-box;">
+          </div>
+        </div>
+        <div style="margin-top:10px;"><textarea class="wl-notes-input" id="wlCardioNotes" placeholder="How it felt..." rows="2"></textarea></div>
       </div>`;
     return;
   }
@@ -4072,13 +4103,20 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
   // If session type is 'cardio' and no exercise logs captured (generic cardio view), create entry from session
   if (isCardioSession && exerciseLogs.length === 0) {
     const cardioNotes = document.getElementById('wlCardioNotes')?.value || '';
+    const cardioDist = parseFloat(document.getElementById('wlCardioDistance')?.value) || null;
+    const cardioUnit = document.getElementById('wlCardioDistUnit')?.value || 'km';
+    const cardioTime = document.getElementById('wlCardioTime')?.value || duration || null;
+    const cardioAvgHR = parseInt(document.getElementById('wlCardioAvgHR')?.value) || null;
+    const cardioMaxHR = parseInt(document.getElementById('wlCardioMaxHR')?.value) || null;
     PROGRESS_DATA[cid].cardio.push({
       date: today,
       activity: wlCurrentSession.name,
       exercise: wlCurrentSession.name,
-      distance: null,
-      unit: 'km',
-      time: duration || null,
+      distance: cardioDist,
+      unit: cardioUnit,
+      time: cardioTime,
+      avgHR: cardioAvgHR,
+      maxHR: cardioMaxHR,
       sets: [],
       rpe: wlSessionRPE,
       notes: cardioNotes
@@ -4459,6 +4497,7 @@ function saveCPMeasurement() {
   const m = {date, weight,
     chest: parseFloat(document.getElementById('cpMeasChest').value)||null,
     waist: parseFloat(document.getElementById('cpMeasWaist').value)||null,
+    stomach: parseFloat(document.getElementById('cpMeasStomach').value)||null,
     hips: parseFloat(document.getElementById('cpMeasHips').value)||null,
     glutes: parseFloat(document.getElementById('cpMeasGlutes').value)||null,
     arm: parseFloat(document.getElementById('cpMeasArm').value)||null,
@@ -4469,7 +4508,7 @@ function saveCPMeasurement() {
   pd.measurements.unshift(m);
   pd.measurements.sort((a,b) => b.date.localeCompare(a.date));
   // Reset
-  ['cpMeasWeight','cpMeasChest','cpMeasWaist','cpMeasHips','cpMeasGlutes','cpMeasArm','cpMeasThigh','cpMeasCalf'].forEach(id => document.getElementById(id).value = '');
+  ['cpMeasWeight','cpMeasChest','cpMeasWaist','cpMeasStomach','cpMeasHips','cpMeasGlutes','cpMeasArm','cpMeasThigh','cpMeasCalf'].forEach(id => document.getElementById(id).value = '');
   renderCPMeasChart(); renderCPMeasHistory();
 }
 
@@ -4479,14 +4518,14 @@ function renderCPMeasChart() {
   const entries = pd.measurements.filter(m => m[met] != null).reverse();
   const labels = entries.map(m => cpFormatDate(m.date));
   const data = entries.map(m => m[met]);
-  const labelMap = {weight:'Weight (kg)',chest:'Chest (cm)',waist:'Waist (cm)',hips:'Hips (cm)',glutes:'Glutes (cm)',arm:'Arm (cm)',thigh:'Thigh (cm)',calf:'Calf (cm)'};
+  const labelMap = {weight:'Weight (kg)',chest:'Chest (cm)',waist:'Waist (cm)',stomach:'Stomach (cm)',hips:'Hips (cm)',glutes:'Glutes (cm)',arm:'Arm (cm)',thigh:'Thigh (cm)',calf:'Calf (cm)'};
   renderChart('cpMeasChart', labels, data, labelMap[met]||met, '#8BB07E');
 }
 
 function renderCPMeasHistory() {
   const _cpCid = loggedInUser ? loggedInUser.clientId : 1; const pd = PROGRESS_DATA[_cpCid]; if (!pd) return;
   document.getElementById('cpMeasHistory').innerHTML = pd.measurements.map(m =>
-    `<tr><td class="val">${cpFormatDate(m.date)}</td><td class="val">${m.weight||'—'}kg</td><td>${m.chest||'—'}</td><td>${m.waist||'—'}</td><td>${m.hips||'—'}</td><td>${m.glutes||'—'}</td><td>${m.arm||'—'}</td><td>${m.thigh||'—'}</td><td>${m.calf||'—'}</td></tr>`
+    `<tr><td class="val">${cpFormatDate(m.date)}</td><td class="val">${m.weight||'—'}kg</td><td>${m.chest||'—'}</td><td>${m.waist||'—'}</td><td>${m.stomach||'—'}</td><td>${m.hips||'—'}</td><td>${m.glutes||'—'}</td><td>${m.arm||'—'}</td><td>${m.thigh||'—'}</td><td>${m.calf||'—'}</td></tr>`
   ).join('');
 }
 
@@ -4618,6 +4657,24 @@ function editWorkoutEntry(idx) {
     <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">RPE (1-10)</label><input type="number" id="histEditRPE${idx}" value="${w.rpe || ''}" min="1" max="10" style="${fieldStyle}"></div>
   </div>`;
   html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Notes</label><textarea id="histEditNotes${idx}" style="${fieldStyle}resize:vertical;min-height:50px;">${w.notes || ''}</textarea></div>`;
+  // For cardio sessions with no exercises, show distance/time/HR fields
+  if (w.type === 'cardio' && (!w.exercises || w.exercises.length === 0)) {
+    // Look up matching cardio progress entry for distance/time/HR
+    const pd = PROGRESS_DATA[cid];
+    const cardioEntry = pd?.cardio?.find(c => c.date === w.date && (c.activity === w.sessionName || c.exercise === w.sessionName));
+    html += `<div style="margin-top:8px;padding:10px;background:var(--slate-raised);border-radius:8px;">
+      <div style="font-size:11px;font-weight:600;color:var(--ocean);margin-bottom:8px;">Cardio Details</div>
+      <div style="display:grid;grid-template-columns:1fr 60px 1fr;gap:6px;margin-bottom:8px;">
+        <div><label style="font-size:9px;color:var(--text-dim);display:block;margin-bottom:3px;">DISTANCE</label><input type="number" id="histEditDist${idx}" inputmode="decimal" step="0.1" value="${cardioEntry?.distance || ''}" placeholder="0" style="${inpStyle}"></div>
+        <div><label style="font-size:9px;color:var(--text-dim);display:block;margin-bottom:3px;">UNIT</label><select id="histEditDistUnit${idx}" style="${inpStyle}"><option value="km" ${(cardioEntry?.unit||'km')==='km'?'selected':''}>km</option><option value="mi" ${cardioEntry?.unit==='mi'?'selected':''}>mi</option><option value="m" ${cardioEntry?.unit==='m'?'selected':''}>m</option></select></div>
+        <div><label style="font-size:9px;color:var(--text-dim);display:block;margin-bottom:3px;">TIME</label><input type="text" id="histEditTime${idx}" inputmode="numeric" value="${cardioEntry?.time || ''}" placeholder="mm:ss" onblur="wlFormatTimeInput(this)" style="${inpStyle}"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <div><label style="font-size:9px;color:var(--text-dim);display:block;margin-bottom:3px;">AVG HR</label><input type="number" id="histEditAvgHR${idx}" inputmode="numeric" value="${cardioEntry?.avgHR || ''}" placeholder="bpm" style="${inpStyle}"></div>
+        <div><label style="font-size:9px;color:var(--text-dim);display:block;margin-bottom:3px;">MAX HR</label><input type="number" id="histEditMaxHR${idx}" inputmode="numeric" value="${cardioEntry?.maxHR || ''}" placeholder="bpm" style="${inpStyle}"></div>
+      </div>
+    </div>`;
+  }
   (w.exercises || []).forEach((ex, ei) => {
     const isC = _isCardioExercise(ex.name);
     html += `<div style="margin-top:8px;padding:8px 10px;background:var(--slate-raised);border-radius:8px;box-sizing:border-box;max-width:100%;">
@@ -4679,6 +4736,24 @@ function saveHistoryEdit(idx) {
   }
   w.rpe = parseInt(document.getElementById(`histEditRPE${idx}`)?.value) || w.rpe;
   w.notes = document.getElementById(`histEditNotes${idx}`)?.value || '';
+  // Update cardio progress entry if this is a generic cardio session
+  if (w.type === 'cardio' && (!w.exercises || w.exercises.length === 0)) {
+    const pd = PROGRESS_DATA[cid];
+    if (pd?.cardio) {
+      let cardioEntry = pd.cardio.find(c => c.date === w.date && (c.activity === w.sessionName || c.exercise === w.sessionName));
+      if (!cardioEntry) {
+        cardioEntry = { date: w.date, activity: w.sessionName, exercise: w.sessionName, sets: [], rpe: w.rpe };
+        pd.cardio.push(cardioEntry);
+      }
+      cardioEntry.distance = parseFloat(document.getElementById(`histEditDist${idx}`)?.value) || null;
+      cardioEntry.unit = document.getElementById(`histEditDistUnit${idx}`)?.value || 'km';
+      cardioEntry.time = document.getElementById(`histEditTime${idx}`)?.value || null;
+      cardioEntry.avgHR = parseInt(document.getElementById(`histEditAvgHR${idx}`)?.value) || null;
+      cardioEntry.maxHR = parseInt(document.getElementById(`histEditMaxHR${idx}`)?.value) || null;
+      // Update date if changed
+      if (dateVal && dateVal !== cardioEntry.date) cardioEntry.date = dateVal;
+    }
+  }
   // Recalculate volume
   let vol = 0, sets = 0;
   (w.exercises || []).forEach(ex => {
@@ -4765,7 +4840,10 @@ function _buildOneWeek(workouts, monday, localDateStr) {
         const n = (e.name || '').toLowerCase();
         return n.includes('run') || n.includes('jog') || n.includes('sprint');
       });
-      const hasRunning = runExercises.length > 0;
+      // Also check session name for running (covers pure cardio sessions with no exercises)
+      const sessionNameLower = (w.sessionName || '').toLowerCase();
+      const isRunSession = sessionNameLower.includes('run') || sessionNameLower.includes('jog') || sessionNameLower.includes('sprint');
+      const hasRunning = runExercises.length > 0 || (isRunSession && !(w.exercises || []).length);
       const hasCardio = w.type === 'cardio' || (w.exercises || []).some(e => _isCardioExercise(e.name));
       if (hasRunning) running += durH;
       else if (hasCardio) otherCardio += durH;
@@ -5411,7 +5489,7 @@ function renderDetailMeasChart() {
   const entries = pd.measurements.filter(m => m[met] != null).reverse();
   const labels = entries.map(m => cpFormatDate(m.date));
   const data = entries.map(m => m[met]);
-  const labelMap = {weight:'Weight (kg)',chest:'Chest (cm)',waist:'Waist (cm)',hips:'Hips (cm)',glutes:'Glutes (cm)',arm:'Arm (cm)',thigh:'Thigh (cm)',calf:'Calf (cm)'};
+  const labelMap = {weight:'Weight (kg)',chest:'Chest (cm)',waist:'Waist (cm)',stomach:'Stomach (cm)',hips:'Hips (cm)',glutes:'Glutes (cm)',arm:'Arm (cm)',thigh:'Thigh (cm)',calf:'Calf (cm)'};
   renderChart('detailMeasChart', labels, data, labelMap[met]||met, '#8BB07E');
 }
 
@@ -5419,7 +5497,7 @@ function renderDetailMeasTable(clientId) {
   const pd = PROGRESS_DATA[clientId || currentDetailClient?.id];
   if (!pd) return;
   document.getElementById('detailMeasTable').innerHTML = pd.measurements.map(m =>
-    `<tr><td class="val">${cpFormatDate(m.date)}</td><td class="val">${m.weight||'—'}kg</td><td>${m.chest||'—'}</td><td>${m.waist||'—'}</td><td>${m.hips||'—'}</td><td>${m.glutes||'—'}</td><td>${m.arm||'—'}</td><td>${m.thigh||'—'}</td><td>${m.calf||'—'}</td></tr>`
+    `<tr><td class="val">${cpFormatDate(m.date)}</td><td class="val">${m.weight||'—'}kg</td><td>${m.chest||'—'}</td><td>${m.waist||'—'}</td><td>${m.stomach||'—'}</td><td>${m.hips||'—'}</td><td>${m.glutes||'—'}</td><td>${m.arm||'—'}</td><td>${m.thigh||'—'}</td><td>${m.calf||'—'}</td></tr>`
   ).join('');
 }
 
@@ -7209,6 +7287,7 @@ function submitCheckin() {
   const w = parseFloat(document.getElementById('ciWeight')?.value) || 0;
   const ch = parseFloat(document.getElementById('ciChest')?.value) || 0;
   const wa = parseFloat(document.getElementById('ciWaist')?.value) || 0;
+  const st = parseFloat(document.getElementById('ciStomach')?.value) || 0;
   const hi = parseFloat(document.getElementById('ciHips')?.value) || 0;
   const gl = parseFloat(document.getElementById('ciGlute')?.value) || 0;
   const ar = parseFloat(document.getElementById('ciArm')?.value) || 0;
@@ -7234,7 +7313,7 @@ function submitCheckin() {
     week: newWeek,
     goal: goal || 'No goal set',
     overall: overall || 'No notes provided',
-    measurements: {w, ch, wa, hi, gl, ar, th, ca},
+    measurements: {w, ch, wa, st, hi, gl, ar, th, ca},
     adherence: adherence,
     photos: {front:true, side:true, back:true},
     extra: extra,
@@ -7261,6 +7340,7 @@ function submitCheckin() {
     weight: w || null,
     chest: ch || null,
     waist: wa || null,
+    stomach: st || null,
     hips: hi || null,
     glutes: gl || null,
     arm: ar || null,
@@ -7320,7 +7400,7 @@ function resetCheckinWizard() {
   document.getElementById('checkinConfirm').classList.add('hidden');
   ['ciGoal','ciOverall','ciExtra'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   ['ciGoalCount','ciOverallCount','ciExtraCount'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '0'; });
-  ['ciWeight','ciChest','ciWaist','ciHips','ciGlute','ciArm','ciThigh','ciCalf'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['ciWeight','ciChest','ciWaist','ciStomach','ciHips','ciGlute','ciArm','ciThigh','ciCalf'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('ciAdherence').value = '';
   document.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.ci-dot').forEach((d,i) => { d.classList.toggle('active', i===0); d.classList.remove('done'); });
@@ -7400,11 +7480,14 @@ function renderCheckinCard(ci, ptView) {
             <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;color:#9B8EC4;">${ci.auto.avgSleep}</div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;">
-          <div style="text-align:center;font-size:11px;color:var(--text-dim);">Chest: <strong style="color:var(--text-body);">${ci.measurements.ch}cm</strong></div>
-          <div style="text-align:center;font-size:11px;color:var(--text-dim);">Hips: <strong style="color:var(--text-body);">${ci.measurements.hi}cm</strong></div>
-          <div style="text-align:center;font-size:11px;color:var(--text-dim);">Glutes: <strong style="color:var(--text-body);">${ci.measurements.gl}cm</strong></div>
-          <div style="text-align:center;font-size:11px;color:var(--text-dim);">Arm: <strong style="color:var(--text-body);">${ci.measurements.ar}cm</strong></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px 6px;margin-bottom:10px;">
+          <div style="text-align:center;font-size:10px;color:var(--text-dim);">Chest: <strong style="color:var(--text-body);">${ci.measurements.ch}cm</strong></div>
+          <div style="text-align:center;font-size:10px;color:var(--text-dim);">Stomach: <strong style="color:var(--text-body);">${ci.measurements.st||'—'}cm</strong></div>
+          <div style="text-align:center;font-size:10px;color:var(--text-dim);">Hips: <strong style="color:var(--text-body);">${ci.measurements.hi}cm</strong></div>
+          <div style="text-align:center;font-size:10px;color:var(--text-dim);">Glutes: <strong style="color:var(--text-body);">${ci.measurements.gl}cm</strong></div>
+          <div style="text-align:center;font-size:10px;color:var(--text-dim);">Arm: <strong style="color:var(--text-body);">${ci.measurements.ar}cm</strong></div>
+          <div style="text-align:center;font-size:10px;color:var(--text-dim);">Thigh: <strong style="color:var(--text-body);">${ci.measurements.th}cm</strong></div>
+          <div style="text-align:center;font-size:10px;color:var(--text-dim);">Calf: <strong style="color:var(--text-body);">${ci.measurements.ca}cm</strong></div>
         </div>
         ${ci.photos ? `<div style="display:flex;gap:8px;margin-bottom:${ci.extra?'10':'0'}px;">
           <div class="photo-thumb" onclick="event.stopPropagation();openPhotoModal('Front — Week ${ci.week}')">Front</div>
