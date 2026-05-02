@@ -504,16 +504,21 @@
 
   /* Photo upload */
   .photo-upload-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
-  .photo-upload-slot{border:2px dashed var(--slate-border);border-radius:14px;padding:32px 16px;text-align:center;cursor:pointer;transition:all 0.15s;color:var(--text-dim);display:flex;flex-direction:column;align-items:center;}
+  .photo-upload-slot{border:2px dashed var(--slate-border);border-radius:14px;padding:32px 16px;text-align:center;cursor:pointer;transition:all 0.15s;color:var(--text-dim);display:flex;flex-direction:column;align-items:center;position:relative;overflow:hidden;}
   .photo-upload-slot:hover{border-color:var(--ember);background:var(--ember-soft);color:var(--text-muted);}
+  .photo-upload-slot.has-photo{border-style:solid;border-color:var(--sage);padding:0;}
+  .photo-upload-slot.has-photo img{width:100%;height:100%;object-fit:cover;border-radius:12px;}
+  .photo-upload-slot .photo-uploading{position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;border-radius:12px;color:#fff;font-size:11px;}
 
   /* Check-in history card */
   .checkin-history-card{background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all 0.15s;}
   .checkin-history-card:hover{border-color:var(--ember);background:rgba(224,122,58,0.04);}
 
   /* Photo thumbnails */
-  .photo-thumb{width:56px;height:56px;border-radius:8px;background:var(--slate-raised);border:1px solid var(--slate-border);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-dim);cursor:pointer;transition:all 0.15s;}
+  .photo-thumb{width:56px;height:56px;border-radius:8px;background:var(--slate-raised);border:1px solid var(--slate-border);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text-dim);cursor:pointer;transition:all 0.15s;overflow:hidden;position:relative;}
   .photo-thumb:hover{border-color:var(--ocean);background:var(--ocean-soft);}
+  .photo-thumb img{width:100%;height:100%;object-fit:cover;}
+  .photo-thumb .photo-thumb-label{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);color:#fff;font-size:9px;padding:2px 0;text-align:center;}
 
   /* Photo modal */
   .photo-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;}
@@ -742,7 +747,7 @@
       <a class="login-new-client" onclick="startNewClientOnboarding()">New client? Complete your onboarding</a>
       <div class="login-demo-hint">
         <div class="demo-title">Trainer Login</div>
-        <div class="demo-row"><span>Email:</span><span class="demo-val">adam@ahperformance.co.uk</span></div>
+        <div class="demo-row"><span>Email:</span><span class="demo-val">adam@ahperformance.ie</span></div>
       </div>
     </div>
   </div>
@@ -1615,17 +1620,20 @@
           <h3>Progress Photos</h3>
           <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Take photos in the same location and lighting each week for the best comparison.</p>
           <div class="photo-upload-grid">
-            <div class="photo-upload-slot" onclick="alert('Camera / file picker would open here')">
+            <div class="photo-upload-slot" id="ciPhotoFrontSlot" onclick="document.getElementById('ciPhotoFrontInput').click()">
               <span id="ciPhotoFrontIcon"></span>
-              <span style="font-size:12px;margin-top:6px;">Front</span>
+              <span id="ciPhotoFrontLabel" style="font-size:12px;margin-top:6px;">Front</span>
+              <input type="file" id="ciPhotoFrontInput" accept="image/*" capture="environment" style="display:none" onchange="ciHandlePhotoSelect(this,'front')">
             </div>
-            <div class="photo-upload-slot" onclick="alert('Camera / file picker would open here')">
+            <div class="photo-upload-slot" id="ciPhotoSideSlot" onclick="document.getElementById('ciPhotoSideInput').click()">
               <span id="ciPhotoSideIcon"></span>
-              <span style="font-size:12px;margin-top:6px;">Side</span>
+              <span id="ciPhotoSideLabel" style="font-size:12px;margin-top:6px;">Side</span>
+              <input type="file" id="ciPhotoSideInput" accept="image/*" capture="environment" style="display:none" onchange="ciHandlePhotoSelect(this,'side')">
             </div>
-            <div class="photo-upload-slot" onclick="alert('Camera / file picker would open here')">
+            <div class="photo-upload-slot" id="ciPhotoBackSlot" onclick="document.getElementById('ciPhotoBackInput').click()">
               <span id="ciPhotoBackIcon"></span>
-              <span style="font-size:12px;margin-top:6px;">Back</span>
+              <span id="ciPhotoBackLabel" style="font-size:12px;margin-top:6px;">Back</span>
+              <input type="file" id="ciPhotoBackInput" accept="image/*" capture="environment" style="display:none" onchange="ciHandlePhotoSelect(this,'back')">
             </div>
           </div>
           <p style="font-size:11px;color:var(--text-dim);margin-top:10px;">Photos are private and only visible to you and Coach Adam.</p>
@@ -1740,7 +1748,10 @@
       <h3 id="photoModalLabel" style="margin:0;font-size:16px;">Photo</h3>
       <button onclick="closePhotoModal()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;">&times;</button>
     </div>
-    <div style="background:var(--slate-raised);border-radius:12px;height:300px;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:13px;">Photo would display here</div>
+    <div id="photoModalBody" style="background:var(--slate-raised);border-radius:12px;min-height:200px;max-height:70vh;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:13px;overflow:hidden;">
+      <img id="photoModalImg" src="" alt="Progress photo" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:12px;display:none;">
+      <span id="photoModalPlaceholder">No photo available</span>
+    </div>
   </div>
 </div>
 
@@ -2193,7 +2204,7 @@ function ic(name, colour, size) { return ICONS[name] ? ICONS[name](colour, size)
 const CLIENTS = [
   {
     id: 1, name: 'Demo Client', initials: 'DC', bg: 'var(--ocean-soft)', colour: 'var(--ocean)',
-    email: 'demo@ahperformance.co.uk',
+    email: 'demo@ahperformance.ie',
     programme: 'No programme', week: 0, goal: 'General fitness',
     status: 'active', compliance: 0, lastActivity: 'Just now',
     nextCheckin: 'Monday', checkinDay: 'Monday',
@@ -2203,7 +2214,7 @@ const CLIENTS = [
     startWeight: 83,
     runs: [], goals: [],
     onboarding: {
-      personal: { firstName: 'Demo', lastName: 'Client', email: 'demo@ahperformance.co.uk', phone: '07700000000', dob: '1990-01-15', gender: 'Male', weight: '83', height: '178' },
+      personal: { firstName: 'Demo', lastName: 'Client', email: 'demo@ahperformance.ie', phone: '07700000000', dob: '1990-01-15', gender: 'Male', weight: '83', height: '178' },
       goals: { mainGoals: ['Build strength', 'Improve fitness'], targetWeight: '', timeline: '3 months' }
     }
   }
@@ -2613,8 +2624,8 @@ function buildSidebars() {
 //  AUTHENTICATION SYSTEM
 // ═══════════════════════════════════════
 const USERS = [
-  { email: 'adam@ahperformance.co.uk', password: 'coach2026', role: 'pt', name: 'Adam Heayberd' },
-  { email: 'demo@ahperformance.co.uk', password: 'demo2026', role: 'client', name: 'Demo Client', clientId: 1 }
+  { email: 'adam@ahperformance.ie', password: 'coach2026', role: 'pt', name: 'Adam Heayberd' },
+  { email: 'demo@ahperformance.ie', password: 'demo2026', role: 'client', name: 'Demo Client', clientId: 1 }
 ];
 let loggedInUser = null;
 
@@ -7300,6 +7311,68 @@ function checkinStep(dir) {
   });
 }
 
+// ─── Photo upload state for current check-in ───
+const _ciPhotos = { front: null, side: null, back: null };
+
+function ciHandlePhotoSelect(input, pose) {
+  const file = input.files[0];
+  if (!file) return;
+  const slot = document.getElementById('ciPhoto' + pose.charAt(0).toUpperCase() + pose.slice(1) + 'Slot');
+  const label = document.getElementById('ciPhoto' + pose.charAt(0).toUpperCase() + pose.slice(1) + 'Label');
+  const icon = document.getElementById('ciPhoto' + pose.charAt(0).toUpperCase() + pose.slice(1) + 'Icon');
+
+  // Show preview immediately
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    slot.classList.add('has-photo');
+    slot.innerHTML = `<img src="${e.target.result}" alt="${pose}"><div class="photo-uploading">Uploading...</div>`;
+    // Re-attach the file input
+    const newInput = document.createElement('input');
+    newInput.type = 'file'; newInput.id = input.id; newInput.accept = 'image/*';
+    newInput.capture = 'environment'; newInput.style.display = 'none';
+    newInput.onchange = function() { ciHandlePhotoSelect(this, pose); };
+    slot.appendChild(newInput);
+  };
+  reader.readAsDataURL(file);
+
+  // Upload to server
+  const cid = loggedInUser ? loggedInUser.clientId : 1;
+  const formData = new FormData();
+  formData.append('photo', file);
+  formData.append('clientId', cid);
+  formData.append('pose', pose);
+
+  fetch('/api/upload-photo', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        _ciPhotos[pose] = data.url;
+        // Remove uploading overlay
+        const overlay = slot.querySelector('.photo-uploading');
+        if (overlay) overlay.remove();
+        // Add a small checkmark
+        const check = document.createElement('div');
+        check.style.cssText = 'position:absolute;top:4px;right:4px;background:var(--sage);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:12px;';
+        check.textContent = '✓';
+        slot.appendChild(check);
+      } else {
+        console.error('Photo upload failed:', data.error);
+        slot.classList.remove('has-photo');
+        slot.innerHTML = `<span style="color:var(--warning);font-size:11px;">Upload failed</span><span style="font-size:12px;margin-top:4px;">${pose}</span>`;
+        const retryInput = document.createElement('input');
+        retryInput.type = 'file'; retryInput.id = input.id; retryInput.accept = 'image/*';
+        retryInput.capture = 'environment'; retryInput.style.display = 'none';
+        retryInput.onchange = function() { ciHandlePhotoSelect(this, pose); };
+        slot.appendChild(retryInput);
+      }
+    })
+    .catch(err => {
+      console.error('Photo upload error:', err);
+      const overlay = slot.querySelector('.photo-uploading');
+      if (overlay) overlay.textContent = 'Failed — tap to retry';
+    });
+}
+
 function submitCheckin() {
   // Gather form data
   const goal = document.getElementById('ciGoal')?.value || '';
@@ -7337,7 +7410,11 @@ function submitCheckin() {
     overall: overall || 'No notes provided',
     measurements: {w, ch, wa, st, hi, gl, ar, th, ca},
     adherence: adherence,
-    photos: {front:true, side:true, back:true},
+    photos: {
+      front: _ciPhotos.front || null,
+      side: _ciPhotos.side || null,
+      back: _ciPhotos.back || null
+    },
     extra: extra,
     auto: {
       avgEnergy: 3.8,
@@ -7426,6 +7503,16 @@ function resetCheckinWizard() {
   document.getElementById('ciAdherence').value = '';
   document.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.ci-dot').forEach((d,i) => { d.classList.toggle('active', i===0); d.classList.remove('done'); });
+  // Reset photo upload state
+  _ciPhotos.front = null; _ciPhotos.side = null; _ciPhotos.back = null;
+  ['Front','Side','Back'].forEach(pose => {
+    const slot = document.getElementById('ciPhoto' + pose + 'Slot');
+    if (slot) {
+      slot.classList.remove('has-photo');
+      const inputId = 'ciPhoto' + pose + 'Input';
+      slot.innerHTML = `<span id="ciPhoto${pose}Icon">${ic('camera','var(--text-dim)',24)}</span><span id="ciPhoto${pose}Label" style="font-size:12px;margin-top:6px;">${pose}</span><input type="file" id="${inputId}" accept="image/*" capture="environment" style="display:none" onchange="ciHandlePhotoSelect(this,'${pose.toLowerCase()}')">`;
+    }
+  });
 }
 
 function renderCheckinHistory() {
@@ -7511,10 +7598,10 @@ function renderCheckinCard(ci, ptView) {
           <div style="text-align:center;font-size:10px;color:var(--text-dim);">Thigh: <strong style="color:var(--text-body);">${ci.measurements.th}cm</strong></div>
           <div style="text-align:center;font-size:10px;color:var(--text-dim);">Calf: <strong style="color:var(--text-body);">${ci.measurements.ca}cm</strong></div>
         </div>
-        ${ci.photos ? `<div style="display:flex;gap:8px;margin-bottom:${ci.extra?'10':'0'}px;">
-          <div class="photo-thumb" onclick="event.stopPropagation();openPhotoModal('Front — Week ${ci.week}')">Front</div>
-          <div class="photo-thumb" onclick="event.stopPropagation();openPhotoModal('Side — Week ${ci.week}')">Side</div>
-          <div class="photo-thumb" onclick="event.stopPropagation();openPhotoModal('Back — Week ${ci.week}')">Back</div>
+        ${ci.photos && (ci.photos.front || ci.photos.side || ci.photos.back) ? `<div style="display:flex;gap:8px;margin-bottom:${ci.extra?'10':'0'}px;">
+          ${ci.photos.front ? `<div class="photo-thumb" onclick="event.stopPropagation();openPhotoModal('Front — Week ${ci.week}','${ci.photos.front}')"><img src="${ci.photos.front}" alt="Front"><span class="photo-thumb-label">Front</span></div>` : ''}
+          ${ci.photos.side ? `<div class="photo-thumb" onclick="event.stopPropagation();openPhotoModal('Side — Week ${ci.week}','${ci.photos.side}')"><img src="${ci.photos.side}" alt="Side"><span class="photo-thumb-label">Side</span></div>` : ''}
+          ${ci.photos.back ? `<div class="photo-thumb" onclick="event.stopPropagation();openPhotoModal('Back — Week ${ci.week}','${ci.photos.back}')"><img src="${ci.photos.back}" alt="Back"><span class="photo-thumb-label">Back</span></div>` : ''}
         </div>` : ''}
         ${ci.extra ? `<div style="font-size:12px;color:var(--text-muted);font-style:italic;line-height:1.5;background:var(--slate-card);border:1px solid var(--slate-border);border-radius:8px;padding:10px;margin-top:8px;">"${ci.extra}"</div>` : ''}
         <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--text-dim);">
@@ -7528,10 +7615,21 @@ function renderCheckinCard(ci, ptView) {
     </div>`;
 }
 
-function openPhotoModal(label) {
+function openPhotoModal(label, url) {
   const modal = document.getElementById('photoModal');
   if (!modal) return;
   document.getElementById('photoModalLabel').textContent = label;
+  const img = document.getElementById('photoModalImg');
+  const placeholder = document.getElementById('photoModalPlaceholder');
+  if (url) {
+    img.src = url;
+    img.style.display = 'block';
+    if (placeholder) placeholder.style.display = 'none';
+  } else {
+    img.style.display = 'none';
+    img.src = '';
+    if (placeholder) placeholder.style.display = 'block';
+  }
   modal.classList.add('active');
 }
 function closePhotoModal() {
@@ -8839,7 +8937,7 @@ function renderClientOnboardingForm() {
       <div class="ob-consent-block" style="border-color:var(--sage-border);background:rgba(139,176,126,0.03);"><div class="ob-consent-title" style="color:var(--sage-text);">Health Data Consent (Special Category)</div><div class="ob-consent-text">Your health information is classified as special category data under UK GDPR and requires your explicit consent to process.</div><div class="ob-consent-check" onclick="this.querySelector('.ob-checkbox').classList.toggle('chk')"><div class="ob-checkbox" id="obConsent2"></div><div class="ob-consent-label"><strong>I explicitly consent</strong> to AH Performance collecting and processing my health data for safe and effective programme design.</div></div></div>
       <div class="ob-consent-block"><div class="ob-consent-title">Communication Consent</div><div class="ob-consent-text">To deliver programmes, check-in reminders, and coaching feedback, I need to contact you via email and/or the AH Performance app.</div><div class="ob-consent-check" onclick="this.querySelector('.ob-checkbox').classList.toggle('chk')"><div class="ob-checkbox" id="obConsent3"></div><div class="ob-consent-label"><strong>I consent</strong> to receiving programme updates, coaching communications, and check-in reminders.</div></div></div>
       <div class="ob-consent-block" style="border-color:var(--ocean-border);background:rgba(74,157,200,0.03);"><div class="ob-consent-title" style="color:var(--ocean-text);">Progress Tracking Consent</div><div class="ob-consent-text">To monitor your progress, I will record data including body weight, measurements, performance metrics, and check-in responses.</div><div class="ob-consent-check" onclick="this.querySelector('.ob-checkbox').classList.toggle('chk')"><div class="ob-checkbox" id="obConsent4"></div><div class="ob-consent-label"><strong>I consent</strong> to AH Performance recording and storing my progress data.</div></div></div>
-      <div class="ob-consent-block" style="background:var(--slate-raised);border-color:var(--slate-border);"><div class="ob-consent-title">Your Rights</div><div class="ob-consent-text" style="margin-bottom:0;">Under UK GDPR, you have the right to: <strong>access</strong> all data held about you; <strong>correct</strong> any inaccurate data; <strong>request deletion</strong> of your data; <strong>withdraw consent</strong> at any time; <strong>data portability</strong>. Contact adam@ahperformance.co.uk.</div></div>
+      <div class="ob-consent-block" style="background:var(--slate-raised);border-color:var(--slate-border);"><div class="ob-consent-title">Your Rights</div><div class="ob-consent-text" style="margin-bottom:0;">Under UK GDPR, you have the right to: <strong>access</strong> all data held about you; <strong>correct</strong> any inaccurate data; <strong>request deletion</strong> of your data; <strong>withdraw consent</strong> at any time; <strong>data portability</strong>. Contact adam@ahperformance.ie.</div></div>
       <div class="ob-divider"></div>
       <div class="ob-consent-block" style="border-color:var(--ember-glow);background:rgba(224,122,58,0.03);"><div class="ob-consent-title" style="color:var(--ember);">Declaration</div><div class="ob-consent-check" onclick="this.querySelector('.ob-checkbox').classList.toggle('chk')"><div class="ob-checkbox" id="obConsent5"></div><div class="ob-consent-label"><strong>I declare</strong> that the information I have provided is true and complete. I understand that withholding relevant health information may affect the safety of my training.</div></div></div>
       <div class="ob-row" style="margin-top:18px;">
@@ -9254,7 +9352,7 @@ function completeManualOnboard() {
 }
 
 function copyOnboardingLink() {
-  alert('Onboarding link copied! In production, this would be: ahperformance.co.uk/onboard?ref=adam\\n\\nFor testing, click the Client role and use the Onboarding option in the sidebar.');
+  alert('Onboarding link copied! In production, this would be: ahperformance.ie/onboard?ref=adam\\n\\nFor testing, click the Client role and use the Onboarding option in the sidebar.');
 }
 
 function renderPTOnboardingView() {

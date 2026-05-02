@@ -17,9 +17,12 @@ DATA PERSISTENCE:
 from flask import Flask, request, jsonify, send_from_directory, send_file
 import json
 import os
+import uuid
+import time
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 
@@ -85,7 +88,7 @@ SMTP_HOST = os.environ.get('SMTP_HOST', '')       # e.g. smtp-relay.brevo.com
 SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
 SMTP_USER = os.environ.get('SMTP_USER', '')        # e.g. your Brevo login
 SMTP_PASS = os.environ.get('SMTP_PASS', '')        # e.g. your Brevo SMTP key
-SMTP_FROM = os.environ.get('SMTP_FROM', 'adam@ahperformance.co.uk')
+SMTP_FROM = os.environ.get('SMTP_FROM', 'adam@ahperformance.ie')
 SMTP_FROM_NAME = os.environ.get('SMTP_FROM_NAME', 'AH Performance')
 
 # ─── API: Shared data sync ───
@@ -201,6 +204,84 @@ def send_email():
 
         return jsonify({'ok': True})
 
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ─── Photo uploads ───
+# Store photos on Render persistent disk if available, else local directory.
+if DISK_PATH and os.path.isdir(DISK_PATH):
+    PHOTO_DIR = os.path.join(DISK_PATH, 'photos')
+else:
+    PHOTO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'photos')
+
+os.makedirs(PHOTO_DIR, exist_ok=True)
+print(f'  Photo storage: {PHOTO_DIR}')
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'heic'}
+MAX_PHOTO_SIZE = 10 * 1024 * 1024  # 10 MB
+
+def _allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/api/upload-photo', methods=['POST'])
+def upload_photo():
+    """Accept a progress photo, save to persistent disk, return URL."""
+    if 'photo' not in request.files:
+        return jsonify({'error': 'No photo file provided'}), 400
+
+    file = request.files['photo']
+    if file.filename == '':
+        return jsonify({'error': 'Empty filename'}), 400
+
+    if not _allowed_file(file.filename):
+        return jsonify({'error': 'File type not allowed. Use PNG, JPG, JPEG, or WEBP.'}), 400
+
+    # Read file to check size
+    file_data = file.read()
+    if len(file_data) > MAX_PHOTO_SIZE:
+        return jsonify({'error': 'File too large. Maximum 10 MB.'}), 400
+
+    # Generate unique filename: clientId_pose_timestamp.ext
+    client_id = request.form.get('clientId', 'unknown')
+    pose = request.form.get('pose', 'photo')  # front, side, back
+    ext = file.filename.rsplit('.', 1)[1].lower()
+    if ext == 'heic':
+        ext = 'jpg'  # HEIC will be served as-is but named .jpg for compatibility
+    timestamp = int(time.time() * 1000)
+    unique_name = f"{client_id}_{pose}_{timestamp}.{ext}"
+    safe_name = secure_filename(unique_name)
+
+    filepath = os.path.join(PHOTO_DIR, safe_name)
+    with open(filepath, 'wb') as f:
+        f.write(file_data)
+
+    photo_url = f"/api/photos/{safe_name}"
+    print(f'  Photo saved: {safe_name} ({len(file_data)} bytes)')
+    return jsonify({'ok': True, 'url': photo_url, 'filename': safe_name})
+
+@app.route('/api/photos/<filename>', methods=['GET'])
+def serve_photo(filename):
+    """Serve a saved progress photo."""
+    safe = secure_filename(filename)
+    filepath = os.path.join(PHOTO_DIR, safe)
+    if not os.path.exists(filepath):
+        return jsonify({'error': 'Photo not found'}), 404
+    return send_from_directory(PHOTO_DIR, safe)
+
+@app.route('/api/photos', methods=['GET'])
+def list_photos():
+    """List photos for a given client (optional filter by clientId query param)."""
+    client_id = request.args.get('clientId', '')
+    try:
+        all_files = os.listdir(PHOTO_DIR)
+        if client_id:
+            files = [f for f in all_files if f.startswith(f"{client_id}_")]
+        else:
+            files = all_files
+        # Sort newest first
+        files.sort(reverse=True)
+        photos = [{'filename': f, 'url': f'/api/photos/{f}'} for f in files if _allowed_file(f)]
+        return jsonify({'ok': True, 'photos': photos})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
