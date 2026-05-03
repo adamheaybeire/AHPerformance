@@ -162,7 +162,7 @@
   .wb-metric select:focus,.wb-metric input:focus{border-color:var(--sage);}
 
   /* ─── EXERCISE DETAIL MODAL ─── */
-  .ex-modal-overlay{display:none;position:fixed;inset:0;background:rgba(11,17,23,0.8);z-index:100;align-items:center;justify-content:center;}
+  .ex-modal-overlay{display:none;position:fixed;inset:0;background:rgba(11,17,23,0.8);z-index:300;align-items:center;justify-content:center;}
   .ex-modal-overlay.active{display:flex;}
   .ex-modal{background:var(--slate-card);border:1px solid var(--ocean-border);border-radius:16px;padding:28px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;}
   .ex-modal h3{font-family:'Space Grotesk',sans-serif;color:var(--ocean-text);margin-bottom:4px;}
@@ -1626,11 +1626,11 @@
           <h3>Programme Adherence</h3>
           <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">How closely did you follow your training plan this week?</p>
           <div class="scale-buttons" id="ciAdherenceScale">
-            <button class="scale-btn" onclick="selectScale('ciAdherence',1)"><div class="scale-num">1</div><div class="scale-label">Didn't use</div></button>
-            <button class="scale-btn" onclick="selectScale('ciAdherence',2)"><div class="scale-num">2</div><div class="scale-label">Some sessions</div></button>
-            <button class="scale-btn" onclick="selectScale('ciAdherence',3)"><div class="scale-num">3</div><div class="scale-label">Most sessions</div></button>
+            <button class="scale-btn" onclick="selectScale('ciAdherence',1)"><div class="scale-num">1</div><div class="scale-label">Rarely</div></button>
+            <button class="scale-btn" onclick="selectScale('ciAdherence',2)"><div class="scale-num">2</div><div class="scale-label">Some</div></button>
+            <button class="scale-btn" onclick="selectScale('ciAdherence',3)"><div class="scale-num">3</div><div class="scale-label">Most</div></button>
             <button class="scale-btn" onclick="selectScale('ciAdherence',4)"><div class="scale-num">4</div><div class="scale-label">Nearly all</div></button>
-            <button class="scale-btn" onclick="selectScale('ciAdherence',5)"><div class="scale-num">5</div><div class="scale-label">Entire plan</div></button>
+            <button class="scale-btn" onclick="selectScale('ciAdherence',5)"><div class="scale-num">5</div><div class="scale-label">All</div></button>
           </div>
           <input type="hidden" id="ciAdherence" value="">
         </div>
