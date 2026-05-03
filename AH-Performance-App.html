@@ -172,6 +172,16 @@
   .ex-modal .ex-section p{font-size:13px;color:var(--text-body);line-height:1.7;}
   .ex-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;}
   .ex-close:hover{color:var(--text-bright);}
+  .ex-tab{padding:8px 16px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:all 0.15s;background:var(--slate-raised);color:var(--text-muted);}
+  .ex-tab.active{background:var(--ocean);color:#fff;}
+  .ex-hist-session{margin-bottom:16px;}
+  .ex-hist-date{font-size:13px;font-weight:700;color:var(--text-bright);margin-bottom:2px;}
+  .ex-hist-label{font-size:11px;color:var(--text-dim);margin-bottom:6px;}
+  .ex-hist-set{display:grid;grid-template-columns:30px 1fr 1fr;gap:4px;padding:8px 0;border-bottom:1px solid var(--slate-border);align-items:center;}
+  .ex-hist-set:last-child{border-bottom:none;}
+  .ex-hist-setnum{font-size:12px;font-weight:700;color:var(--ocean);text-align:center;}
+  .ex-hist-val{font-size:13px;color:var(--text-body);}
+  .ex-hist-more{font-size:11px;color:var(--ocean);cursor:pointer;text-align:center;padding:6px 0;}
 
   /* ─── PT DASHBOARD ─── */
   .pt-search-bar{display:flex;gap:12px;margin-bottom:20px;}
@@ -322,8 +332,9 @@
     /* Check-in wizard */
     .checkin-wizard{padding:16px !important;}
     .scale-buttons{grid-template-columns:repeat(5,1fr) !important;gap:6px !important;}
-    .scale-btn{padding:10px 4px !important;}
-    .scale-num{font-size:16px !important;}
+    .scale-btn{padding:10px 2px !important;min-height:68px !important;}
+    .scale-num{font-size:16px !important;line-height:1 !important;margin-bottom:4px !important;}
+    .scale-label{font-size:9px !important;line-height:1.2 !important;}
 
     /* Messages */
     #clientMessages .card{max-height:calc(100vh - 200px) !important;}
@@ -449,7 +460,7 @@
   .wl-add-set:active{background:var(--slate-raised);}
   .wl-remove-set-btn{width:28px;height:28px;border-radius:8px;border:none;background:transparent;color:var(--text-dim);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;opacity:0.5;transition:all 0.15s;margin-left:-4px;}
   .wl-remove-set-btn:active{opacity:1;color:#e74c3c;background:rgba(231,76,60,0.1);}
-  .wl-notes-input{width:100%;padding:8px 10px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-body);font-size:12px;resize:none;min-height:28px;font-family:Inter,sans-serif;line-height:1.5;}
+  .wl-notes-input{width:100%;padding:6px 10px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-body);font-size:11px;resize:none;min-height:24px;font-family:Inter,sans-serif;line-height:1.4;}
   .wl-notes-input:focus{border-color:var(--ocean);outline:none;}
   /* Timer bar — flexbox child above footer */
   .wl-timer-bar{display:flex;align-items:center;justify-content:center;gap:0;padding:8px 16px;background:var(--slate-card);border-top:1px solid var(--slate-border);flex-shrink:0;}
@@ -497,7 +508,7 @@
   .scale-btn{background:var(--slate-raised);border:2px solid var(--slate-border);border-radius:12px;padding:14px 6px;text-align:center;cursor:pointer;transition:all 0.15s;color:var(--text-body);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70px;}
   .scale-btn:hover{border-color:var(--ember);background:var(--ember-soft);}
   .scale-btn.active{border-color:var(--ember);background:var(--ember-soft);color:var(--text-bright);}
-  .scale-num{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;margin-bottom:4px;}
+  .scale-num{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;margin-bottom:4px;line-height:1;}
   .scale-btn.active .scale-num{color:var(--ember);}
   .scale-label{font-size:10px;color:var(--text-dim);line-height:1.3;}
   .scale-btn.active .scale-label{color:var(--text-muted);}
@@ -712,12 +723,22 @@
 <div class="ex-modal-overlay" id="exModal" onclick="if(event.target===this)closeExModal()">
   <div class="ex-modal" style="position:relative;">
     <button class="ex-close" onclick="closeExModal()">&times;</button>
-    <h3 id="exModalName"></h3>
-    <div class="ex-category" id="exModalCat"></div>
-    <div class="ex-section"><h4>Muscles Worked</h4><p id="exModalMuscles"></p></div>
-    <div class="ex-section"><h4>Setup</h4><p id="exModalSetup"></p></div>
-    <div class="ex-section"><h4>Coaching Cues</h4><p id="exModalCues"></p></div>
-    <div class="ex-section"><h4>Common Mistakes</h4><p id="exModalMistakes"></p></div>
+    <div style="display:flex;gap:6px;margin-bottom:14px;">
+      <button class="ex-tab active" id="exTabDetails" onclick="switchExTab('details')">Exercise details</button>
+      <button class="ex-tab" id="exTabHistory" onclick="switchExTab('history')">History</button>
+    </div>
+    <div id="exTabDetailsContent">
+      <h3 id="exModalName"></h3>
+      <div class="ex-category" id="exModalCat"></div>
+      <div class="ex-section"><h4>Muscles Worked</h4><p id="exModalMuscles"></p></div>
+      <div class="ex-section"><h4>Setup</h4><p id="exModalSetup"></p></div>
+      <div class="ex-section"><h4>Coaching Cues</h4><p id="exModalCues"></p></div>
+      <div class="ex-section"><h4>Common Mistakes</h4><p id="exModalMistakes"></p></div>
+    </div>
+    <div id="exTabHistoryContent" style="display:none;">
+      <h3 id="exModalHistName" style="margin-bottom:12px;"></h3>
+      <div id="exModalHistBody" style="font-size:13px;color:var(--text-body);"></div>
+    </div>
   </div>
 </div>
 
@@ -3225,16 +3246,117 @@ function openExModal(name) {
   let ex = match ? match.data : null;
   // If not in EXERCISE_DB, check inline programme data
   if (!ex) ex = _findExDetailInProgramme(name);
-  if (!ex) { alert('No details available for ' + name); return; }
-  document.getElementById('exModalName').textContent = name;
-  document.getElementById('exModalCat').textContent = ex.cat;
-  document.getElementById('exModalMuscles').textContent = ex.muscles;
-  document.getElementById('exModalSetup').textContent = ex.setup;
-  document.getElementById('exModalCues').textContent = ex.cues;
-  document.getElementById('exModalMistakes').textContent = ex.mistakes;
+  if (!ex) {
+    // No exercise details — still show modal with history only
+    document.getElementById('exModalName').textContent = name;
+    document.getElementById('exModalCat').textContent = '';
+    document.getElementById('exModalMuscles').textContent = 'Not available';
+    document.getElementById('exModalSetup').textContent = 'Not available';
+    document.getElementById('exModalCues').textContent = 'Not available';
+    document.getElementById('exModalMistakes').textContent = 'Not available';
+  } else {
+    document.getElementById('exModalName').textContent = name;
+    document.getElementById('exModalCat').textContent = ex.cat || '';
+    document.getElementById('exModalMuscles').textContent = ex.muscles || '';
+    document.getElementById('exModalSetup').textContent = ex.setup || '';
+    document.getElementById('exModalCues').textContent = ex.cues || '';
+    document.getElementById('exModalMistakes').textContent = ex.mistakes || '';
+  }
+  // Always populate history and reset to details tab
+  _renderExHistory(name);
+  switchExTab('details');
   document.getElementById('exModal').classList.add('active');
 }
 function closeExModal() { document.getElementById('exModal').classList.remove('active'); }
+
+function switchExTab(tab) {
+  document.getElementById('exTabDetails').classList.toggle('active', tab === 'details');
+  document.getElementById('exTabHistory').classList.toggle('active', tab === 'history');
+  document.getElementById('exTabDetailsContent').style.display = tab === 'details' ? '' : 'none';
+  document.getElementById('exTabHistoryContent').style.display = tab === 'history' ? '' : 'none';
+}
+
+function _wlGetAllExHistory(exerciseName) {
+  const cid = loggedInUser ? loggedInUser.clientId : null;
+  if (!cid || !exerciseName) return [];
+  const logs = WORKOUT_LOG[cid] || [];
+  const lower = exerciseName.toLowerCase();
+  const results = [];
+  for (const w of logs) {
+    const exMatch = (w.exercises || []).find(e => (e.name || '').toLowerCase() === lower);
+    if (exMatch && exMatch.sets && exMatch.sets.length) {
+      results.push({ date: w.date, sessionName: w.sessionName || '', sets: exMatch.sets });
+    }
+  }
+  return results;
+}
+
+function _renderExHistory(exerciseName) {
+  const history = _wlGetAllExHistory(exerciseName);
+  const container = document.getElementById('exModalHistBody');
+  document.getElementById('exModalHistName').textContent = exerciseName;
+  if (!history.length) {
+    container.innerHTML = '<p style="color:var(--text-dim);font-size:13px;padding:20px 0;text-align:center;">No history recorded for this exercise yet.</p>';
+    return;
+  }
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  let html = '';
+  const maxShow = 5;
+  const visible = history.slice(0, maxShow);
+  const hidden = history.slice(maxShow);
+  visible.forEach(h => {
+    html += _renderExHistSession(h, months, days);
+  });
+  if (hidden.length) {
+    html += `<div id="exHistMore">
+      <div class="ex-hist-more" onclick="document.getElementById('exHistHidden').style.display='';document.getElementById('exHistMore').style.display='none';">${ic('chevron','var(--ocean)',12)} ${hidden.length} More</div>
+    </div>
+    <div id="exHistHidden" style="display:none;">`;
+    hidden.forEach(h => { html += _renderExHistSession(h, months, days); });
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
+
+function _renderExHistSession(h, months, days) {
+  let dateLabel = h.date || '';
+  try {
+    const d = new Date(h.date);
+    if (!isNaN(d.getTime())) {
+      dateLabel = days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()];
+      if (d.getFullYear() !== new Date().getFullYear()) dateLabel += ' ' + d.getFullYear();
+    }
+  } catch(e) {}
+  let setsHtml = '';
+  const showSets = h.sets.slice(0, 3);
+  const extraSets = h.sets.slice(3);
+  showSets.forEach((s, si) => {
+    setsHtml += `<div class="ex-hist-set">
+      <div class="ex-hist-setnum">${si + 1}</div>
+      <div class="ex-hist-val"><strong>${s.reps || '—'}</strong>  reps</div>
+      <div class="ex-hist-val" style="text-align:right;"><strong>${s.weight || '—'}</strong>  kg</div>
+    </div>`;
+  });
+  if (extraSets.length) {
+    const uid = 'exH' + Math.random().toString(36).substr(2,6);
+    setsHtml += `<div class="ex-hist-more" onclick="document.getElementById('${uid}').style.display='';this.style.display='none';">${ic('chevron','var(--ocean)',10)} ${extraSets.length} More</div>`;
+    setsHtml += `<div id="${uid}" style="display:none;">`;
+    extraSets.forEach((s, si) => {
+      setsHtml += `<div class="ex-hist-set">
+        <div class="ex-hist-setnum">${showSets.length + si + 1}</div>
+        <div class="ex-hist-val"><strong>${s.reps || '—'}</strong>  reps</div>
+        <div class="ex-hist-val" style="text-align:right;"><strong>${s.weight || '—'}</strong>  kg</div>
+      </div>`;
+    });
+    setsHtml += '</div>';
+  }
+  return `<div class="ex-hist-session">
+    <div class="ex-hist-date">${dateLabel}</div>
+    <div class="ex-hist-label">${h.sessionName}</div>
+    ${setsHtml}
+  </div>`;
+}
 
 // ═══════════════════════════════════════
 //  WORKOUT LOGGER — GYM MODE
@@ -3655,7 +3777,7 @@ function renderWLActiveSession() {
       ${ssHeader}${coachNote}
       <div class="wl-ex-header" onclick="toggleWLExercise(${i})">
         <div>
-          <h3>${_shortenExName(ex.n)}</h3>
+          <h3 onclick="event.stopPropagation();openExModal('${(ex.n||'').replace(/'/g,"\\'")}')" style="cursor:pointer;">${_shortenExName(ex.n)} <span style="font-size:9px;color:var(--ocean);font-weight:400;">ⓘ</span></h3>
           <div class="wl-ex-detail">${ex.sr || ''} ${ex.w && ex.w !== '—' ? '@ ' + ex.w : ''} ${ex.rpe && ex.rpe !== '—' ? '· RPE ' + ex.rpe : ''}${ex.rest ? ' · Rest ' + ex.rest : ''}${ex.perSide ? ' · per side' : ''}</div>
           ${prevRefHtml}
         </div>
@@ -3746,18 +3868,24 @@ function wlFormatTimeInput(el) {
 
 function wlUpdateSet(exIdx, setIdx, field, value) {
   if (!wlSetData[exIdx] || !wlSetData[exIdx][setIdx]) return;
+  const oldValue = wlSetData[exIdx][setIdx][field];
   wlSetData[exIdx][setIdx][field] = value;
-  // Auto-populate weight to subsequent unfilled sets when weight changes on ANY set
+  // Auto-populate weight to subsequent sets when weight changes on ANY set
+  // Updates sets that are either empty OR still have the old value (auto-filled, not manually changed)
   if (field === 'weight' && value) {
     const allSets = wlSetData[exIdx];
     for (let s = setIdx + 1; s < allSets.length; s++) {
-      if (!allSets[s].done && (!allSets[s].weight || allSets[s].weight === '')) {
-        allSets[s].weight = value;
-        // Update the input value in DOM immediately
-        const row = document.getElementById(`wlSet${exIdx}_${s}`);
-        if (row) {
-          const inp = row.querySelectorAll('.wl-set-input')[0];
-          if (inp) { inp.value = value; inp.placeholder = value; }
+      if (!allSets[s].done) {
+        const curW = allSets[s].weight;
+        const isEmpty = !curW || curW === '';
+        const wasAutoFilled = oldValue && String(curW) === String(oldValue);
+        if (isEmpty || wasAutoFilled) {
+          allSets[s].weight = value;
+          const row = document.getElementById(`wlSet${exIdx}_${s}`);
+          if (row) {
+            const inp = row.querySelectorAll('.wl-set-input')[0];
+            if (inp) { inp.value = value; inp.placeholder = value; }
+          }
         }
       }
     }
@@ -3785,12 +3913,15 @@ function wlToggleSet(exIdx, setIdx) {
     if (inputs[1]) set.reps = inputs[1].value || set.reps;
   }
   set.done = !set.done;
-  // Auto-populate weight: when any set is checked, copy weight to all subsequent unfilled sets
+  // Auto-populate weight: when any set is checked, copy weight to all subsequent unfilled/matching sets
   if (set.done && set.weight) {
     const allSets = wlSetData[exIdx] || [];
     for (let s = setIdx + 1; s < allSets.length; s++) {
-      if (!allSets[s].done && (!allSets[s].weight || allSets[s].weight === '')) {
-        allSets[s].weight = set.weight;
+      if (!allSets[s].done) {
+        const curW = allSets[s].weight;
+        if (!curW || curW === '') {
+          allSets[s].weight = set.weight;
+        }
       }
     }
   }
@@ -4679,14 +4810,20 @@ function editWorkoutEntry(idx) {
   html += '<div style="margin-bottom:10px;font-size:13px;font-weight:600;color:var(--ocean);">Edit Workout</div>';
   html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Session Name</label><input type="text" id="histEditName${idx}" value="${(w.sessionName||'').replace(/"/g,'&quot;')}" style="${fieldStyle}"></div>`;
   html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Date</label><input type="date" id="histEditDate${idx}" value="${w.date || ''}" style="${fieldStyle}"></div>`;
-  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-    <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Duration (mm:ss)</label><input type="text" inputmode="numeric" id="histEditDuration${idx}" value="${w.duration || ''}" placeholder="mm:ss" onblur="wlFormatTimeInput(this)" style="${fieldStyle}"></div>
-    <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">RPE (1-10)</label><input type="number" id="histEditRPE${idx}" value="${w.rpe || ''}" min="1" max="10" style="${fieldStyle}"></div>
-  </div>`;
-  html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Notes</label><textarea id="histEditNotes${idx}" style="${fieldStyle}resize:vertical;min-height:50px;">${w.notes || ''}</textarea></div>`;
-  // For cardio sessions or run sessions with no exercises, show distance/time/HR fields
+  // Detect cardio/run session early so we can hide Duration for those
   const _wNameLower = (w.sessionName || '').toLowerCase();
   const _isRunOrCardio = w.type === 'cardio' || _wNameLower.includes('run') || _wNameLower.includes('jog') || _wNameLower.includes('sprint') || _wNameLower.includes('cycle') || _wNameLower.includes('swim') || _wNameLower.includes('walk') || _wNameLower.includes('row');
+  const _showDuration = !(_isRunOrCardio && (!w.exercises || w.exercises.length === 0));
+  if (_showDuration) {
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Duration (mm:ss)</label><input type="text" inputmode="numeric" id="histEditDuration${idx}" value="${w.duration || ''}" placeholder="mm:ss" onblur="wlFormatTimeInput(this)" style="${fieldStyle}"></div>
+      <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">RPE (1-10)</label><input type="number" id="histEditRPE${idx}" value="${w.rpe || ''}" min="1" max="10" style="${fieldStyle}"></div>
+    </div>`;
+  } else {
+    html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">RPE (1-10)</label><input type="number" id="histEditRPE${idx}" value="${w.rpe || ''}" min="1" max="10" style="${fieldStyle}"></div>`;
+    html += `<input type="hidden" id="histEditDuration${idx}" value="${w.duration || ''}">`;
+  }
+  html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Notes</label><textarea id="histEditNotes${idx}" style="${fieldStyle}resize:vertical;min-height:50px;">${w.notes || ''}</textarea></div>`;
   if (_isRunOrCardio && (!w.exercises || w.exercises.length === 0)) {
     // Look up matching cardio progress entry for distance/time/HR
     const pd = PROGRESS_DATA[cid];
@@ -7547,70 +7684,75 @@ function renderCIWeightTrend(cid) {
 }
 
 function renderCheckinCard(ci, ptView) {
+  const m = ci.measurements || {};
+  const hasPhotos = ci.photos && (ci.photos.front || ci.photos.side || ci.photos.back);
+  const noPhotos = !ci.photos || (!ci.photos.front && !ci.photos.side && !ci.photos.back);
   return `
     <div class="checkin-history-card" onclick="this.querySelector('.ci-detail')?.classList.toggle('hidden')">
       <div class="session-header">
         <div>
           <span class="session-name">Week ${ci.week} Check-In</span>
-          <span style="margin-left:8px;font-size:10px;padding:2px 8px;border-radius:10px;background:${ci.reviewed?'var(--sage-soft)':'var(--warning-soft)'};color:${ci.reviewed?'var(--sage-text)':'var(--warning)'};">${ci.reviewed?(ptView?'Reviewed':'Reviewed'):(ptView?'Needs Review':'Pending Review')}</span>
+          <span style="margin-left:8px;font-size:10px;padding:2px 8px;border-radius:10px;background:${ci.reviewed?'var(--sage-soft)':'var(--warning-soft)'};color:${ci.reviewed?'var(--sage-text)':'var(--warning)'};">${ci.reviewed?'Reviewed':(ptView?'Needs Review':'Pending Review')}</span>
         </div>
         <span class="session-date">${ci.date}</span>
       </div>
       <div class="session-metrics" style="margin-top:8px;">
         <div class="session-metric">${ic('target','#E07A3A',12)} Adherence: <span class="sm-val">${ci.adherence}/5</span></div>
-        <div class="session-metric">${ic('trending','#8BB07E',12)} Weight: <span class="sm-val">${ci.measurements.w}kg</span></div>
+        <div class="session-metric">${ic('trending','#8BB07E',12)} Weight: <span class="sm-val">${m.w||'—'}kg</span></div>
         <div class="session-metric">${ic('bolt','#4A9DC8',12)} Energy: <span class="sm-val">${ci.auto.avgEnergy}/5</span></div>
         <div class="session-metric">${ic('moon','#9B8EC4',12)} Sleep: <span class="sm-val">${ci.auto.avgSleep}</span></div>
       </div>
       <div class="ci-detail hidden" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--slate-border);">
         <div style="margin-bottom:10px;">
-          <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Goal</div>
-          <div style="font-size:13px;color:var(--text-body);line-height:1.5;">${ci.goal}</div>
+          <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">Goal</div>
+          <div style="font-size:12px;color:var(--text-body);line-height:1.5;">${ci.goal}</div>
         </div>
         <div style="margin-bottom:10px;">
-          <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Overall Reflection</div>
-          <div style="font-size:13px;color:var(--text-body);line-height:1.5;">${ci.overall}</div>
+          <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">Overall Reflection</div>
+          <div style="font-size:12px;color:var(--text-body);line-height:1.5;">${ci.overall}</div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px;">
-          <div style="background:rgba(74,157,200,0.06);border-radius:8px;padding:10px;text-align:center;">
-            <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;">Weight</div>
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;color:var(--ocean-text);">${ci.measurements.w}kg</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px;">
+          <div style="background:rgba(74,157,200,0.06);border-radius:8px;padding:8px 4px;text-align:center;">
+            <div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;">Weight</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--ocean-text);">${m.w||'—'}kg</div>
           </div>
-          <div style="background:rgba(224,122,58,0.06);border-radius:8px;padding:10px;text-align:center;">
-            <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;">Waist</div>
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;color:var(--ember);">${ci.measurements.wa}cm</div>
+          <div style="background:rgba(224,122,58,0.06);border-radius:8px;padding:8px 4px;text-align:center;">
+            <div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;">Waist</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--ember);">${m.wa||'—'}cm</div>
           </div>
-          <div style="background:rgba(139,176,126,0.06);border-radius:8px;padding:10px;text-align:center;">
-            <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;">Adherence</div>
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;color:var(--sage-text);">${ci.adherence}/5</div>
-          </div>
-          <div style="background:rgba(155,142,196,0.06);border-radius:8px;padding:10px;text-align:center;">
-            <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;">Avg Sleep</div>
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;color:#9B8EC4;">${ci.auto.avgSleep}</div>
+          <div style="background:rgba(139,176,126,0.06);border-radius:8px;padding:8px 4px;text-align:center;">
+            <div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;">Adherence</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--sage-text);">${ci.adherence}/5</div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px 6px;margin-bottom:10px;">
-          <div style="text-align:center;font-size:10px;color:var(--text-dim);">Chest: <strong style="color:var(--text-body);">${ci.measurements.ch}cm</strong></div>
-          <div style="text-align:center;font-size:10px;color:var(--text-dim);">Stomach: <strong style="color:var(--text-body);">${ci.measurements.st||'—'}cm</strong></div>
-          <div style="text-align:center;font-size:10px;color:var(--text-dim);">Hips: <strong style="color:var(--text-body);">${ci.measurements.hi}cm</strong></div>
-          <div style="text-align:center;font-size:10px;color:var(--text-dim);">Glutes: <strong style="color:var(--text-body);">${ci.measurements.gl}cm</strong></div>
-          <div style="text-align:center;font-size:10px;color:var(--text-dim);">Arm: <strong style="color:var(--text-body);">${ci.measurements.ar}cm</strong></div>
-          <div style="text-align:center;font-size:10px;color:var(--text-dim);">Thigh: <strong style="color:var(--text-body);">${ci.measurements.th}cm</strong></div>
-          <div style="text-align:center;font-size:10px;color:var(--text-dim);">Calf: <strong style="color:var(--text-body);">${ci.measurements.ca}cm</strong></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px;">
+          <div style="text-align:center;font-size:9px;color:var(--text-dim);">Chest: <strong style="color:var(--text-body);">${m.ch||'—'}</strong></div>
+          <div style="text-align:center;font-size:9px;color:var(--text-dim);">Stomach: <strong style="color:var(--text-body);">${m.st||'—'}</strong></div>
+          <div style="text-align:center;font-size:9px;color:var(--text-dim);">Hips: <strong style="color:var(--text-body);">${m.hi||'—'}</strong></div>
+          <div style="text-align:center;font-size:9px;color:var(--text-dim);">Glutes: <strong style="color:var(--text-body);">${m.gl||'—'}</strong></div>
+          <div style="text-align:center;font-size:9px;color:var(--text-dim);">Arm: <strong style="color:var(--text-body);">${m.ar||'—'}</strong></div>
+          <div style="text-align:center;font-size:9px;color:var(--text-dim);">Thigh: <strong style="color:var(--text-body);">${m.th||'—'}</strong></div>
+          <div style="text-align:center;font-size:9px;color:var(--text-dim);">Calf: <strong style="color:var(--text-body);">${m.ca||'—'}</strong></div>
         </div>
-        ${ci.photos && (ci.photos.front || ci.photos.side || ci.photos.back) ? `<div style="display:flex;gap:8px;margin-bottom:${ci.extra?'10':'0'}px;">
-          ${ci.photos.front ? `<div class="photo-thumb" onclick="event.stopPropagation();openPhotoModal('Front — Week ${ci.week}','${ci.photos.front}')"><img src="${ci.photos.front}" alt="Front"><span class="photo-thumb-label">Front</span></div>` : ''}
-          ${ci.photos.side ? `<div class="photo-thumb" onclick="event.stopPropagation();openPhotoModal('Side — Week ${ci.week}','${ci.photos.side}')"><img src="${ci.photos.side}" alt="Side"><span class="photo-thumb-label">Side</span></div>` : ''}
-          ${ci.photos.back ? `<div class="photo-thumb" onclick="event.stopPropagation();openPhotoModal('Back — Week ${ci.week}','${ci.photos.back}')"><img src="${ci.photos.back}" alt="Back"><span class="photo-thumb-label">Back</span></div>` : ''}
-        </div>` : ''}
-        ${ci.extra ? `<div style="font-size:12px;color:var(--text-muted);font-style:italic;line-height:1.5;background:var(--slate-card);border:1px solid var(--slate-border);border-radius:8px;padding:10px;margin-top:8px;">"${ci.extra}"</div>` : ''}
-        <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--text-dim);">
-          <span>Avg Energy: <strong style="color:var(--text-body);">${ci.auto.avgEnergy}/5</strong></span>
-          <span>Avg Mood: <strong style="color:var(--text-body);">${ci.auto.avgMood}/5</strong></span>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+          ${hasPhotos ? `
+            ${ci.photos.front ? `<div class="photo-thumb" onclick="event.stopPropagation();openPhotoModal('Front — Week ${ci.week}','${ci.photos.front}')"><img src="${ci.photos.front}" alt="Front"><span class="photo-thumb-label">Front</span></div>` : ''}
+            ${ci.photos.side ? `<div class="photo-thumb" onclick="event.stopPropagation();openPhotoModal('Side — Week ${ci.week}','${ci.photos.side}')"><img src="${ci.photos.side}" alt="Side"><span class="photo-thumb-label">Side</span></div>` : ''}
+            ${ci.photos.back ? `<div class="photo-thumb" onclick="event.stopPropagation();openPhotoModal('Back — Week ${ci.week}','${ci.photos.back}')"><img src="${ci.photos.back}" alt="Back"><span class="photo-thumb-label">Back</span></div>` : ''}
+          ` : ''}
+          ${!ptView ? `<div class="photo-thumb" onclick="event.stopPropagation();openCIPhotoUpload('${ci.id}')" style="border-style:dashed;font-size:16px;color:var(--ocean);" title="Add photos">+</div>` : ''}
+        </div>
+        ${ci.extra ? `<div style="font-size:11px;color:var(--text-muted);font-style:italic;line-height:1.4;background:var(--slate-card);border:1px solid var(--slate-border);border-radius:8px;padding:8px;margin-bottom:8px;">"${ci.extra}"</div>` : ''}
+        <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:10px;color:var(--text-dim);">
+          <span>Energy: <strong style="color:var(--text-body);">${ci.auto.avgEnergy}/5</strong></span>
+          <span>Mood: <strong style="color:var(--text-body);">${ci.auto.avgMood}/5</strong></span>
           <span>Steps: <strong style="color:var(--text-body);">${ci.auto.steps}</strong></span>
-          <span>Resting HR: <strong style="color:var(--text-body);">${ci.auto.restingHR} bpm</strong></span>
+          <span>HR: <strong style="color:var(--text-body);">${ci.auto.restingHR} bpm</strong></span>
         </div>
-        ${ptView && !ci.reviewed ? `<div style="margin-top:12px;"><button class="btn btn-sm btn-ember" onclick="event.stopPropagation();markCheckinReviewed('${ci.id}')">Mark as Reviewed</button></div>` : ''}
+        <div style="margin-top:10px;display:flex;gap:8px;">
+          ${!ptView ? `<button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openCIEdit('${ci.id}')" style="font-size:11px;">Edit Check-In</button>` : ''}
+          ${ptView && !ci.reviewed ? `<button class="btn btn-sm btn-ember" onclick="event.stopPropagation();markCheckinReviewed('${ci.id}')">Mark as Reviewed</button>` : ''}
+        </div>
       </div>
     </div>`;
 }
@@ -7635,6 +7777,104 @@ function openPhotoModal(label, url) {
 function closePhotoModal() {
   const modal = document.getElementById('photoModal');
   if (modal) modal.classList.remove('active');
+}
+
+// ─── Check-in edit & photo upload after submission ───
+function _findCheckin(ciId) {
+  const cid = loggedInUser ? loggedInUser.clientId : 1;
+  const logs = CHECKIN_LOG[cid] || [];
+  return logs.find(ci => ci.id === ciId);
+}
+
+function openCIPhotoUpload(ciId) {
+  const ci = _findCheckin(ciId);
+  if (!ci) return;
+  // Create a temporary file input for photo upload
+  const poses = ['front','side','back'];
+  const missing = poses.filter(p => !ci.photos || !ci.photos[p]);
+  if (!missing.length) { alert('All photos already uploaded for this check-in.'); return; }
+  const pose = missing[0]; // Upload next missing pose
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment';
+  input.onchange = function() {
+    const file = this.files[0];
+    if (!file) return;
+    const cid = loggedInUser ? loggedInUser.clientId : 1;
+    const formData = new FormData();
+    formData.append('photo', file);
+    formData.append('clientId', cid);
+    formData.append('pose', pose);
+    fetch('/api/upload-photo', { method: 'POST', body: formData })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          if (!ci.photos) ci.photos = {};
+          ci.photos[pose] = data.url;
+          renderCheckinHistory();
+          scheduleSave();
+        } else {
+          alert('Photo upload failed: ' + (data.error || 'Unknown error'));
+        }
+      })
+      .catch(err => alert('Upload error: ' + err.message));
+  };
+  input.click();
+}
+
+function openCIEdit(ciId) {
+  const ci = _findCheckin(ciId);
+  if (!ci) return;
+  const m = ci.measurements || {};
+  const inpS = "width:100%;padding:6px 8px;font-size:12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:6px;color:var(--text-bright);box-sizing:border-box;";
+  const labS = "font-size:9px;color:var(--text-dim);text-transform:uppercase;display:block;margin-bottom:2px;";
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(11,17,23,0.85);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div style="background:var(--slate-card);border:1px solid var(--slate-border);border-radius:16px;padding:20px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto;" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <h3 style="margin:0;font-size:15px;color:var(--ocean);">Edit Week ${ci.week} Check-In</h3>
+        <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;">&times;</button>
+      </div>
+      <div style="margin-bottom:10px;"><label style="${labS}">Goal</label><textarea id="ciEditGoal" style="${inpS}resize:vertical;min-height:40px;">${(ci.goal||'').replace(/"/g,'&quot;')}</textarea></div>
+      <div style="margin-bottom:10px;"><label style="${labS}">Overall Reflection</label><textarea id="ciEditOverall" style="${inpS}resize:vertical;min-height:40px;">${(ci.overall||'').replace(/"/g,'&quot;')}</textarea></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">
+        <div><label style="${labS}">Weight</label><input type="number" step="0.1" id="ciEditW" value="${m.w||''}" style="${inpS}"></div>
+        <div><label style="${labS}">Chest</label><input type="number" step="0.1" id="ciEditCh" value="${m.ch||''}" style="${inpS}"></div>
+        <div><label style="${labS}">Waist</label><input type="number" step="0.1" id="ciEditWa" value="${m.wa||''}" style="${inpS}"></div>
+        <div><label style="${labS}">Stomach</label><input type="number" step="0.1" id="ciEditSt" value="${m.st||''}" style="${inpS}"></div>
+        <div><label style="${labS}">Hips</label><input type="number" step="0.1" id="ciEditHi" value="${m.hi||''}" style="${inpS}"></div>
+        <div><label style="${labS}">Glutes</label><input type="number" step="0.1" id="ciEditGl" value="${m.gl||''}" style="${inpS}"></div>
+        <div><label style="${labS}">Arm</label><input type="number" step="0.1" id="ciEditAr" value="${m.ar||''}" style="${inpS}"></div>
+        <div><label style="${labS}">Thigh</label><input type="number" step="0.1" id="ciEditTh" value="${m.th||''}" style="${inpS}"></div>
+        <div><label style="${labS}">Calf</label><input type="number" step="0.1" id="ciEditCa" value="${m.ca||''}" style="${inpS}"></div>
+      </div>
+      <div style="margin-bottom:10px;"><label style="${labS}">Additional Notes</label><textarea id="ciEditExtra" style="${inpS}resize:vertical;min-height:30px;">${(ci.extra||'').replace(/"/g,'&quot;')}</textarea></div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="saveCIEdit('${ci.id}');this.closest('[style*=fixed]').remove()" style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--ember);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Save</button>
+        <button onclick="this.closest('[style*=fixed]').remove()" style="padding:10px 16px;border:1px solid var(--slate-border);border-radius:8px;background:none;color:var(--text-muted);font-size:12px;cursor:pointer;">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+function saveCIEdit(ciId) {
+  const ci = _findCheckin(ciId);
+  if (!ci) return;
+  ci.goal = document.getElementById('ciEditGoal')?.value || ci.goal;
+  ci.overall = document.getElementById('ciEditOverall')?.value || ci.overall;
+  ci.extra = document.getElementById('ciEditExtra')?.value || '';
+  ci.measurements.w = parseFloat(document.getElementById('ciEditW')?.value) || ci.measurements.w;
+  ci.measurements.ch = parseFloat(document.getElementById('ciEditCh')?.value) || ci.measurements.ch;
+  ci.measurements.wa = parseFloat(document.getElementById('ciEditWa')?.value) || ci.measurements.wa;
+  ci.measurements.st = parseFloat(document.getElementById('ciEditSt')?.value) || 0;
+  ci.measurements.hi = parseFloat(document.getElementById('ciEditHi')?.value) || ci.measurements.hi;
+  ci.measurements.gl = parseFloat(document.getElementById('ciEditGl')?.value) || ci.measurements.gl;
+  ci.measurements.ar = parseFloat(document.getElementById('ciEditAr')?.value) || ci.measurements.ar;
+  ci.measurements.th = parseFloat(document.getElementById('ciEditTh')?.value) || ci.measurements.th;
+  ci.measurements.ca = parseFloat(document.getElementById('ciEditCa')?.value) || ci.measurements.ca;
+  renderCheckinHistory();
+  scheduleSave();
 }
 
 // ═══════════════════════════════════════
