@@ -715,9 +715,22 @@
   @supports (-webkit-touch-callout: none) {
     input, select, textarea { font-size: 16px !important; }
   }
+
+  /* ── PWA update banner ── */
+  .update-banner{position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--ocean);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;font-size:14px;font-weight:600;box-shadow:0 -2px 12px rgba(0,0,0,0.25);transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);font-family:var(--font);}
+  .update-banner.visible{transform:translateY(0);}
+  .update-banner .update-msg{flex:1;}
+  .update-banner .update-btn{background:#fff;color:var(--ocean);border:none;border-radius:20px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:12px;font-family:var(--font);}
+  .update-banner .update-btn:active{opacity:.8;}
 </style>
 </head>
 <body>
+
+<!-- PWA Update Banner -->
+<div class="update-banner" id="updateBanner">
+  <span class="update-msg">A new version is available</span>
+  <button class="update-btn" onclick="_applyUpdate()">Tap to update</button>
+</div>
 
 <!-- Exercise Detail Modal -->
 <div class="ex-modal-overlay" id="exModal" onclick="if(event.target===this)closeExModal()">
@@ -2315,10 +2328,38 @@ let currentDetailClient = null;
 let _lastAppliedSavedAt = 0;
 let _stateFullyLoaded = false; // Guard: prevents saves before state has loaded
 
+// ── PWA update banner ──
+function _showUpdateBanner() {
+  const banner = document.getElementById('updateBanner');
+  if (banner && !banner.classList.contains('visible')) {
+    banner.classList.add('visible');
+  }
+}
+function _applyUpdate() {
+  document._swReloading = true;
+  window.location.reload();
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
-  // Register PWA Service Worker
+  // Register PWA Service Worker with update detection
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      // Check for updates every 60 seconds
+      setInterval(() => reg.update(), 60000);
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+            _showUpdateBanner();
+          }
+        });
+      });
+    }).catch(() => {});
+    // Also detect controller change (when new SW takes over)
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!document._swReloading) _showUpdateBanner();
+    });
   }
   await loadAppState();
   buildSidebars();
