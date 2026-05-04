@@ -409,8 +409,49 @@ function switchDay(idx) {
 function renderDayTabs() {
   const tabs = document.getElementById('dayTabs');
   tabs.innerHTML = programme.days.map((d, i) => `
-    <div class="day-tab ${i === activeDay ? 'active' : ''}" onclick="switchDay(${i})">${d.name}${programme.days.length > 1 ? `<span onclick="event.stopPropagation();removeDay(${i})" style="margin-left:8px;opacity:0.5;cursor:pointer">×</span>` : ''}</div>
+    <div class="day-tab ${i === activeDay ? 'active' : ''}" onclick="switchDay(${i})">
+      <span onclick="event.stopPropagation();showChangeDayMenu(${i}, this)" style="cursor:pointer;" title="Click to change day">${d.name}</span>
+      ${programme.days.length > 1 ? `<span onclick="event.stopPropagation();removeDay(${i})" style="margin-left:8px;opacity:0.5;cursor:pointer">×</span>` : ''}
+    </div>
   `).join('') + `<button class="add-day-btn" onclick="showAddDayMenu(this)" title="Add day">+</button>`;
+}
+
+function showChangeDayMenu(dayIdx, btn) {
+  let existing = document.getElementById('changeDayMenu');
+  if (existing) { existing.remove(); return; }
+  const currentName = programme.days[dayIdx].name;
+  const usedNames = programme.days.map((d, i) => i !== dayIdx ? d.name : null).filter(Boolean);
+  const available = ALL_DAYS.filter(d => !usedNames.includes(d));
+  if (available.length === 0) { showToast('No other days available'); return; }
+  const menu = document.createElement('div');
+  menu.id = 'changeDayMenu';
+  menu.style.cssText = 'position:absolute;z-index:100;background:var(--raised);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 0;box-shadow:0 8px 24px rgba(0,0,0,0.4);min-width:150px;';
+  const rect = btn.getBoundingClientRect();
+  menu.style.top = (rect.bottom + 4) + 'px';
+  menu.style.left = rect.left + 'px';
+  // Header
+  const hdr = document.createElement('div');
+  hdr.textContent = 'Move to...';
+  hdr.style.cssText = 'padding:6px 16px 8px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);margin-bottom:4px;';
+  menu.appendChild(hdr);
+  available.forEach(day => {
+    const opt = document.createElement('div');
+    opt.textContent = day;
+    opt.style.cssText = 'padding:8px 16px;cursor:pointer;font-size:13px;color:var(--text-primary);' + (day === currentName ? 'font-weight:700;' : '');
+    opt.onmouseenter = () => opt.style.background = 'var(--border)';
+    opt.onmouseleave = () => opt.style.background = 'none';
+    opt.onclick = () => {
+      programme.days[dayIdx].name = day;
+      sortDays();
+      menu.remove();
+      showToast('Moved to ' + day);
+    };
+    menu.appendChild(opt);
+  });
+  document.body.appendChild(menu);
+  setTimeout(() => document.addEventListener('click', function closeMenu(ev) {
+    if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('click', closeMenu); }
+  }), 10);
 }
 
 // ── Render Programme Day ──

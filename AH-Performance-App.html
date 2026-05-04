@@ -867,6 +867,15 @@
       <!-- Today's Session tile -->
       <div id="dashTodaySession" style="margin-bottom:12px;cursor:pointer;" onclick="mobileNav('clientProgramme')"></div>
 
+      <!-- Quick Log Run button -->
+      <div id="dashQuickLogRun" style="margin-bottom:12px;cursor:pointer;" onclick="openQuickLogRun()">
+        <div class="card" style="padding:12px 16px;display:flex;align-items:center;gap:12px;border-left:3px solid var(--ocean);">
+          <div style="width:36px;height:36px;border-radius:10px;background:var(--ocean-soft);display:flex;align-items:center;justify-content:center;">${ic('bolt','var(--ocean)',18)}</div>
+          <div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--text-bright);">Quick Log Run</div><div style="font-size:11px;color:var(--text-muted);">Log distance, time & pace after your run</div></div>
+          <span style="color:var(--text-dim);font-size:14px;">&rsaquo;</span>
+        </div>
+      </div>
+
       <!-- Check-in Due tile -->
       <div id="dashCheckinTile" style="margin-bottom:12px;cursor:pointer;" onclick="mobileNav('clientCheckin')"></div>
 
@@ -1350,28 +1359,57 @@
               <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Food Name *</label>
               <input type="text" id="fdManualName" placeholder="e.g. Chicken breast" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;">
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-              <div>
-                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Serving (g)</label>
-                <input type="number" id="fdManualServing" value="100" min="1" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;">
+            <!-- Per 100g section -->
+            <div style="background:var(--slate-deep);border-radius:10px;padding:12px;">
+              <div style="font-size:12px;font-weight:600;color:var(--ocean);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Nutrition per 100g</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                <div>
+                  <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">Calories (kcal) *</label>
+                  <input type="number" id="fdManualCal" placeholder="0" min="0" oninput="fdCalcManualAmount()" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:15px;">
+                </div>
+                <div>
+                  <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">Protein (g)</label>
+                  <input type="number" id="fdManualPro" placeholder="0" min="0" step="0.1" oninput="fdCalcManualAmount()" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:15px;">
+                </div>
               </div>
-              <div>
-                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Calories (kcal) *</label>
-                <input type="number" id="fdManualCal" placeholder="0" min="0" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                  <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">Carbs (g)</label>
+                  <input type="number" id="fdManualCarb" placeholder="0" min="0" step="0.1" oninput="fdCalcManualAmount()" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:15px;">
+                </div>
+                <div>
+                  <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">Fat (g)</label>
+                  <input type="number" id="fdManualFat" placeholder="0" min="0" step="0.1" oninput="fdCalcManualAmount()" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:15px;">
+                </div>
               </div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+            <!-- Amount eaten -->
+            <div style="display:grid;grid-template-columns:1fr;gap:10px;">
               <div>
-                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Protein (g)</label>
-                <input type="number" id="fdManualPro" placeholder="0" min="0" step="0.1" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;">
+                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Amount eaten (g)</label>
+                <input type="number" id="fdManualServing" value="100" min="1" oninput="fdCalcManualAmount()" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;" placeholder="e.g. 38">
               </div>
-              <div>
-                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Carbs (g)</label>
-                <input type="number" id="fdManualCarb" placeholder="0" min="0" step="0.1" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;">
-              </div>
-              <div>
-                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Fat (g)</label>
-                <input type="number" id="fdManualFat" placeholder="0" min="0" step="0.1" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;">
+            </div>
+            <!-- Calculated preview -->
+            <div id="fdManualCalcPreview" style="background:linear-gradient(135deg,var(--ember-soft),var(--slate-raised));border-radius:10px;padding:12px;display:none;">
+              <div style="font-size:11px;font-weight:600;color:var(--ember);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">What you'll log</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;text-align:center;">
+                <div>
+                  <div id="fdCalcCal" style="font-size:18px;font-weight:700;color:var(--ember);font-family:'Space Grotesk';">0</div>
+                  <div style="font-size:10px;color:var(--text-dim);">kcal</div>
+                </div>
+                <div>
+                  <div id="fdCalcPro" style="font-size:18px;font-weight:700;color:var(--ocean);font-family:'Space Grotesk';">0g</div>
+                  <div style="font-size:10px;color:var(--text-dim);">protein</div>
+                </div>
+                <div>
+                  <div id="fdCalcCarb" style="font-size:18px;font-weight:700;color:var(--text-body);font-family:'Space Grotesk';">0g</div>
+                  <div style="font-size:10px;color:var(--text-dim);">carbs</div>
+                </div>
+                <div>
+                  <div id="fdCalcFat" style="font-size:18px;font-weight:700;color:var(--text-body);font-family:'Space Grotesk';">0g</div>
+                  <div style="font-size:10px;color:var(--text-dim);">fat</div>
+                </div>
               </div>
             </div>
           </div>
@@ -4315,6 +4353,14 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
       }
     });
   }
+  // Capture cardio distance/time at session level for weekly summary
+  let sessionDistance = null, sessionDistUnit = 'km', sessionTime = null;
+  const isCardioType = (wlCurrentSession.type === 'cardio');
+  if (isCardioType) {
+    sessionDistance = parseFloat(document.getElementById('wlCardioDistance')?.value) || null;
+    sessionDistUnit = document.getElementById('wlCardioDistUnit')?.value || 'km';
+    sessionTime = document.getElementById('wlCardioTime')?.value || null;
+  }
   // Create workout log entry
   const entry = {
     date: today,
@@ -4327,7 +4373,10 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
     totalVolume: Math.round(totalVolume),
     rpe: wlSessionRPE,
     notes: sessionNotes,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    distance: sessionDistance,
+    distUnit: sessionDistUnit,
+    time: sessionTime
   };
   // Save to WORKOUT_LOG
   if (!WORKOUT_LOG[cid]) WORKOUT_LOG[cid] = [];
@@ -4443,6 +4492,151 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
     document.getElementById('wlDiscardBtn').style.display = '';
     if (typeof initClientApp === 'function') initClientApp();
   };
+}
+
+// ═══════════════════════════════════════
+//  QUICK LOG RUN
+// ═══════════════════════════════════════
+function openQuickLogRun() {
+  const cid = loggedInUser ? loggedInUser.clientId : null;
+  if (!cid) return;
+  // Check if there's a running session in today's programme
+  const today = new Date();
+  const dayAbbrevs = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const todayAbbr = dayAbbrevs[today.getDay()];
+  const progWeeks = getClientProgrammeWeeks();
+  let progRunSession = null;
+  if (progWeeks) {
+    const weekKeys = Object.keys(progWeeks).map(Number).sort();
+    const latestKey = weekKeys[weekKeys.length - 1];
+    const latestWeek = progWeeks[latestKey];
+    if (latestWeek && latestWeek.sessions) {
+      progRunSession = latestWeek.sessions.find(s => {
+        const sDay = (s.day || '').substring(0,3);
+        const sName = (s.name || '').toLowerCase();
+        return sDay === todayAbbr && (s.type === 'cardio' || sName.includes('run') || sName.includes('cardio'));
+      });
+    }
+  }
+  const sessionName = progRunSession ? progRunSession.name : 'Outdoor Run';
+  const todayStr = today.toISOString().slice(0, 10);
+  // Build overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'quickRunOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:var(--bg);overflow-y:auto;padding:20px;';
+  overlay.innerHTML = `
+    <div style="max-width:460px;margin:0 auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h2 style="font-size:18px;font-weight:700;color:var(--text-bright);font-family:var(--font-heading);">Log Run</h2>
+        <button onclick="document.getElementById('quickRunOverlay').remove()" style="background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;">&times;</button>
+      </div>
+      ${progRunSession ? `<div style="font-size:11px;color:var(--ocean);font-weight:600;margin-bottom:14px;padding:8px 12px;background:var(--ocean-soft);border-radius:8px;">Linked to programme: ${sessionName}</div>` : ''}
+      <div style="display:grid;gap:14px;">
+        <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Date</label>
+        <input type="date" id="qrDate" value="${todayStr}" style="width:100%;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);font-family:var(--font);"></div>
+        <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Session Name</label>
+        <input type="text" id="qrName" value="${sessionName}" placeholder="e.g. Outdoor Run" style="width:100%;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);font-family:var(--font);"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Distance</label>
+          <div style="display:flex;gap:6px;">
+            <input type="number" id="qrDist" inputmode="decimal" step="0.1" placeholder="5.0" style="flex:1;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;">
+            <select id="qrDistUnit" style="padding:10px;font-size:13px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);"><option value="km">km</option><option value="mi">mi</option></select>
+          </div></div>
+          <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Time (mm:ss)</label>
+          <input type="text" id="qrTime" placeholder="25:30" style="width:100%;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;font-family:var(--font);"></div>
+        </div>
+        <div id="qrPaceDisplay" style="text-align:center;font-size:13px;color:var(--ocean);font-weight:600;padding:8px;background:var(--ocean-soft);border-radius:8px;display:none;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Avg Heart Rate</label>
+          <input type="number" id="qrAvgHR" placeholder="145" style="width:100%;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;"></div>
+          <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">RPE (1-10)</label>
+          <input type="number" id="qrRPE" min="1" max="10" placeholder="7" style="width:100%;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;"></div>
+        </div>
+        <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Notes</label>
+        <textarea id="qrNotes" rows="2" placeholder="How did it feel?" style="width:100%;padding:10px;font-size:13px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);font-family:var(--font);resize:none;"></textarea></div>
+      </div>
+      <button onclick="saveQuickRun()" style="width:100%;margin-top:20px;padding:14px;border:none;border-radius:14px;background:var(--ocean);color:white;font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;">Save Run</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  // Auto-calculate pace on input
+  const distEl = overlay.querySelector('#qrDist');
+  const timeEl = overlay.querySelector('#qrTime');
+  const paceEl = overlay.querySelector('#qrPaceDisplay');
+  const calcPace = () => {
+    const d = parseFloat(distEl.value) || 0;
+    const t = timeEl.value || '';
+    if (d > 0 && t.includes(':')) {
+      const parts = t.split(':');
+      const totalMins = (parseInt(parts[0])||0) + (parseInt(parts[1])||0)/60;
+      const paceMin = totalMins / d;
+      const pm = Math.floor(paceMin);
+      const ps = Math.round((paceMin - pm) * 60);
+      paceEl.textContent = `Pace: ${pm}:${String(ps).padStart(2,'0')} /km`;
+      paceEl.style.display = '';
+    } else { paceEl.style.display = 'none'; }
+  };
+  distEl.addEventListener('input', calcPace);
+  timeEl.addEventListener('input', calcPace);
+}
+
+function saveQuickRun() {
+  const cid = loggedInUser ? loggedInUser.clientId : null;
+  if (!cid) return;
+  const date = document.getElementById('qrDate').value || new Date().toISOString().slice(0,10);
+  const name = document.getElementById('qrName').value || 'Outdoor Run';
+  const dist = parseFloat(document.getElementById('qrDist').value) || 0;
+  const distUnit = document.getElementById('qrDistUnit').value || 'km';
+  const timeStr = document.getElementById('qrTime').value || '';
+  const avgHR = parseInt(document.getElementById('qrAvgHR').value) || null;
+  const rpe = parseInt(document.getElementById('qrRPE').value) || null;
+  const notes = document.getElementById('qrNotes').value || '';
+  if (!dist && !timeStr) { alert('Please enter at least distance or time.'); return; }
+  // Build duration from time string
+  let durationStr = '0:00';
+  if (timeStr) {
+    if (timeStr.includes(':')) durationStr = timeStr;
+    else durationStr = timeStr + ':00';
+  }
+  // Save to WORKOUT_LOG
+  const entry = {
+    date: date,
+    sessionName: name,
+    day: '',
+    type: 'cardio',
+    duration: durationStr,
+    exercises: [],
+    totalSets: 0,
+    totalVolume: 0,
+    rpe: rpe,
+    notes: notes,
+    timestamp: Date.now(),
+    distance: dist > 0 ? dist : null,
+    distUnit: distUnit,
+    time: timeStr || null
+  };
+  if (!WORKOUT_LOG[cid]) WORKOUT_LOG[cid] = [];
+  WORKOUT_LOG[cid].unshift(entry);
+  // Save to PROGRESS_DATA for cardio charts
+  if (!PROGRESS_DATA[cid]) PROGRESS_DATA[cid] = { strength: [], cardio: [], measurements: [], wearable: [], weekly: [] };
+  PROGRESS_DATA[cid].cardio.push({
+    date: date,
+    activity: name,
+    exercise: name,
+    distance: dist > 0 ? dist : null,
+    unit: distUnit,
+    time: timeStr || null,
+    avgHR: avgHR,
+    sets: [],
+    rpe: rpe,
+    notes: notes
+  });
+  PROGRESS_DATA[cid].cardio.sort((a,b) => b.date.localeCompare(a.date));
+  _updateClientCompliance(cid);
+  scheduleSave();
+  // Close overlay and refresh
+  document.getElementById('quickRunOverlay').remove();
+  initClientApp();
+  alert('Run logged! ' + (dist ? dist + ' ' + distUnit : '') + (timeStr ? ' in ' + timeStr : ''));
 }
 
 // Client Progress page
@@ -4606,7 +4800,7 @@ function renderCPStrChart() {
   const _cpCid = loggedInUser ? loggedInUser.clientId : 1; const pd = PROGRESS_DATA[_cpCid]; if (!pd) return;
   const ex = document.getElementById('cpStrExercise').value;
   const met = document.getElementById('cpStrMetric').value;
-  const entries = pd.strength.filter(e => e.exercise === ex).reverse();
+  const entries = pd.strength.filter(e => e.exercise === ex).sort((a,b) => (a.date||'').localeCompare(b.date||''));
   const labels = entries.map(e => cpFormatDate(e.date));
   let vals, label;
   if (met === 'volume') {
@@ -4698,7 +4892,7 @@ function renderCPCardChart() {
   if (!pd || !pd.cardio) return;
   const act = document.getElementById('cpCardActivity').value;
   const met = document.getElementById('cpCardMetric').value;
-  const entries = _filterRealCardio(pd.cardio).filter(e => (e.activity || e.exercise) === act).reverse();
+  const entries = _filterRealCardio(pd.cardio).filter(e => (e.activity || e.exercise) === act).sort((a,b) => (a.date||'').localeCompare(b.date||''));
   const labels = entries.map(e => cpFormatDate(e.date));
   let data, label, colour;
   if (met === 'time') {
@@ -4754,7 +4948,7 @@ function saveCPMeasurement() {
 function renderCPMeasChart() {
   const _cpCid = loggedInUser ? loggedInUser.clientId : 1; const pd = PROGRESS_DATA[_cpCid]; if (!pd) return;
   const met = document.getElementById('cpMeasMetric').value;
-  const entries = pd.measurements.filter(m => m[met] != null).reverse();
+  const entries = pd.measurements.filter(m => m[met] != null).sort((a,b) => (a.date||'').localeCompare(b.date||''));
   const labels = entries.map(m => cpFormatDate(m.date));
   const data = entries.map(m => m[met]);
   const labelMap = {weight:'Weight (kg)',chest:'Chest (cm)',waist:'Waist (cm)',stomach:'Stomach (cm)',hips:'Hips (cm)',glutes:'Glutes (cm)',arm:'Arm (cm)',thigh:'Thigh (cm)',calf:'Calf (cm)'};
@@ -4808,7 +5002,7 @@ function setCPWearTab(tab, btn) {
 
 function renderCPWearChart() {
   const _cpCid = loggedInUser ? loggedInUser.clientId : 1; const pd = PROGRESS_DATA[_cpCid]; if (!pd) return;
-  const entries = pd.wearable.slice().reverse();
+  const entries = pd.wearable.slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
   const labels = entries.map(e => cpFormatDate(e.date));
   const metricMap = {rhr:{key:'rhr',label:'Resting HR (bpm)',color:'#D45B5B'},hrv:{key:'hrv',label:'HRV (ms)',color:'#4A9DC8'},vo2:{key:'vo2',label:'VO2 Max',color:'#8BB07E'},recovery:{key:'recovery',label:'Recovery (%)',color:'#9B8EC4'},sleep:{key:'sleep',label:'Sleep (hours)',color:'#4A9DC8'},strain:{key:'strain',label:'Strain (0-21)',color:'#E07A3A'},steps:{key:'steps',label:'Steps',color:'#8BB07E'}};
   const m = metricMap[cpWearTab] || metricMap.rhr;
@@ -5099,6 +5293,15 @@ function _buildOneWeek(workouts, monday, localDateStr) {
       if (hasRunning) running += durH;
       else if (hasCardio) otherCardio += durH;
       else strength += durH;
+      // Session-level distance (from pure cardio sessions logged via quick log or generic cardio)
+      if (hasRunning && w.distance && w.distance > 0) {
+        let km = w.distance;
+        const unit = (w.distUnit || 'km').toLowerCase();
+        if (unit === 'mi' || unit === 'miles') km *= 1.60934;
+        else if (unit === 'm') km /= 1000;
+        dayRunKm += km;
+      }
+      // Exercise-level distance from structured cardio sets
       runExercises.forEach(e => {
         (e.sets || []).forEach(s => {
           const distStr = String(s.reps || s.weight || '');
@@ -5115,6 +5318,17 @@ function _buildOneWeek(workouts, monday, localDateStr) {
     });
     const cardioSessions = [];
     dayWorkouts.forEach(w => {
+      // Session-level cardio (pure cardio with distance/time on the entry itself)
+      if (w.type === 'cardio' && w.distance && w.distance > 0 && !(w.exercises || []).length) {
+        let timeSec = 0;
+        if (w.time) {
+          if (String(w.time).includes(':')) { const p = w.time.split(':'); timeSec = (parseInt(p[0])||0)*60 + (parseInt(p[1])||0); }
+          else timeSec = (parseFloat(w.time)||0)*60;
+        } else if (w.duration) {
+          const p = w.duration.split(':'); timeSec = (parseInt(p[0])||0)*60 + (parseInt(p[1])||0);
+        }
+        cardioSessions.push({ name: w.sessionName || 'Run', distance: w.distance, unit: w.distUnit || 'km', timeSec });
+      }
       (w.exercises || []).forEach(e => {
         if (_isCardioExercise(e.name) || _isSledExercise(e.name)) {
           let dist = 0, timeSec = 0;
@@ -5653,7 +5867,7 @@ function renderDetailStrChart() {
   if (!pd) return;
   const ex = document.getElementById('dtStrEx').value;
   const met = document.getElementById('dtStrMetric')?.value || 'maxWeight';
-  const entries = pd.strength.filter(e => e.exercise === ex).reverse();
+  const entries = pd.strength.filter(e => e.exercise === ex).sort((a,b) => (a.date||'').localeCompare(b.date||''));
   const labels = entries.map(e => cpFormatDate(e.date));
   let vals, label;
   if (met === 'volume') {
@@ -5715,7 +5929,7 @@ function renderDetailCardChart() {
   if (!pd) return;
   const act = document.getElementById('dtCardActivity').value;
   const met = document.getElementById('dtCardMetric')?.value || 'time';
-  const entries = _filterRealCardio(pd.cardio).filter(e => (e.activity || e.exercise) === act).reverse();
+  const entries = _filterRealCardio(pd.cardio).filter(e => (e.activity || e.exercise) === act).sort((a,b) => (a.date||'').localeCompare(b.date||''));
   const labels = entries.map(e => cpFormatDate(e.date));
   let data, label, colour;
   if (met === 'time') { data = entries.map(e => cpTimeToSec(e.time)); label = 'Time (sec)'; colour = '#4A9DC8'; }
@@ -5739,7 +5953,7 @@ function renderDetailMeasChart() {
   const pd = PROGRESS_DATA[currentDetailClient.id];
   if (!pd) return;
   const met = document.getElementById('dtMeasMetric')?.value || 'weight';
-  const entries = pd.measurements.filter(m => m[met] != null).reverse();
+  const entries = pd.measurements.filter(m => m[met] != null).sort((a,b) => (a.date||'').localeCompare(b.date||''));
   const labels = entries.map(m => cpFormatDate(m.date));
   const data = entries.map(m => m[met]);
   const labelMap = {weight:'Weight (kg)',chest:'Chest (cm)',waist:'Waist (cm)',stomach:'Stomach (cm)',hips:'Hips (cm)',glutes:'Glutes (cm)',arm:'Arm (cm)',thigh:'Thigh (cm)',calf:'Calf (cm)'};
@@ -5765,7 +5979,7 @@ function renderDetailWearChart() {
   if (!currentDetailClient) return;
   const pd = PROGRESS_DATA[currentDetailClient.id];
   if (!pd) return;
-  const entries = pd.wearable.slice().reverse();
+  const entries = pd.wearable.slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
   const labels = entries.map(e => cpFormatDate(e.date));
   const metricMap = {rhr:{key:'rhr',label:'Resting HR (bpm)',color:'#D45B5B'},hrv:{key:'hrv',label:'HRV (ms)',color:'#4A9DC8'},vo2:{key:'vo2',label:'VO2 Max',color:'#8BB07E'},recovery:{key:'recovery',label:'Recovery (%)',color:'#9B8EC4'},sleep:{key:'sleep',label:'Sleep (hours)',color:'#4A9DC8'},strain:{key:'strain',label:'Strain (0-21)',color:'#E07A3A'},steps:{key:'steps',label:'Steps',color:'#8BB07E'}};
   const m = metricMap[dtWearTab] || metricMap.rhr;
@@ -6802,18 +7016,21 @@ function fdEditItem(mealKey, idx) {
   const day = _fdGetDayLog(dateStr);
   if (!day[mealKey] || !day[mealKey][idx]) return;
   const item = day[mealKey][idx];
-  // Pre-fill the manual entry overlay with this item's data
+  // Pre-fill the manual entry overlay — reverse-calculate to per-100g values
   _fdShowOverlay('fdManualOverlay');
+  const serving = item.serving || 100;
+  const ratio = serving / 100;
   document.getElementById('fdManualName').value = item.name || '';
-  document.getElementById('fdManualServing').value = item.serving || 100;
-  document.getElementById('fdManualCal').value = Math.round(item.cal || 0);
-  document.getElementById('fdManualPro').value = Math.round(item.pro || 0);
-  document.getElementById('fdManualCarb').value = Math.round(item.carb || 0);
-  document.getElementById('fdManualFat').value = Math.round(item.fat || 0);
+  document.getElementById('fdManualServing').value = serving;
+  document.getElementById('fdManualCal').value = ratio > 0 ? Math.round((item.cal || 0) / ratio) : Math.round(item.cal || 0);
+  document.getElementById('fdManualPro').value = ratio > 0 ? Math.round(((item.protein || item.pro || 0) / ratio) * 10) / 10 : Math.round((item.protein || item.pro || 0) * 10) / 10;
+  document.getElementById('fdManualCarb').value = ratio > 0 ? Math.round(((item.carbs || item.carb || 0) / ratio) * 10) / 10 : Math.round((item.carbs || item.carb || 0) * 10) / 10;
+  document.getElementById('fdManualFat').value = ratio > 0 ? Math.round(((item.fat || 0) / ratio) * 10) / 10 : Math.round((item.fat || 0) * 10) / 10;
   // Store edit context so save replaces instead of adding
   window._fdEditContext = { mealKey, idx, dateStr };
   const saveBtn = document.getElementById('fdManualSaveBtn');
   if (saveBtn) saveBtn.textContent = 'Update Entry';
+  fdCalcManualAmount(); // Show preview
 }
 
 // ─── Manual entry ───
@@ -6828,6 +7045,28 @@ function fdShowManualEntry() {
   document.getElementById('fdManualPro').value = '';
   document.getElementById('fdManualCarb').value = '';
   document.getElementById('fdManualFat').value = '';
+  const preview = document.getElementById('fdManualCalcPreview');
+  if (preview) preview.style.display = 'none';
+}
+
+function fdCalcManualAmount() {
+  const cal100 = parseFloat(document.getElementById('fdManualCal').value) || 0;
+  const pro100 = parseFloat(document.getElementById('fdManualPro').value) || 0;
+  const carb100 = parseFloat(document.getElementById('fdManualCarb').value) || 0;
+  const fat100 = parseFloat(document.getElementById('fdManualFat').value) || 0;
+  const amount = parseFloat(document.getElementById('fdManualServing').value) || 0;
+  const preview = document.getElementById('fdManualCalcPreview');
+  if (!preview) return;
+  if (cal100 <= 0 && pro100 <= 0 && carb100 <= 0 && fat100 <= 0) {
+    preview.style.display = 'none';
+    return;
+  }
+  preview.style.display = '';
+  const ratio = amount / 100;
+  document.getElementById('fdCalcCal').textContent = Math.round(cal100 * ratio);
+  document.getElementById('fdCalcPro').textContent = (Math.round(pro100 * ratio * 10) / 10) + 'g';
+  document.getElementById('fdCalcCarb').textContent = (Math.round(carb100 * ratio * 10) / 10) + 'g';
+  document.getElementById('fdCalcFat').textContent = (Math.round(fat100 * ratio * 10) / 10) + 'g';
 }
 
 function fdCloseManual() {
@@ -6836,18 +7075,19 @@ function fdCloseManual() {
 
 function fdAddManualFood() {
   const name = document.getElementById('fdManualName').value.trim();
-  const cal = parseFloat(document.getElementById('fdManualCal').value) || 0;
+  const cal100 = parseFloat(document.getElementById('fdManualCal').value) || 0;
   if (!name) { alert('Please enter a food name.'); return; }
-  if (cal <= 0) { alert('Please enter the calorie amount.'); return; }
-  const serving = parseFloat(document.getElementById('fdManualServing').value) || 100;
+  if (cal100 <= 0) { alert('Please enter the calorie amount per 100g.'); return; }
+  const amount = parseFloat(document.getElementById('fdManualServing').value) || 100;
+  const ratio = amount / 100;
   const entry = {
     name: name,
     brand: '',
-    serving: serving,
-    cal: Math.round(cal),
-    protein: parseFloat(document.getElementById('fdManualPro').value) || 0,
-    carbs: parseFloat(document.getElementById('fdManualCarb').value) || 0,
-    fat: parseFloat(document.getElementById('fdManualFat').value) || 0,
+    serving: amount,
+    cal: Math.round(cal100 * ratio),
+    protein: Math.round((parseFloat(document.getElementById('fdManualPro').value) || 0) * ratio * 10) / 10,
+    carbs: Math.round((parseFloat(document.getElementById('fdManualCarb').value) || 0) * ratio * 10) / 10,
+    fat: Math.round((parseFloat(document.getElementById('fdManualFat').value) || 0) * ratio * 10) / 10,
     fibre: 0, sugar: 0, salt: 0, barcode: '',
     time: new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'})
   };
@@ -6920,7 +7160,41 @@ function fdSearchFood(query) {
         }).join('');
       })
       .catch(() => {
-        document.getElementById('fdSearchResults').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">Search failed — check your connection and try again.</div>';
+        // Fallback: try the v2 API search
+        fetch('https://world.openfoodfacts.net/cgi/search.pl?action=process&search_terms=' + encodeURIComponent(query) + '&json=1&page_size=15&fields=product_name,brands,nutriments,code')
+          .then(r => r.json())
+          .then(data => {
+            const products = (data.products || []).filter(p => p.product_name && p.nutriments);
+            if (products.length === 0) {
+              document.getElementById('fdSearchResults').innerHTML = `<div style="padding:20px;text-align:center;">
+                <div style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">No results found for "${query}".</div>
+                <button onclick="fdShowManualEntry()" style="padding:10px 20px;border:1px solid var(--ember);background:var(--ember-soft);color:var(--ember);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);">Add Manually</button>
+              </div>`;
+              return;
+            }
+            document.getElementById('fdSearchResults').innerHTML = products.map(p => {
+              const n = p.nutriments;
+              const cal = Math.round(n['energy-kcal_100g'] || n['energy-kcal'] || (n.energy_100g || 0) / 4.184 || 0);
+              const pro = Math.round((n.proteins_100g || 0) * 10) / 10;
+              return `<button onclick='fdSelectSearchResult(${JSON.stringify({
+                name: p.product_name, brand: p.brands || '', cal100: cal, pro100: pro,
+                carb100: Math.round((n.carbohydrates_100g||0)*10)/10,
+                fat100: Math.round((n.fat_100g||0)*10)/10,
+                fibre100: Math.round((n.fiber_100g||0)*10)/10,
+                sugar100: Math.round((n.sugars_100g||0)*10)/10,
+                salt100: Math.round((n.salt_100g||0)*100)/100, barcode: p.code||''
+              }).replace(/'/g,"&#39;")})' style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:10px;cursor:pointer;text-align:left;margin-bottom:6px;">
+                <div style="flex:1;"><div style="font-size:14px;font-weight:500;color:var(--text-body);">${p.product_name}</div><div style="font-size:12px;color:var(--text-dim);">${p.brands || 'Generic'} · per 100g</div></div>
+                <div style="text-align:right;"><div style="font-size:14px;font-weight:600;color:var(--ember);font-family:'Space Grotesk';">${cal} kcal</div><div style="font-size:11px;color:var(--text-dim);">P:${pro}g</div></div>
+              </button>`;
+            }).join('');
+          })
+          .catch(() => {
+            document.getElementById('fdSearchResults').innerHTML = `<div style="padding:20px;text-align:center;">
+              <div style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">Search unavailable — try adding the item manually.</div>
+              <button onclick="fdShowManualEntry()" style="padding:10px 20px;border:1px solid var(--ember);background:var(--ember-soft);color:var(--ember);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);">Add Manually</button>
+            </div>`;
+          });
       });
   }, 400);
 }
@@ -8033,7 +8307,7 @@ function renderClientNotifs() {
         <div style="font-size:12px;font-weight:${n.read?'400':'600'};color:var(--text-bright);line-height:1.4;">${n.message || n.text || ''}</div>
         <div style="font-size:10px;color:var(--text-dim);margin-top:2px;">${n.time}</div>
       </div>
-      ${n.read ? '' : `<button style="flex-shrink:0;padding:4px 12px;border-radius:6px;border:1px solid var(--ember);background:transparent;color:var(--ember);font-size:11px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;">${actionLabel}</button>`}
+      <button onclick="event.stopPropagation();dismissClientNotif('${n.id}')" style="flex-shrink:0;width:24px;height:24px;border:none;background:transparent;color:var(--text-dim);font-size:16px;cursor:pointer;padding:0;line-height:24px;" title="Dismiss">&times;</button>
     </div>`;
   }).join('');
 }
@@ -8092,9 +8366,20 @@ function renderClientNotifFullList() {
         <div style="font-size:13px;font-weight:${n.read?'400':'600'};color:var(--text-bright);line-height:1.5;">${n.message || n.text || ''}</div>
         <div style="font-size:11px;color:var(--text-dim);margin-top:3px;">${n.time}</div>
       </div>
-      ${n.read ? '' : `<button style="flex-shrink:0;padding:6px 14px;border-radius:8px;border:1px solid var(--ember);background:var(--ember-soft);color:var(--ember);font-size:11px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;white-space:nowrap;" onclick="event.stopPropagation();handleClientNotif('${n.id}','${n.type || 'message'}')">${actionLabel}</button>`}
+      <button onclick="event.stopPropagation();dismissClientNotif('${n.id}')" style="flex-shrink:0;width:28px;height:28px;border:none;background:var(--slate-raised);color:var(--text-dim);font-size:16px;cursor:pointer;padding:0;line-height:28px;border-radius:50;" title="Dismiss">&times;</button>
     </div>`;
   }).join('');
+}
+
+function dismissClientNotif(nId) {
+  const cid = loggedInUser && loggedInUser.clientId ? loggedInUser.clientId : 1;
+  const notifs = CLIENT_NOTIFICATIONS[cid] || [];
+  const idx = notifs.findIndex(x => String(x.id) === String(nId));
+  if (idx !== -1) notifs.splice(idx, 1);
+  renderClientNotifs();
+  renderClientNotifFullList();
+  updateSidebarBadges();
+  scheduleSave();
 }
 
 function markSingleClientNotifRead(nId) {
@@ -8148,7 +8433,7 @@ function renderPTNotifications() {
         <div style="font-size:11px;color:var(--text-muted);">${n.message}</div>
         <div style="font-size:10px;color:var(--text-dim);margin-top:2px;">${n.time}</div>
       </div>
-      ${n.read ? '' : '<div style="width:6px;height:6px;border-radius:50%;background:var(--ember);flex-shrink:0;margin-top:8px;"></div>'}
+      <button onclick="event.stopPropagation();dismissPTNotif('${n.id}')" style="flex-shrink:0;width:24px;height:24px;border:none;background:transparent;color:var(--text-dim);font-size:16px;cursor:pointer;padding:0;line-height:24px;" title="Dismiss">&times;</button>
     </div>`;
   }).join('');
 }
@@ -8156,6 +8441,14 @@ function renderPTNotifications() {
 function toggleNotifications() {
   const dd = document.getElementById('ptNotifDropdown');
   if (dd) dd.classList.toggle('hidden');
+}
+
+function dismissPTNotif(nId) {
+  const idx = PT_NOTIFICATIONS.findIndex(x => String(x.id) === String(nId));
+  if (idx !== -1) PT_NOTIFICATIONS.splice(idx, 1);
+  renderPTNotifications();
+  updateSidebarBadges();
+  scheduleSave();
 }
 
 function markAllPTNotifsRead() {
