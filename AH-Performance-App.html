@@ -2455,15 +2455,20 @@ function _applyState(state, _source) {
       if (updated) currentDetailClient = updated;
     }
   }
-  if (state.users) {
-    // Merge: keep defaults + add any from stored state
-    const newUsers = state.users.filter(u => !USERS.some(existing => existing.email === u.email));
-    newUsers.forEach(u => USERS.push(u));
-    // Also update existing users (e.g. if password changed)
-    state.users.forEach(su => {
-      const existing = USERS.find(u => u.email === su.email);
-      if (existing && su.clientId) existing.clientId = su.clientId;
+  if (state.users && state.users.length) {
+    // FULL REPLACE: saved state is the source of truth for users (includes onboarded clients).
+    // Start from saved users, then add any hardcoded defaults that aren't in saved state.
+    const savedUsers = state.users.slice();
+    const hardcoded = [
+      { email: 'adam@ahperformance.ie', password: 'coach2026', role: 'pt', name: 'Adam Heayberd' },
+      { email: 'demo@ahperformance.ie', password: 'demo2026', role: 'client', name: 'Demo Client', clientId: 1 }
+    ];
+    // Add hardcoded defaults only if not already in saved state
+    hardcoded.forEach(hc => {
+      if (!savedUsers.some(su => su.email === hc.email)) savedUsers.push(hc);
     });
+    USERS.length = 0;
+    savedUsers.forEach(u => USERS.push(u));
   }
   if (state.workoutLog) Object.assign(WORKOUT_LOG, state.workoutLog);
   if (state.checkinLog) Object.assign(CHECKIN_LOG, state.checkinLog);
@@ -2633,6 +2638,43 @@ async function loadAppState() {
   // Mark state as fully loaded — saveAppState is now safe to call
   _stateFullyLoaded = true;
   console.log('AH Performance: State fully loaded — saves are now enabled');
+
+  // 5. If we only have the hardcoded demo client, the server data may have been
+  // wiped by a deploy. Retry server fetch a few times — the phone app may push
+  // its data back within seconds.
+  if (CLIENTS.length <= 1 && USERS.length <= 2) {
+    console.log('AH Performance: Only default data found — will retry server fetch in case another device syncs');
+    let retries = 0;
+    const retryInterval = setInterval(async () => {
+      retries++;
+      try {
+        const res = await fetch('/api/state');
+        if (res.ok) {
+          const state = await res.json();
+          if (state && state.savedAt && (state.clients || []).length > CLIENTS.length) {
+            console.log('AH Performance: Server now has ' + state.clients.length + ' clients — applying');
+            _applyState(state, 'server-retry');
+            // Update localStorage with the recovered data
+            const stateJSON = JSON.stringify(state);
+            try { localStorage.setItem('ahPerformanceState', stateJSON); } catch(e) {}
+            try { localStorage.setItem('ahPerformanceState_backup', stateJSON); } catch(e) {}
+            // Re-render current view
+            if (currentRole === 'client') {
+              initClientApp(); renderClientMessages(); renderClientNotifs(); updateSidebarBadges();
+            } else if (currentRole === 'pt') {
+              initPTApp(); renderPTNotifications(); renderPTMessages(); updateSidebarBadges();
+            }
+            clearInterval(retryInterval);
+            return;
+          }
+        }
+      } catch(e) {}
+      if (retries >= 10) {
+        console.log('AH Performance: Server retry exhausted — no additional data found');
+        clearInterval(retryInterval);
+      }
+    }, 5000); // Retry every 5 seconds for up to 50 seconds
+  }
 }
 
 // Auto-save after important operations (debounced)
