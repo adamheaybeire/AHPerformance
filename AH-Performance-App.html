@@ -2971,13 +2971,25 @@ function initClientApp() {
       <div style="font-size:13px;color:var(--text-dim);">No programme assigned yet. Your coach will set this up.</div></div>`;
   }
 
-  // ─── CHECK-IN TILE ───
-  const checkinDay = clientData?.checkinDay || clientData?.nextCheckin || 'Monday';
-  document.getElementById('dashCheckinTile').innerHTML = `<div style="background:var(--ember-soft);border:1px solid rgba(224,122,58,0.15);border-radius:14px;padding:16px 18px;">
-    <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--ember);margin-bottom:6px;font-family:'Space Grotesk',sans-serif;">Check-in Due</div>
-    <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:500;color:var(--text-bright);">${checkinDay} morning</div>
-    <div style="font-size:11px;color:var(--text-body);">Weight · Photos · How you're feeling · First thing AM</div>
-  </div>`;
+  // ─── CHECK-IN TILE (only show day before + day of) ───
+  const checkinDay = clientData?.checkinDay || clientData?.nextCheckin || 'Saturday';
+  const checkinTileEl = document.getElementById('dashCheckinTile');
+  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const todayDayIdx = new Date().getDay();
+  const checkinDayIdx = dayNames.findIndex(d => d.toLowerCase() === checkinDay.toLowerCase());
+  const dayBeforeIdx = checkinDayIdx === 0 ? 6 : checkinDayIdx - 1;
+  const showCheckin = (checkinDayIdx >= 0) && (todayDayIdx === checkinDayIdx || todayDayIdx === dayBeforeIdx);
+  if (showCheckin) {
+    checkinTileEl.style.display = '';
+    const isToday = todayDayIdx === checkinDayIdx;
+    checkinTileEl.innerHTML = `<div style="background:var(--ember-soft);border:1px solid rgba(224,122,58,0.15);border-radius:14px;padding:16px 18px;">
+      <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--ember);margin-bottom:6px;font-family:'Space Grotesk',sans-serif;">Check-in ${isToday ? 'Today' : 'Tomorrow'}</div>
+      <div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:500;color:var(--text-bright);">${checkinDay} morning</div>
+      <div style="font-size:11px;color:var(--text-body);">Weight · Photos · How you're feeling · First thing AM</div>
+    </div>`;
+  } else {
+    checkinTileEl.style.display = 'none';
+  }
 
   // ─── WELLBEING TILE ───
   document.getElementById('dashWellbeingTile').innerHTML = `<div style="background:var(--sage-soft);border:1px solid var(--sage-border);border-radius:14px;padding:16px 18px;">
@@ -2987,12 +2999,17 @@ function initClientApp() {
   </div>`;
 
   // ─── STAT TILES ───
+  // Current week = Monday 00:00 to Sunday 23:59
+  const _now = new Date();
+  const _dayOfWeek = _now.getDay(); // 0=Sun,1=Mon...
+  const _mondayOffset = _dayOfWeek === 0 ? -6 : 1 - _dayOfWeek;
+  const _monday = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate() + _mondayOffset);
+  const _mondayStr = _monday.toISOString().slice(0,10);
+  const _sunday = new Date(_monday.getTime() + 6*24*60*60*1000);
+  const _sundayStr = _sunday.toISOString().slice(0,10);
   const sessionsThisWeek = workouts.filter(w => {
     if (!w.date) return false;
-    const d = new Date(w.date);
-    const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7*24*60*60*1000);
-    return d >= weekAgo;
+    return w.date >= _mondayStr && w.date <= _sundayStr;
   }).length;
   const totalSessions = progKeys.length ? (progWeeks[progKeys[progKeys.length-1]]?.sessions?.length || 0) : 0;
   const pct = totalSessions > 0 ? Math.round(sessionsThisWeek / totalSessions * 100) : 0;
@@ -4539,11 +4556,24 @@ function openQuickLogRun() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Distance</label>
           <div style="display:flex;gap:6px;">
-            <input type="number" id="qrDist" inputmode="decimal" step="0.1" placeholder="5.0" style="flex:1;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;">
-            <select id="qrDistUnit" style="padding:10px;font-size:13px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);"><option value="km">km</option><option value="mi">mi</option></select>
+            <input type="number" id="qrDist" inputmode="decimal" step="0.1" placeholder="5.0" style="flex:1;min-width:0;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;">
+            <select id="qrDistUnit" style="padding:8px 6px;font-size:13px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);flex-shrink:0;"><option value="km">km</option><option value="mi">mi</option></select>
           </div></div>
-          <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Time (mm:ss)</label>
-          <input type="text" id="qrTime" placeholder="25:30" style="width:100%;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;font-family:var(--font);"></div>
+          <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Time</label>
+          <div style="display:flex;gap:4px;align-items:center;">
+            <input type="number" id="qrTimeH" inputmode="numeric" min="0" max="23" placeholder="0" style="width:100%;min-width:0;padding:10px 4px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;">
+            <span style="color:var(--text-dim);font-weight:600;flex-shrink:0;">:</span>
+            <input type="number" id="qrTimeM" inputmode="numeric" min="0" max="59" placeholder="25" style="width:100%;min-width:0;padding:10px 4px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;">
+            <span style="color:var(--text-dim);font-weight:600;flex-shrink:0;">:</span>
+            <input type="number" id="qrTimeS" inputmode="numeric" min="0" max="59" placeholder="30" style="width:100%;min-width:0;padding:10px 4px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;">
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:3px;padding:0 2px;">
+            <span style="font-size:9px;color:var(--text-dim);text-align:center;flex:1;">hr</span>
+            <span style="width:8px;"></span>
+            <span style="font-size:9px;color:var(--text-dim);text-align:center;flex:1;">min</span>
+            <span style="width:8px;"></span>
+            <span style="font-size:9px;color:var(--text-dim);text-align:center;flex:1;">sec</span>
+          </div></div>
         </div>
         <div id="qrPaceDisplay" style="text-align:center;font-size:13px;color:var(--ocean);font-weight:600;padding:8px;background:var(--ocean-soft);border-radius:8px;display:none;"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -4560,23 +4590,29 @@ function openQuickLogRun() {
   document.body.appendChild(overlay);
   // Auto-calculate pace on input
   const distEl = overlay.querySelector('#qrDist');
-  const timeEl = overlay.querySelector('#qrTime');
+  const timeHEl = overlay.querySelector('#qrTimeH');
+  const timeMEl = overlay.querySelector('#qrTimeM');
+  const timeSEl = overlay.querySelector('#qrTimeS');
   const paceEl = overlay.querySelector('#qrPaceDisplay');
   const calcPace = () => {
     const d = parseFloat(distEl.value) || 0;
-    const t = timeEl.value || '';
-    if (d > 0 && t.includes(':')) {
-      const parts = t.split(':');
-      const totalMins = (parseInt(parts[0])||0) + (parseInt(parts[1])||0)/60;
+    const h = parseInt(timeHEl.value) || 0;
+    const m = parseInt(timeMEl.value) || 0;
+    const s = parseInt(timeSEl.value) || 0;
+    const totalMins = h * 60 + m + s / 60;
+    if (d > 0 && totalMins > 0) {
+      const unit = overlay.querySelector('#qrDistUnit').value || 'km';
       const paceMin = totalMins / d;
       const pm = Math.floor(paceMin);
       const ps = Math.round((paceMin - pm) * 60);
-      paceEl.textContent = `Pace: ${pm}:${String(ps).padStart(2,'0')} /km`;
+      paceEl.textContent = `Pace: ${pm}:${String(ps).padStart(2,'0')} /${unit}`;
       paceEl.style.display = '';
     } else { paceEl.style.display = 'none'; }
   };
   distEl.addEventListener('input', calcPace);
-  timeEl.addEventListener('input', calcPace);
+  timeHEl.addEventListener('input', calcPace);
+  timeMEl.addEventListener('input', calcPace);
+  timeSEl.addEventListener('input', calcPace);
 }
 
 function saveQuickRun() {
@@ -4586,16 +4622,19 @@ function saveQuickRun() {
   const name = document.getElementById('qrName').value || 'Outdoor Run';
   const dist = parseFloat(document.getElementById('qrDist').value) || 0;
   const distUnit = document.getElementById('qrDistUnit').value || 'km';
-  const timeStr = document.getElementById('qrTime').value || '';
+  const tH = parseInt(document.getElementById('qrTimeH').value) || 0;
+  const tM = parseInt(document.getElementById('qrTimeM').value) || 0;
+  const tS = parseInt(document.getElementById('qrTimeS').value) || 0;
+  const hasTime = tH > 0 || tM > 0 || tS > 0;
+  const timeStr = hasTime ? (tH > 0 ? tH + ':' + String(tM).padStart(2,'0') + ':' + String(tS).padStart(2,'0') : tM + ':' + String(tS).padStart(2,'0')) : '';
   const avgHR = parseInt(document.getElementById('qrAvgHR').value) || null;
   const rpe = parseInt(document.getElementById('qrRPE').value) || null;
   const notes = document.getElementById('qrNotes').value || '';
-  if (!dist && !timeStr) { alert('Please enter at least distance or time.'); return; }
-  // Build duration from time string
+  if (!dist && !hasTime) { alert('Please enter at least distance or time.'); return; }
+  // Build duration string
   let durationStr = '0:00';
-  if (timeStr) {
-    if (timeStr.includes(':')) durationStr = timeStr;
-    else durationStr = timeStr + ':00';
+  if (hasTime) {
+    durationStr = tH > 0 ? tH + ':' + String(tM).padStart(2,'0') + ':' + String(tS).padStart(2,'0') : tM + ':' + String(tS).padStart(2,'0');
   }
   // Save to WORKOUT_LOG
   const entry = {
@@ -4636,7 +4675,7 @@ function saveQuickRun() {
   // Close overlay and refresh
   document.getElementById('quickRunOverlay').remove();
   initClientApp();
-  alert('Run logged! ' + (dist ? dist + ' ' + distUnit : '') + (timeStr ? ' in ' + timeStr : ''));
+  alert('Run logged! ' + (dist ? dist + ' ' + distUnit : '') + (hasTime ? ' in ' + durationStr : ''));
 }
 
 // Client Progress page
