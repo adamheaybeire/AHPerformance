@@ -174,6 +174,7 @@ body { font-family: var(--font-body); background: var(--base); color: var(--text
     <button class="btn btn-secondary" onclick="showTemplates()">Load Template</button>
     <button class="btn btn-secondary" onclick="saveAsTemplate()">Save as Template</button>
     <button class="btn btn-primary" onclick="exportProgramme()">Export Programme</button>
+    <button class="btn btn-secondary" id="copyPrevBtn" onclick="copyPreviousWeek()" style="display:none;">Copy Previous Week</button>
     <button class="btn btn-primary" id="assignBtn" onclick="assignToClient()" style="background:#8BB07E;border-color:#8BB07E;display:none;">Assign to Client</button>
   </div>
 </div>
@@ -1016,6 +1017,20 @@ function saveProgrammeToApp() {
   showToast('Programme saved to app');
 }
 
+// Copy previous week's programme into the builder with incremented week number
+function copyPreviousWeek() {
+  const sel = document.getElementById('clientSelect');
+  const clientId = parseInt(sel.value);
+  if (!clientId) { showToast('Please select a client first'); return; }
+  const weekNum = parseInt(document.getElementById('weekNumber').value) || 1;
+  // Ask parent for the previous week's data
+  window.parent.postMessage({
+    type: 'ah-request-prev-week',
+    clientId: clientId,
+    currentWeek: weekNum
+  }, '*');
+}
+
 // Listen for client list from parent
 window.addEventListener('message', function(e) {
   if (e.data && e.data.type === 'ah-client-list') {
@@ -1040,11 +1055,39 @@ window.addEventListener('message', function(e) {
       switchDay(0);
     }
   }
+  // Receive previous week's programme data
+  if (e.data && e.data.type === 'ah-prev-week-data') {
+    if (!e.data.programme || !e.data.programme.days) {
+      showToast('No previous week found for this client');
+      return;
+    }
+    programme = JSON.parse(JSON.stringify(e.data.programme));
+    activeDay = 0;
+    activeSessionIdx = 0;
+    // Set the new week number (previous + 1)
+    const weekEl = document.getElementById('weekNumber');
+    if (weekEl) weekEl.value = e.data.newWeek || 1;
+    // Keep the programme name but update any week reference
+    const nameEl = document.getElementById('programmeName');
+    if (nameEl && e.data.programmeName) {
+      // If the name contains "Week X", update the number. Otherwise keep as-is.
+      let newName = e.data.programmeName.replace(/Week\s*\d+/i, 'Week ' + (e.data.newWeek || 1));
+      if (newName === e.data.programmeName && e.data.newWeek) {
+        // Name didn't have "Week X" in it — keep original name
+        newName = e.data.programmeName;
+      }
+      nameEl.value = newName;
+    }
+    renderDayTabs();
+    switchDay(0);
+    showToast('Previous week\'s programme loaded — ready to tweak for Week ' + (e.data.newWeek || ''));
+  }
 });
 
-// If embedded, show assign button and client dropdown, hide text input
+// If embedded, show assign button, copy prev button, and client dropdown, hide text input
 if (isEmbedded) {
   document.getElementById('assignBtn').style.display = '';
+  document.getElementById('copyPrevBtn').style.display = '';
   document.getElementById('clientSelect').style.display = '';
   document.getElementById('clientName').style.display = 'none';
   // Request client list from parent

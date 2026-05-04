@@ -8786,19 +8786,33 @@ window.addEventListener('message', function(e) {
     const client = CLIENTS.find(c => c.id === clientId);
     if (!client) return;
 
-    // Store in PT_PROGRAMMES
-    const progRecord = {
-      id: Date.now(),
-      name: programmeName,
-      clientId: clientId,
-      clientName: clientName,
-      weekNumber: weekNumber,
-      startDate: e.data.startDate || '',
-      status: 'active',
-      builderData: programme,
-      assignedDate: new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})
-    };
-    PT_PROGRAMMES.push(progRecord);
+    // Check if there's already an active programme for this client + same week number
+    // If so, UPDATE it in place instead of creating a duplicate
+    let existing = PT_PROGRAMMES.find(p => p.clientId === clientId && p.weekNumber === weekNumber && p.status === 'active');
+    let isUpdate = false;
+
+    if (existing) {
+      // Update in place
+      existing.name = programmeName;
+      existing.builderData = programme;
+      existing.startDate = e.data.startDate || existing.startDate;
+      existing.assignedDate = new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+      isUpdate = true;
+    } else {
+      // New programme assignment
+      const progRecord = {
+        id: Date.now(),
+        name: programmeName,
+        clientId: clientId,
+        clientName: clientName,
+        weekNumber: weekNumber,
+        startDate: e.data.startDate || '',
+        status: 'active',
+        builderData: programme,
+        assignedDate: new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})
+      };
+      PT_PROGRAMMES.push(progRecord);
+    }
 
     // Update client record
     client.programme = programmeName;
@@ -8816,11 +8830,11 @@ window.addEventListener('message', function(e) {
     }
 
     // Notify PT
-    addPTNotification('programme', clientId, clientName, 'Programme assigned: ' + programmeName);
+    addPTNotification('programme', clientId, clientName, (isUpdate ? 'Programme updated: ' : 'Programme assigned: ') + programmeName);
     // Notify client + queue email (triggerProgrammeUpdated handles both)
     triggerProgrammeUpdated(clientId, clientName, client.email || '', programmeName);
 
-    alert('Programme "' + programmeName + '" assigned to ' + clientName + ' successfully.');
+    alert('Programme "' + programmeName + '" ' + (isUpdate ? 'updated' : 'assigned') + ' for ' + clientName + ' successfully.');
     scheduleSave();
   }
 
@@ -8853,6 +8867,37 @@ window.addEventListener('message', function(e) {
       builderData: programme,
       assignedDate: ''
     });
+  }
+
+  // Copy Previous Week — find the most recent programme for this client and send it back
+  if (e.data.type === 'ah-request-prev-week') {
+    const { clientId, currentWeek } = e.data;
+    const iframe = document.querySelector('#ptProgrammes iframe');
+    if (!iframe || !iframe.contentWindow) return;
+
+    // Find all programmes for this client, sorted by week number descending
+    const clientProgs = PT_PROGRAMMES.filter(p => p.clientId === clientId && p.builderData)
+      .sort((a,b) => (b.weekNumber || 0) - (a.weekNumber || 0));
+
+    // Find the highest week that's less than currentWeek, or just the latest one
+    let prevProg = clientProgs.find(p => p.weekNumber < currentWeek);
+    if (!prevProg) prevProg = clientProgs[0]; // fallback to the latest one regardless
+
+    if (prevProg) {
+      const newWeek = (prevProg.weekNumber || 0) + 1;
+      iframe.contentWindow.postMessage({
+        type: 'ah-prev-week-data',
+        programme: prevProg.builderData,
+        programmeName: prevProg.name || '',
+        prevWeek: prevProg.weekNumber,
+        newWeek: newWeek
+      }, '*');
+    } else {
+      iframe.contentWindow.postMessage({
+        type: 'ah-prev-week-data',
+        programme: null
+      }, '*');
+    }
   }
 });
 
