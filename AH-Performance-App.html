@@ -156,9 +156,9 @@
   .mood-btn:hover{border-color:var(--sage);transform:scale(1.1);box-shadow:0 0 20px rgba(139,176,126,0.15);}
   .mood-btn.selected{border-color:var(--sage);background:var(--sage-soft);transform:scale(1.1);box-shadow:0 0 24px rgba(139,176,126,0.2);}
   .wellbeing-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
-  .wb-metric{background:rgba(139,176,126,0.04);border:1px solid var(--wb-border);border-radius:12px;padding:16px;}
-  .wb-metric label{font-size:11px;font-weight:500;color:var(--sage-text);text-transform:uppercase;letter-spacing:0.3px;display:block;margin-bottom:6px;}
-  .wb-metric select,.wb-metric input{width:100%;background:var(--wb-card);border-color:var(--wb-border);}
+  .wb-metric{background:rgba(139,176,126,0.04);border:1px solid var(--wb-border);border-radius:12px;padding:12px;}
+  .wb-metric label{font-size:10px;font-weight:500;color:var(--sage-text);text-transform:uppercase;letter-spacing:0.3px;display:block;margin-bottom:4px;}
+  .wb-metric select,.wb-metric input{width:100%;background:var(--wb-card);border-color:var(--wb-border);font-size:13px;padding:8px;}
   .wb-metric select:focus,.wb-metric input:focus{border-color:var(--sage);}
 
   /* ─── EXERCISE DETAIL MODAL ─── */
@@ -341,7 +341,7 @@
 
     /* Wellbeing page mobile */
     #clientWellbeing .wellbeing-grid{grid-template-columns:1fr 1fr !important;gap:8px !important;}
-    #clientWellbeing .wb-metric select{font-size:16px !important;padding:8px !important;}
+    #clientWellbeing .wb-metric select{font-size:13px !important;padding:8px !important;}
     #clientWellbeing .mood-scale{gap:6px !important;}
     #clientWellbeing .mood-btn{width:40px !important;height:40px !important;font-size:16px !important;}
     #clientWellbeing .card{padding:14px !important;}
@@ -1597,8 +1597,8 @@
         </div>
 
         <div style="margin-bottom:14px;">
-          <label style="font-size:11px;font-weight:500;color:var(--sage-text);text-transform:uppercase;letter-spacing:0.3px;display:block;margin-bottom:6px;">Anything on your mind?</label>
-          <textarea placeholder="How training is going, any niggles, motivation levels, life outside the gym..." id="wbNotes" style="background:var(--wb-card);border-color:var(--wb-border);width:100%;"></textarea>
+          <label style="font-size:10px;font-weight:500;color:var(--sage-text);text-transform:uppercase;letter-spacing:0.3px;display:block;margin-bottom:4px;">Anything on your mind?</label>
+          <textarea placeholder="How training is going, any niggles, motivation levels, life outside the gym..." id="wbNotes" style="background:var(--wb-card);border-color:var(--wb-border);width:100%;font-size:13px;padding:10px;"></textarea>
         </div>
 
         <button class="btn btn-sage" onclick="submitWellbeing()">Submit Check-In</button>
@@ -3574,9 +3574,16 @@ function renderWLSessionPicker(showResume) {
   const latestKey = weekKeys[weekKeys.length - 1];
   const week = progWeeks[latestKey];
   const sessions = week.sessions || [];
-  const today = new Date().toISOString().slice(0, 10);
   const cid = loggedInUser ? loggedInUser.clientId : null;
-  const todaysLogs = cid && WORKOUT_LOG[cid] ? WORKOUT_LOG[cid].filter(w => w.date === today) : [];
+  // Check entire current week (Mon-Sun) for logged sessions
+  const _wkNow = new Date();
+  const _wkDay = _wkNow.getDay();
+  const _wkMonOff = _wkDay === 0 ? -6 : 1 - _wkDay;
+  const _wkMon = new Date(_wkNow.getFullYear(), _wkNow.getMonth(), _wkNow.getDate() + _wkMonOff);
+  const _wkMonStr = _wkMon.toISOString().slice(0,10);
+  const _wkSun = new Date(_wkMon.getTime() + 6*24*60*60*1000);
+  const _wkSunStr = _wkSun.toISOString().slice(0,10);
+  const weekLogs = cid && WORKOUT_LOG[cid] ? WORKOUT_LOG[cid].filter(w => w.date >= _wkMonStr && w.date <= _wkSunStr) : [];
 
   html += `<div style="margin-bottom:12px;"><h3 style="color:var(--text-bright);font-size:15px;margin-bottom:2px;">${week.label || 'Current Week'}</h3><p style="font-size:11px;color:var(--text-dim);">Tap a session to start</p></div>`;
   html += '<div class="wl-session-pick">';
@@ -3585,7 +3592,9 @@ function renderWLSessionPicker(showResume) {
     const typeClass = isCardio ? 'cardio' : 'strength';
     const exCount = s.exercises ? s.exercises.length : 0;
     const desc = isCardio ? (s.desc || 'Cardio session') : `${exCount} exercise${exCount !== 1 ? 's' : ''}`;
-    const logged = todaysLogs.some(l => l.sessionName === s.name);
+    // Match by session name (case-insensitive) across the whole week
+    const sNameLower = (s.name || '').toLowerCase();
+    const logged = weekLogs.some(l => (l.sessionName || '').toLowerCase() === sNameLower);
     html += `<div class="wl-session-card ${typeClass}" onclick="startWorkoutSession(${latestKey}, ${i})" ${logged ? 'style="opacity:0.5;"' : ''}>
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div><h3>${s.day} — ${s.name}</h3><p>${desc}</p></div>
@@ -3623,14 +3632,24 @@ function startWorkoutSession(weekKey, sessionIdx) {
   document.getElementById('wlTimerBar').style.display = 'flex';
   document.getElementById('wlPauseBtn').style.display = 'inline-block';
   // Pre-populate sets from programme prescription
+  // Build superset lookup so we can use superset rounds as the set count
+  const _ssLookup = {};
+  if (wlCurrentSession.supersets && wlCurrentSession.supersets.length) {
+    wlCurrentSession.supersets.forEach(ss => {
+      (ss.exerciseIndices || []).forEach(idx => { _ssLookup[idx] = ss; });
+    });
+  }
   if (wlCurrentSession.exercises) {
     wlCurrentSession.exercises.forEach((ex, i) => {
       const prescribed = parseSetRep(ex.sr);
       const isCardio = _isCardioExercise(ex.n);
+      const exIdx = ex._idx !== undefined ? ex._idx : i;
+      // If exercise is in a superset, use superset rounds as set count
+      const ssGroup = _ssLookup[exIdx];
+      const numSets = ssGroup && ssGroup.rounds ? ssGroup.rounds : prescribed.sets;
       const sets = [];
-      for (let s = 0; s < prescribed.sets; s++) {
+      for (let s = 0; s < numSets; s++) {
         if (isCardio) {
-          // Cardio: weight=time, reps=distance. Prescribed value (e.g. "60min") goes into time (weight)
           sets.push({ weight: prescribed.reps || '', reps: '', done: false });
         } else {
           sets.push({ weight: (ex.w && ex.w !== '—') ? parseFloat(ex.w) || '' : '', reps: prescribed.reps || '', done: false });
@@ -3643,7 +3662,64 @@ function startWorkoutSession(weekKey, sessionIdx) {
 }
 
 function startEmptyWorkout() {
-  wlCurrentSession = { name: 'Free Workout', day: new Date().toLocaleDateString('en-GB',{weekday:'long'}), type: 'strength', exercises: [] };
+  // Show picker: Strength or Cardio
+  const overlay = document.createElement('div');
+  overlay.id = 'unschedPickerOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:var(--slate-bg);overflow-y:auto;padding:20px;padding-top:calc(20px + env(safe-area-inset-top, 0px));';
+  const cardioPresets = [
+    { name: 'Outdoor Run', icon: '🏃' },
+    { name: 'Stationary Bike', icon: '🚴' },
+    { name: 'Rowing Machine', icon: '🚣' },
+    { name: 'Cross Trainer', icon: '⚡' },
+    { name: 'Swimming', icon: '🏊' },
+    { name: 'Walking', icon: '🚶' },
+    { name: 'Skipping', icon: '⏭' },
+    { name: 'HIIT', icon: '🔥' }
+  ];
+  overlay.innerHTML = `<div style="max-width:460px;margin:0 auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <h2 style="font-size:18px;font-weight:700;color:var(--text-bright);font-family:var(--font-heading);">Log Unscheduled Workout</h2>
+      <button onclick="document.getElementById('unschedPickerOverlay').remove()" style="background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;">×</button>
+    </div>
+    <div style="margin-bottom:20px;">
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Strength</div>
+      <button onclick="_launchUnsched('Free Workout','strength')" style="width:100%;padding:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:12px;color:var(--text-bright);font-size:14px;font-weight:500;cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">💪</span> Free Strength Workout
+      </button>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Cardio</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        ${cardioPresets.map(c => `<button onclick="_launchUnsched('${c.name}','cardio')" style="padding:14px 12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:12px;color:var(--text-bright);font-size:13px;font-weight:500;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;">
+          <span style="font-size:18px;">${c.icon}</span> ${c.name}
+        </button>`).join('')}
+      </div>
+    </div>
+    <div style="margin-top:16px;">
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Custom</div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="unschedCustomName" placeholder="Session name..." style="flex:1;padding:12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:10px;color:var(--text-bright);font-size:14px;">
+        <select id="unschedCustomType" style="padding:12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:10px;color:var(--text-bright);font-size:13px;">
+          <option value="strength">Strength</option>
+          <option value="cardio">Cardio</option>
+        </select>
+        <button onclick="_launchUnsched(document.getElementById('unschedCustomName').value||'Custom Workout',document.getElementById('unschedCustomType').value)" style="padding:12px 16px;background:var(--ocean);border:none;border-radius:10px;color:#fff;font-weight:600;font-size:13px;cursor:pointer;">Go</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+function _launchUnsched(name, type) {
+  const overlay = document.getElementById('unschedPickerOverlay');
+  if (overlay) overlay.remove();
+  // For cardio types that are running, use Quick Log Run instead
+  const nameLower = (name || '').toLowerCase();
+  if (type === 'cardio' && (nameLower.includes('run') || nameLower.includes('jog'))) {
+    openQuickLogRun();
+    return;
+  }
+  wlCurrentSession = { name: name, day: new Date().toLocaleDateString('en-GB',{weekday:'long'}), type: type, exercises: [] };
   wlActive = true;
   wlPaused = false;
   wlSetData = {};
@@ -3656,7 +3732,7 @@ function startEmptyWorkout() {
   document.getElementById('wlRestTimer').textContent = '00:00';
   if (wlTimerInterval) clearInterval(wlTimerInterval);
   wlTimerInterval = setInterval(updateWLTimer, 1000);
-  document.getElementById('wlTitle').textContent = 'Free Workout';
+  document.getElementById('wlTitle').textContent = name;
   document.getElementById('wlFooter').style.display = 'block';
   document.getElementById('wlTimerBar').style.display = 'flex';
   document.getElementById('wlPauseBtn').style.display = 'inline-block';
@@ -4553,28 +4629,28 @@ function openQuickLogRun() {
         <input type="date" id="qrDate" value="${todayStr}" style="width:100%;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);font-family:var(--font);"></div>
         <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Session Name</label>
         <input type="text" id="qrName" value="${sessionName}" placeholder="e.g. Outdoor Run" style="width:100%;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);font-family:var(--font);"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Distance</label>
-          <div style="display:flex;gap:6px;">
-            <input type="number" id="qrDist" inputmode="decimal" step="0.1" placeholder="5.0" style="flex:1;min-width:0;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;">
-            <select id="qrDistUnit" style="padding:8px 6px;font-size:13px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);flex-shrink:0;"><option value="km">km</option><option value="mi">mi</option></select>
-          </div></div>
-          <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Time</label>
-          <div style="display:flex;gap:4px;align-items:center;">
-            <input type="number" id="qrTimeH" inputmode="numeric" min="0" max="23" placeholder="0" style="width:100%;min-width:0;padding:10px 4px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;">
-            <span style="color:var(--text-dim);font-weight:600;flex-shrink:0;">:</span>
-            <input type="number" id="qrTimeM" inputmode="numeric" min="0" max="59" placeholder="25" style="width:100%;min-width:0;padding:10px 4px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;">
-            <span style="color:var(--text-dim);font-weight:600;flex-shrink:0;">:</span>
-            <input type="number" id="qrTimeS" inputmode="numeric" min="0" max="59" placeholder="30" style="width:100%;min-width:0;padding:10px 4px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;">
+        <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Distance</label>
+        <div style="display:flex;gap:8px;">
+          <input type="number" id="qrDist" inputmode="decimal" step="0.1" placeholder="5.0" style="flex:1;min-width:0;padding:10px;font-size:15px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;">
+          <select id="qrDistUnit" style="padding:10px 12px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);"><option value="km">km</option><option value="mi">mi</option></select>
+        </div></div>
+        <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Time</label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <div style="flex:1;text-align:center;">
+            <input type="number" id="qrTimeH" inputmode="numeric" min="0" max="23" placeholder="0" style="width:100%;padding:12px 6px;font-size:18px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;font-family:'Space Grotesk',sans-serif;">
+            <div style="font-size:10px;color:var(--text-dim);margin-top:3px;">hours</div>
           </div>
-          <div style="display:flex;justify-content:space-between;margin-top:3px;padding:0 2px;">
-            <span style="font-size:9px;color:var(--text-dim);text-align:center;flex:1;">hr</span>
-            <span style="width:8px;"></span>
-            <span style="font-size:9px;color:var(--text-dim);text-align:center;flex:1;">min</span>
-            <span style="width:8px;"></span>
-            <span style="font-size:9px;color:var(--text-dim);text-align:center;flex:1;">sec</span>
-          </div></div>
-        </div>
+          <span style="color:var(--text-dim);font-size:20px;font-weight:700;padding-bottom:18px;">:</span>
+          <div style="flex:1;text-align:center;">
+            <input type="number" id="qrTimeM" inputmode="numeric" min="0" max="59" placeholder="25" style="width:100%;padding:12px 6px;font-size:18px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;font-family:'Space Grotesk',sans-serif;">
+            <div style="font-size:10px;color:var(--text-dim);margin-top:3px;">min</div>
+          </div>
+          <span style="color:var(--text-dim);font-size:20px;font-weight:700;padding-bottom:18px;">:</span>
+          <div style="flex:1;text-align:center;">
+            <input type="number" id="qrTimeS" inputmode="numeric" min="0" max="59" placeholder="00" style="width:100%;padding:12px 6px;font-size:18px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;font-family:'Space Grotesk',sans-serif;">
+            <div style="font-size:10px;color:var(--text-dim);margin-top:3px;">sec</div>
+          </div>
+        </div></div>
         <div id="qrPaceDisplay" style="text-align:center;font-size:13px;color:var(--ocean);font-weight:600;padding:8px;background:var(--ocean-soft);border-radius:8px;display:none;"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div><label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px;">Avg Heart Rate</label>
@@ -5086,9 +5162,9 @@ function renderWorkoutHistory() {
           <div style="font-size:13px;font-weight:600;color:var(--text-bright);">${w.sessionName || 'Workout'}</div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${w.date ? new Date(w.date + 'T00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}) : '—'} · ${w.duration || '—'} · ${w.totalSets || 0} sets</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
           <span style="font-size:10px;font-weight:600;color:${typeColor};background:${typeColor}15;padding:2px 8px;border-radius:20px;">${typeLabel}</span>
-          ${w.rpe ? `<span style="font-size:10px;color:var(--text-dim);">RPE ${w.rpe}</span>` : ''}
+          <span style="font-size:10px;color:var(--text-dim);min-width:36px;text-align:right;">${w.rpe ? 'RPE ' + w.rpe : ''}</span>
           <span style="color:var(--text-dim);font-size:12px;" id="histArrow${wi}">▼</span>
         </div>
       </div>
@@ -5253,7 +5329,20 @@ function deleteWorkoutEntry(idx) {
   if (!confirm('Delete this workout entry?')) return;
   const cid = loggedInUser ? loggedInUser.clientId : null;
   if (!cid || !WORKOUT_LOG[cid]) return;
+  const entry = WORKOUT_LOG[cid][idx];
   WORKOUT_LOG[cid].splice(idx, 1);
+  // Cascade: remove matching entry from PROGRESS_DATA (cardio + strength)
+  if (entry && PROGRESS_DATA[cid]) {
+    const pd = PROGRESS_DATA[cid];
+    if (pd.cardio && entry.type === 'cardio') {
+      const ci = pd.cardio.findIndex(c => c.date === entry.date && (c.activity || c.exercise || '') === (entry.sessionName || ''));
+      if (ci !== -1) pd.cardio.splice(ci, 1);
+    }
+    if (pd.strength) {
+      // Remove strength entries logged on same date with same session name
+      pd.strength = pd.strength.filter(s => !(s.date === entry.date && s.session === entry.sessionName));
+    }
+  }
   scheduleSave();
   renderWorkoutHistory();
 }
@@ -5316,10 +5405,11 @@ function _buildOneWeek(workouts, monday, localDateStr) {
     let strength = 0, running = 0, otherCardio = 0;
     let dayRunKm = 0;
     dayWorkouts.forEach(w => {
-      const dParts = (w.duration || '0:00').split(':');
-      const mins = parseInt(dParts[0]) || 0;
-      const secs = parseInt(dParts[1]) || 0;
-      const durH = parseFloat(((mins + secs / 60) / 60).toFixed(3));
+      const dParts = (w.duration || '0:00').split(':').map(Number);
+      let totalSecs = 0;
+      if (dParts.length >= 3) totalSecs = (dParts[0]||0)*3600 + (dParts[1]||0)*60 + (dParts[2]||0); // H:MM:SS
+      else totalSecs = (dParts[0]||0)*60 + (dParts[1]||0); // MM:SS
+      const durH = parseFloat((totalSecs / 3600).toFixed(3));
       const runExercises = (w.exercises || []).filter(e => {
         const n = (e.name || '').toLowerCase();
         return n.includes('run') || n.includes('jog') || n.includes('sprint');
