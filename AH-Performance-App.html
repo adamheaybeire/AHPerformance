@@ -969,6 +969,10 @@
           </div>
           <div class="chart-container"><canvas id="cpStrChart"></canvas></div>
         </div>
+        <div class="card" id="cpProgressionOverview">
+          <h3 style="margin-bottom:10px;">Progression Overview</h3>
+          <div id="cpProgressionList" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
         <div class="card">
           <div class="flex-between mb-12">
             <h3 style="margin-bottom:0;">Strength History</h3>
@@ -1840,6 +1844,7 @@
         <select id="ptClientFilter" onchange="filterClients()"><option value="">All Status</option><option value="active">Active</option><option value="new">New</option><option value="attention">Needs Attention</option><option value="inactive">Inactive</option></select>
         <button class="btn btn-ember" onclick="showOnboardingForm()">+ Add Client</button>
       </div>
+      <div id="ptAttentionList" style="margin-bottom:14px;"></div>
       <div id="ptClientList"></div>
     </div>
 
@@ -1896,6 +1901,10 @@
               </div>
             </div>
             <div class="chart-container"><canvas id="detailStrChart"></canvas></div>
+          </div>
+          <div class="card" id="dtProgressionOverview">
+            <h3 style="margin-bottom:10px;">Progression Overview</h3>
+            <div id="dtProgressionList" style="display:flex;flex-direction:column;gap:6px;"></div>
           </div>
           <div class="card">
             <div class="flex-between mb-12">
@@ -4635,6 +4644,16 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
   });
   if (sessionNotes) reviewHtml += `<div style="padding:8px 0;border-top:1px solid var(--slate-border);font-size:11px;color:var(--text-muted);font-style:italic;">${sessionNotes}</div>`;
   reviewHtml += '</div>';
+  // Post-session feedback prompt
+  reviewHtml += `<div style="margin-top:14px;text-align:center;">
+    <div style="font-size:12px;font-weight:600;color:var(--text-bright);margin-bottom:8px;">How did that feel?</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="wlFeedbackBtns">
+      <button onclick="saveSessionFeedback('too_easy',this)" style="padding:10px 8px;border:1px solid var(--slate-border);border-radius:10px;background:var(--slate-card);color:var(--text-body);font-size:12px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent;">😌 Too Easy</button>
+      <button onclick="saveSessionFeedback('about_right',this)" style="padding:10px 8px;border:1px solid var(--slate-border);border-radius:10px;background:var(--slate-card);color:var(--text-body);font-size:12px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent;">👍 About Right</button>
+      <button onclick="saveSessionFeedback('tough',this)" style="padding:10px 8px;border:1px solid var(--slate-border);border-radius:10px;background:var(--slate-card);color:var(--text-body);font-size:12px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent;">💪 Tough</button>
+      <button onclick="saveSessionFeedback('couldnt_finish',this)" style="padding:10px 8px;border:1px solid var(--slate-border);border-radius:10px;background:var(--slate-card);color:var(--text-body);font-size:12px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent;">🛑 Couldn't Finish</button>
+    </div>
+  </div>`;
   body.innerHTML = reviewHtml;
   document.getElementById('wlFooter').style.display = 'block';
   document.getElementById('wlDiscardBtn').style.display = 'none';
@@ -4646,6 +4665,35 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
     document.getElementById('wlDiscardBtn').style.display = '';
     if (typeof initClientApp === 'function') initClientApp();
   };
+}
+
+// ── POST-SESSION FEEDBACK ──
+const _feedbackLabels = { too_easy: '😌 Too Easy', about_right: '👍 About Right', tough: '💪 Tough', couldnt_finish: '🛑 Couldn\'t Finish' };
+function saveSessionFeedback(feedback, btnEl) {
+  const cid = loggedInUser ? loggedInUser.clientId : null;
+  if (!cid || !WORKOUT_LOG[cid] || !WORKOUT_LOG[cid].length) return;
+  // Find the most recent workout (just saved)
+  const latest = WORKOUT_LOG[cid].reduce((newest, w) => (!newest || (w.timestamp||0) > (newest.timestamp||0)) ? w : newest, null);
+  if (latest) {
+    latest.feedback = feedback;
+    scheduleSave();
+  }
+  // Visual confirmation — highlight selected, dim others
+  const container = document.getElementById('wlFeedbackBtns');
+  if (container) {
+    const btns = container.querySelectorAll('button');
+    btns.forEach(b => {
+      b.style.opacity = '0.3';
+      b.style.pointerEvents = 'none';
+    });
+    if (btnEl) {
+      btnEl.style.opacity = '1';
+      btnEl.style.background = 'var(--ember-soft)';
+      btnEl.style.borderColor = 'var(--ember)';
+      btnEl.style.color = 'var(--ember)';
+      btnEl.style.fontWeight = '700';
+    }
+  }
 }
 
 // ═══════════════════════════════════════
@@ -4904,6 +4952,7 @@ function initClientProgress() {
 
   renderCPStrChart();
   renderCPStrHistory();
+  renderProgressionOverview('cpProgressionList', pd.strength);
   renderCPCardChart();
   renderCPCardHistory();
   renderCPMeasChart();
@@ -5024,6 +5073,85 @@ function renderCPStrHistory() {
   if (table) table.classList.remove('expanded');
   const toggle = table?.nextElementSibling;
   if (toggle && toggle.classList.contains('toggle-rows')) toggle.textContent = 'Show more';
+}
+
+// ── PROGRESSION OVERVIEW ──
+function _calcExerciseTrends(strengthEntries) {
+  // Group entries by exercise, sorted by date ascending
+  const grouped = {};
+  strengthEntries.forEach(e => {
+    if (!grouped[e.exercise]) grouped[e.exercise] = [];
+    grouped[e.exercise].push(e);
+  });
+  const trends = [];
+  Object.keys(grouped).sort().forEach(exName => {
+    const sessions = grouped[exName].sort((a,b) => (a.date||'').localeCompare(b.date||''));
+    if (sessions.length < 2) {
+      trends.push({ name: exName, sessions: sessions.length, trend: 'new', weightDir: 0, volumeDir: 0, e1rmDir: 0 });
+      return;
+    }
+    // Compare last session vs average of previous sessions (up to 3)
+    const last = sessions[sessions.length - 1];
+    const prev = sessions.slice(Math.max(0, sessions.length - 4), sessions.length - 1);
+    // Max weight per session
+    const lastMaxW = Math.max(...last.sets.map(s => s.weight || 0));
+    const prevAvgMaxW = prev.reduce((s,e) => s + Math.max(...e.sets.map(ss => ss.weight || 0)), 0) / prev.length;
+    // Volume (total weight × reps) per session
+    const lastVol = last.sets.reduce((s,ss) => s + (ss.weight||0) * (ss.reps||0), 0);
+    const prevAvgVol = prev.reduce((s,e) => s + e.sets.reduce((ss,set) => ss + (set.weight||0) * (set.reps||0), 0), 0) / prev.length;
+    // Est 1RM
+    const lastBest = last.sets.reduce((b,s) => cpE1RM(s.weight,s.reps) > cpE1RM(b.weight,b.reps) ? s : b, last.sets[0]);
+    const last1RM = cpE1RM(lastBest.weight, lastBest.reps);
+    const prev1RMs = prev.map(e => {
+      const best = e.sets.reduce((bst,s) => cpE1RM(s.weight,s.reps) > cpE1RM(bst.weight,bst.reps) ? s : bst, e.sets[0]);
+      return cpE1RM(best.weight, best.reps);
+    });
+    const prevAvg1RM = prev1RMs.reduce((s,v) => s + v, 0) / prev1RMs.length;
+    // Determine direction: >2% = up, <-2% = down, else flat
+    const pctW = prevAvgMaxW > 0 ? ((lastMaxW - prevAvgMaxW) / prevAvgMaxW) * 100 : 0;
+    const pctV = prevAvgVol > 0 ? ((lastVol - prevAvgVol) / prevAvgVol) * 100 : 0;
+    const pct1 = prevAvg1RM > 0 ? ((last1RM - prevAvg1RM) / prevAvg1RM) * 100 : 0;
+    const dir = (pct) => pct > 2 ? 1 : pct < -2 ? -1 : 0;
+    // Overall trend: majority of indicators
+    const dirs = [dir(pctW), dir(pctV), dir(pct1)];
+    const sum = dirs.reduce((s,d) => s + d, 0);
+    trends.push({
+      name: exName, sessions: sessions.length,
+      trend: sum > 0 ? 'up' : sum < 0 ? 'down' : 'flat',
+      weightDir: dir(pctW), volumeDir: dir(pctV), e1rmDir: dir(pct1),
+      lastMaxW, last1RM: Math.round(last1RM), lastVol: Math.round(lastVol),
+      lastDate: last.date
+    });
+  });
+  return trends;
+}
+
+function renderProgressionOverview(containerId, strengthEntries) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!strengthEntries || !strengthEntries.length) {
+    el.innerHTML = '<div style="text-align:center;font-size:12px;color:var(--text-dim);padding:10px;">No strength data logged yet</div>';
+    return;
+  }
+  const trends = _calcExerciseTrends(strengthEntries);
+  const arrow = (d) => d > 0 ? '<span style="color:#4CAF50;">▲</span>' : d < 0 ? '<span style="color:#E57373;">▼</span>' : '<span style="color:var(--text-dim);">—</span>';
+  const trendBg = (t) => t === 'up' ? 'rgba(76,175,80,0.08)' : t === 'down' ? 'rgba(229,115,115,0.08)' : 'rgba(150,150,150,0.05)';
+  const trendBorder = (t) => t === 'up' ? 'rgba(76,175,80,0.2)' : t === 'down' ? 'rgba(229,115,115,0.2)' : 'rgba(150,150,150,0.1)';
+  const trendLabel = (t) => t === 'up' ? '<span style="color:#4CAF50;font-weight:600;">Progressing</span>' : t === 'down' ? '<span style="color:#E57373;font-weight:600;">Regressing</span>' : t === 'new' ? '<span style="color:var(--ocean);font-weight:600;">New</span>' : '<span style="color:var(--text-dim);font-weight:600;">Maintaining</span>';
+  el.innerHTML = trends.map(t => `
+    <div style="padding:8px 10px;background:${trendBg(t.trend)};border:1px solid ${trendBorder(t.trend)};border-radius:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-size:12px;font-weight:600;color:var(--text-bright);">${_shortenExName(t.name)}</span>
+        ${trendLabel(t.trend)}
+      </div>
+      ${t.trend !== 'new' ? `<div style="display:flex;gap:12px;font-size:10px;color:var(--text-muted);">
+        <span>${arrow(t.weightDir)} ${t.lastMaxW}kg top</span>
+        <span>${arrow(t.e1rmDir)} ${t.last1RM}kg e1RM</span>
+        <span>${arrow(t.volumeDir)} ${t.lastVol}kg vol</span>
+        <span style="margin-left:auto;">${t.sessions} sessions</span>
+      </div>` : `<div style="font-size:10px;color:var(--text-muted);">1 session logged — need more data</div>`}
+    </div>
+  `).join('');
 }
 
 // ── CARDIO ──
@@ -5225,6 +5353,7 @@ function renderWorkoutHistory() {
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
           <span style="font-size:10px;font-weight:600;color:${typeColor};background:${typeColor}15;padding:2px 8px;border-radius:20px;">${typeLabel}</span>
+          ${w.feedback ? `<span style="font-size:9px;color:var(--text-muted);">${_feedbackLabels[w.feedback]||w.feedback}</span>` : ''}
           <span style="font-size:10px;color:var(--text-dim);min-width:36px;text-align:right;">${w.rpe ? 'RPE ' + w.rpe : ''}</span>
           <span style="color:var(--text-dim);font-size:12px;" id="histArrow${wi}">▼</span>
         </div>
@@ -5905,8 +6034,89 @@ function renderClientList() {
     if (filter && c.status !== filter) return false;
     return true;
   }).forEach(c => el.innerHTML += buildClientRow(c));
+  renderAttentionList();
 }
 function filterClients() { renderClientList(); }
+
+function renderAttentionList() {
+  const el = document.getElementById('ptAttentionList');
+  if (!el || !CLIENTS.length) { if (el) el.innerHTML = ''; return; }
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const alerts = [];
+  CLIENTS.filter(c => c.status === 'active' || c.status === 'new').forEach(c => {
+    const workouts = WORKOUT_LOG[c.id] || [];
+    const pd = PROGRESS_DATA[c.id];
+    // 1. No training in 3+ days
+    if (workouts.length) {
+      const lastDate = workouts.reduce((latest, w) => (w.date||'') > latest ? (w.date||'') : latest, '');
+      if (lastDate) {
+        const diffDays = Math.floor((today - new Date(lastDate + 'T00:00')) / 86400000);
+        if (diffDays >= 3) {
+          alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'inactive', icon: '🏋️', msg: `No training for ${diffDays} days`, priority: diffDays >= 7 ? 3 : 2 });
+        }
+      }
+    } else if (c.status === 'active') {
+      alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'inactive', icon: '🏋️', msg: 'No workouts logged yet', priority: 1 });
+    }
+    // 2. Missed check-in (due date has passed)
+    if (c.nextCheckin) {
+      const daysOfWeek = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const checkinDayIdx = daysOfWeek.indexOf(c.nextCheckin);
+      if (checkinDayIdx >= 0) {
+        const todayDayIdx = today.getDay();
+        // Check if we're past their check-in day and they haven't submitted
+        const CHECKIN_LOGS = window.CHECKIN_LOGS || {};
+        const logs = CHECKIN_LOGS[c.id] || [];
+        const thisWeekStart = new Date(today);
+        thisWeekStart.setDate(today.getDate() - today.getDay());
+        const thisWeekStr = thisWeekStart.toISOString().split('T')[0];
+        const hasCheckinThisWeek = logs.some(l => l.date >= thisWeekStr);
+        if (!hasCheckinThisWeek && todayDayIdx > checkinDayIdx) {
+          alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'checkin', icon: '📋', msg: `Missed ${c.nextCheckin} check-in`, priority: 2 });
+        }
+      }
+    }
+    // 3. Low compliance
+    if (typeof c.compliance === 'number' && c.compliance < 60) {
+      alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'compliance', icon: '📉', msg: `Compliance at ${c.compliance}%`, priority: c.compliance < 40 ? 3 : 2 });
+    }
+    // 4. Tough/couldn't finish recent workout
+    if (workouts.length && workouts[0].feedback) {
+      const fb = workouts[0].feedback;
+      if (fb === 'couldnt_finish') {
+        alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'feedback', icon: '🛑', msg: `Couldn't finish last session (${workouts[0].sessionName})`, priority: 3 });
+      } else if (fb === 'too_easy') {
+        alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'feedback', icon: '😌', msg: `Found last session too easy (${workouts[0].sessionName})`, priority: 1 });
+      }
+    }
+  });
+  // Sort by priority (highest first)
+  alerts.sort((a,b) => b.priority - a.priority);
+  if (!alerts.length) {
+    el.innerHTML = '';
+    return;
+  }
+  const priorityColor = (p) => p >= 3 ? 'var(--danger)' : p >= 2 ? 'var(--warning)' : 'var(--ocean)';
+  el.innerHTML = `
+    <div style="background:var(--slate-card);border:1px solid var(--slate-border);border-radius:12px;padding:14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <span style="font-size:14px;">⚠️</span>
+        <h3 style="margin:0;font-size:14px;color:var(--text-bright);">Needs Attention</h3>
+        <span style="font-size:11px;color:var(--text-muted);margin-left:auto;">${alerts.length} alert${alerts.length>1?'s':''}</span>
+      </div>
+      ${alerts.map(a => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 6px;border-top:1px solid var(--slate-border);cursor:pointer;" onclick="openClientDetail(${a.clientId})">
+          <div style="width:28px;height:28px;border-radius:50%;background:${a.bg};color:${a.colour};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">${a.initials}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;font-weight:600;color:var(--text-bright);">${a.name}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${a.icon} ${a.msg}</div>
+          </div>
+          <div style="width:6px;height:6px;border-radius:50%;background:${priorityColor(a.priority)};flex-shrink:0;"></div>
+        </div>
+      `).join('')}
+    </div>`;
+}
 
 function buildClientRow(c) {
   const sm = {active:'status-active',new:'status-new',attention:'status-attention',inactive:'status-inactive'};
@@ -5976,6 +6186,7 @@ function openClientDetail(id) {
           <div class="session-metric">${ic('dumbbell','var(--ember)',12)} <span class="sm-val">${w.totalSets || 0} sets</span></div>
           ${w.totalVolume ? `<div class="session-metric">${ic('trending','var(--sage)',12)} <span class="sm-val">${w.totalVolume.toLocaleString()} kg</span></div>` : ''}
           ${w.rpe ? `<div class="session-metric">${ic('bolt','#D45B5B',12)} RPE <span class="sm-val">${w.rpe}</span></div>` : ''}
+          ${w.feedback ? `<div class="session-metric"><span class="sm-val" style="font-size:10px;">${_feedbackLabels[w.feedback]||w.feedback}</span></div>` : ''}
         </div>
         <div class="session-detail hidden" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--slate-border);">
           ${w.exercises && w.exercises.length ? w.exercises.map(ex => `<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid var(--slate-border);"><span style="font-size:12px;font-weight:600;color:var(--text-bright);min-width:130px;">${ex.name}</span><span style="font-size:11px;color:var(--text-muted);">${ex.sets.map(s => s.weight+'kg × '+s.reps).join(' → ')}</span></div>`).join('') : ''}
@@ -6078,6 +6289,7 @@ function initDetailProgress(clientId) {
   // Render all
   renderDetailStrChart();
   renderDetailStrHistory(clientId);
+  renderProgressionOverview('dtProgressionList', pd.strength);
   renderDetailCardChart();
   renderDetailCardHistory(clientId);
   renderDetailMeasChart();
