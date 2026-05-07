@@ -388,7 +388,7 @@
     #clientProgress .prog-table th{font-size:9px !important;text-transform:uppercase;letter-spacing:0.3px;}
     #clientProgress .card h3{font-size:13px !important;}
     #clientProgress .flex-between{flex-wrap:wrap;gap:6px;}
-    #clientProgress .flex-between select{font-size:16px !important;padding:4px 6px !important;max-width:120px;}
+    #clientProgress .flex-between select{font-size:11px !important;padding:4px 6px !important;max-width:120px;}
     #clientProgress .card .val{font-size:10px !important;}
     #clientProgress .card{padding:12px !important;overflow-x:auto;}
     #clientProgress .chart-container{height:180px !important;min-height:120px !important;}
@@ -3529,6 +3529,7 @@ function _wlSaveState() {
       time: document.getElementById('wlCardioTime')?.value || '',
       avgHR: document.getElementById('wlCardioAvgHR')?.value || '',
       maxHR: document.getElementById('wlCardioMaxHR')?.value || '',
+      date: document.getElementById('wlCardioDate')?.value || '',
       notes: document.getElementById('wlCardioNotes')?.value || ''
     };
   }
@@ -3603,6 +3604,8 @@ function _wlRestoreState() {
         if (mhEl) mhEl.value = cd.maxHR || '';
         const nEl = document.getElementById('wlCardioNotes');
         if (nEl) nEl.value = cd.notes || '';
+        const dateEl = document.getElementById('wlCardioDate');
+        if (dateEl && cd.date) dateEl.value = cd.date;
       }, 50);
     }
     return true;
@@ -4030,6 +4033,10 @@ function renderWLActiveSession() {
             <label style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Max HR</label>
             <input type="number" id="wlCardioMaxHR" inputmode="numeric" placeholder="bpm" style="width:100%;padding:10px;font-size:14px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);text-align:center;box-sizing:border-box;">
           </div>
+        </div>
+        <div style="margin-top:10px;">
+          <label style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Date</label>
+          <input type="date" id="wlCardioDate" value="${new Date().toISOString().slice(0,10)}" style="width:100%;padding:10px;font-size:13px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);box-sizing:border-box;">
         </div>
         <div style="margin-top:10px;"><textarea class="wl-notes-input" id="wlCardioNotes" placeholder="How it felt..." rows="2"></textarea></div>
       </div>`;
@@ -4549,7 +4556,9 @@ function wlSelectRPE(val) {
 function saveWorkoutLog(duration, totalSets, totalVolume) {
   const cid = loggedInUser ? loggedInUser.clientId : null;
   if (!cid) { alert('Not logged in'); return; }
-  const today = new Date().toISOString().slice(0, 10);
+  // Use cardio date picker if available (allows logging workouts from a previous day)
+  const cardioDateVal = document.getElementById('wlCardioDate')?.value;
+  const today = (cardioDateVal && cardioDateVal.match(/^\d{4}-\d{2}-\d{2}$/)) ? cardioDateVal : new Date().toISOString().slice(0, 10);
   const sessionNotes = document.getElementById('wlSessionNotes')?.value || '';
   // Build exercise log entries
   const exerciseLogs = [];
@@ -4594,6 +4603,8 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
   // Save to WORKOUT_LOG
   if (!WORKOUT_LOG[cid]) WORKOUT_LOG[cid] = [];
   WORKOUT_LOG[cid].unshift(entry);
+  // Sort by date descending so history always shows newest first
+  WORKOUT_LOG[cid].sort((a,b) => (b.date||'').localeCompare(a.date||''));
   // Also save individual exercise data to PROGRESS_DATA for charting
   if (!PROGRESS_DATA[cid]) PROGRESS_DATA[cid] = { strength: [], cardio: [], measurements: [], wearable: [], weekly: [] };
   const isCardioSession = (wlCurrentSession.type === 'cardio');
@@ -4852,6 +4863,8 @@ function saveQuickRun() {
   };
   if (!WORKOUT_LOG[cid]) WORKOUT_LOG[cid] = [];
   WORKOUT_LOG[cid].unshift(entry);
+  // Sort by date descending so history always shows newest first
+  WORKOUT_LOG[cid].sort((a,b) => (b.date||'').localeCompare(a.date||''));
   // Save to PROGRESS_DATA for cardio charts
   if (!PROGRESS_DATA[cid]) PROGRESS_DATA[cid] = { strength: [], cardio: [], measurements: [], wearable: [], weekly: [] };
   PROGRESS_DATA[cid].cardio.push({
@@ -5068,17 +5081,17 @@ function renderCPStrHistory() {
     entries.forEach(e => { if (!grouped[e.exercise]) grouped[e.exercise] = []; grouped[e.exercise].push(e); });
     let html = '';
     Object.keys(grouped).sort().forEach(exName => {
-      html += `<tr><td colspan="6" style="padding:10px 12px;font-weight:600;color:var(--ember);font-family:'Space Grotesk',sans-serif;background:var(--ember-soft);border-bottom:1px solid var(--slate-border);">${exName}</td></tr>`;
+      html += `<tr><td colspan="6" style="padding:6px 8px;font-size:11px;font-weight:600;color:var(--ember);font-family:'Space Grotesk',sans-serif;background:var(--ember-soft);border-bottom:1px solid var(--slate-border);">${_shortenExName(exName)}</td></tr>`;
       grouped[exName].forEach(e => {
         const bestSet = e.sets.reduce((b,s) => cpE1RM(s.weight,s.reps) > cpE1RM(b.weight,b.reps) ? s : b, e.sets[0]);
-        html += `<tr><td class="val">${cpFormatDate(e.date)}</td><td class="val">${e.exercise}</td><td>${e.sets.length} sets</td><td class="val">${bestSet.weight}kg × ${bestSet.reps}</td><td class="val">${Math.round(cpE1RM(bestSet.weight,bestSet.reps))}kg</td><td>${e.rpe||'—'}</td></tr>`;
+        html += `<tr style="font-size:10px;"><td class="val">${cpFormatDate(e.date)}</td><td class="val">${_shortenExName(e.exercise)}</td><td>${e.sets.length}s</td><td class="val">${bestSet.weight}kg×${bestSet.reps}</td><td class="val">${Math.round(cpE1RM(bestSet.weight,bestSet.reps))}kg</td><td>${e.rpe||'—'}</td></tr>`;
       });
     });
     document.getElementById('cpStrHistory').innerHTML = html;
   } else {
     document.getElementById('cpStrHistory').innerHTML = entries.map(e => {
       const bestSet = e.sets.reduce((b,s) => cpE1RM(s.weight,s.reps) > cpE1RM(b.weight,b.reps) ? s : b, e.sets[0]);
-      return `<tr><td class="val">${cpFormatDate(e.date)}</td><td class="val">${e.exercise}</td><td>${e.sets.length} sets</td><td class="val">${bestSet.weight}kg × ${bestSet.reps}</td><td class="val">${Math.round(cpE1RM(bestSet.weight,bestSet.reps))}kg</td><td>${e.rpe||'—'}</td></tr>`;
+      return `<tr style="font-size:10px;"><td class="val">${cpFormatDate(e.date)}</td><td class="val">${_shortenExName(e.exercise)}</td><td>${e.sets.length}s</td><td class="val">${bestSet.weight}kg×${bestSet.reps}</td><td class="val">${Math.round(cpE1RM(bestSet.weight,bestSet.reps))}kg</td><td>${e.rpe||'—'}</td></tr>`;
     }).join('');
   }
   // Reset truncation
@@ -5258,6 +5271,8 @@ function renderWorkoutHistory() {
   const cid = loggedInUser ? loggedInUser.clientId : null;
   if (!cid) return;
   const workouts = WORKOUT_LOG[cid] || [];
+  // Ensure date-descending order (newest first)
+  workouts.sort((a,b) => (b.date||'').localeCompare(a.date||''));
   const container = document.getElementById('workoutHistoryList');
   if (!container) return;
   if (!workouts.length) {
@@ -5322,26 +5337,14 @@ function editWorkoutEntry(idx) {
   let html = '<div style="box-sizing:border-box;max-width:100%;overflow:hidden;">';
   html += '<div style="margin-bottom:10px;font-size:13px;font-weight:600;color:var(--ocean);">Edit Workout</div>';
   html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Session Name</label><input type="text" id="histEditName${idx}" value="${(w.sessionName||'').replace(/"/g,'&quot;')}" style="${fieldStyle}"></div>`;
-  html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Date</label><input type="date" id="histEditDate${idx}" value="${w.date || ''}" style="${fieldStyle}"></div>`;
   // Detect cardio/run session early so we can hide Duration for those
   const _wNameLower = (w.sessionName || '').toLowerCase();
   const _isRunOrCardio = w.type === 'cardio' || _wNameLower.includes('run') || _wNameLower.includes('jog') || _wNameLower.includes('sprint') || _wNameLower.includes('cycle') || _wNameLower.includes('swim') || _wNameLower.includes('walk') || _wNameLower.includes('row');
-  const _showDuration = !(_isRunOrCardio && (!w.exercises || w.exercises.length === 0));
-  if (_showDuration) {
-    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-      <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Duration (mm:ss)</label><input type="text" inputmode="numeric" id="histEditDuration${idx}" value="${w.duration || ''}" placeholder="mm:ss" onblur="wlFormatTimeInput(this)" style="${fieldStyle}"></div>
-      <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">RPE (1-10)</label><input type="number" id="histEditRPE${idx}" value="${w.rpe || ''}" min="1" max="10" style="${fieldStyle}"></div>
-    </div>`;
-  } else {
-    html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">RPE (1-10)</label><input type="number" id="histEditRPE${idx}" value="${w.rpe || ''}" min="1" max="10" style="${fieldStyle}"></div>`;
-    html += `<input type="hidden" id="histEditDuration${idx}" value="${w.duration || ''}">`;
-  }
-  html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Notes</label><textarea id="histEditNotes${idx}" style="${fieldStyle}resize:vertical;min-height:50px;">${w.notes || ''}</textarea></div>`;
+  // Cardio Details — placed right after Session Name, above Date
   if (_isRunOrCardio && (!w.exercises || w.exercises.length === 0)) {
-    // Look up matching cardio progress entry for distance/time/HR
     const pd = PROGRESS_DATA[cid];
     const cardioEntry = pd?.cardio?.find(c => c.date === w.date && (c.activity === w.sessionName || c.exercise === w.sessionName));
-    html += `<div style="margin-top:8px;padding:10px;background:var(--slate-raised);border-radius:8px;">
+    html += `<div style="margin-bottom:10px;padding:10px;background:var(--slate-raised);border-radius:8px;">
       <div style="font-size:11px;font-weight:600;color:var(--ocean);margin-bottom:8px;">Cardio Details</div>
       <div style="display:grid;grid-template-columns:1fr 60px 1fr;gap:6px;margin-bottom:8px;">
         <div><label style="font-size:9px;color:var(--text-dim);display:block;margin-bottom:3px;">DISTANCE</label><input type="number" id="histEditDist${idx}" inputmode="decimal" step="0.1" value="${cardioEntry?.distance || ''}" placeholder="0" style="${inpStyle}"></div>
@@ -5354,6 +5357,18 @@ function editWorkoutEntry(idx) {
       </div>
     </div>`;
   }
+  html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Date</label><input type="date" id="histEditDate${idx}" value="${w.date || ''}" style="${fieldStyle}"></div>`;
+  const _showDuration = !(_isRunOrCardio && (!w.exercises || w.exercises.length === 0));
+  if (_showDuration) {
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Duration (mm:ss)</label><input type="text" inputmode="numeric" id="histEditDuration${idx}" value="${w.duration || ''}" placeholder="mm:ss" onblur="wlFormatTimeInput(this)" style="${fieldStyle}"></div>
+      <div><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">RPE (1-10)</label><input type="number" id="histEditRPE${idx}" value="${w.rpe || ''}" min="1" max="10" style="${fieldStyle}"></div>
+    </div>`;
+  } else {
+    html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">RPE (1-10)</label><input type="number" id="histEditRPE${idx}" value="${w.rpe || ''}" min="1" max="10" style="${fieldStyle}"></div>`;
+    html += `<input type="hidden" id="histEditDuration${idx}" value="${w.duration || ''}">`;
+  }
+  html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Notes</label><textarea id="histEditNotes${idx}" style="${fieldStyle}resize:vertical;min-height:50px;">${w.notes || ''}</textarea></div>`;
   (w.exercises || []).forEach((ex, ei) => {
     const isC = _isCardioExercise(ex.name);
     html += `<div style="margin-top:8px;padding:8px 10px;background:var(--slate-raised);border-radius:8px;box-sizing:border-box;max-width:100%;">
@@ -5477,16 +5492,34 @@ function deleteWorkoutEntry(idx) {
   if (!cid || !WORKOUT_LOG[cid]) return;
   const entry = WORKOUT_LOG[cid][idx];
   WORKOUT_LOG[cid].splice(idx, 1);
-  // Cascade: remove matching entry from PROGRESS_DATA (cardio + strength)
+  // Cascade: remove matching entries from PROGRESS_DATA (cardio + strength)
   if (entry && PROGRESS_DATA[cid]) {
     const pd = PROGRESS_DATA[cid];
-    if (pd.cardio && entry.type === 'cardio') {
-      const ci = pd.cardio.findIndex(c => c.date === entry.date && (c.activity || c.exercise || '') === (entry.sessionName || ''));
-      if (ci !== -1) pd.cardio.splice(ci, 1);
+    const eName = (entry.sessionName || '').toLowerCase();
+    const eDate = entry.date;
+    // Remove from cardio progress (match by date + activity name, case-insensitive)
+    if (pd.cardio) {
+      // Check entry type AND also check exercises for cardio exercises
+      const hasCardioData = entry.type === 'cardio' || (entry.exercises || []).some(e => _isCardioExercise(e.name));
+      if (hasCardioData) {
+        pd.cardio = pd.cardio.filter(c => {
+          const cName = (c.activity || c.exercise || '').toLowerCase();
+          if (c.date === eDate && cName === eName) return false;
+          // Also remove exercise-level cardio entries from this workout
+          if (c.date === eDate && (entry.exercises || []).some(ex => (ex.name || '').toLowerCase() === cName)) return false;
+          return true;
+        });
+      }
     }
+    // Remove from strength progress
     if (pd.strength) {
-      // Remove strength entries logged on same date with same session name
-      pd.strength = pd.strength.filter(s => !(s.date === entry.date && s.session === entry.sessionName));
+      pd.strength = pd.strength.filter(s => {
+        const sEx = (s.exercise || '').toLowerCase();
+        if (s.date === eDate && (s.session || '').toLowerCase() === eName) return false;
+        // Also remove by exercise name match
+        if (s.date === eDate && (entry.exercises || []).some(ex => (ex.name || '').toLowerCase() === sEx)) return false;
+        return true;
+      });
     }
   }
   scheduleSave();
@@ -5562,13 +5595,10 @@ function _buildOneWeek(workouts, monday, localDateStr) {
       if (dParts.length >= 3) totalSecs = (dParts[0]||0)*3600 + (dParts[1]||0)*60 + (dParts[2]||0); // H:MM:SS
       else totalSecs = (dParts[0]||0)*60 + (dParts[1]||0); // MM:SS
       const durH = parseFloat((totalSecs / 3600).toFixed(3));
-      const runExercises = (w.exercises || []).filter(e => {
-        const n = (e.name || '').toLowerCase();
-        return n.includes('run') || n.includes('jog') || n.includes('sprint');
-      });
+      const _runRx = /\brun\b|\brunning\b|\bjog\b|\bjogging\b|\bsprint\b/i;
+      const runExercises = (w.exercises || []).filter(e => _runRx.test(e.name || ''));
       // Also check session name for running (covers pure cardio sessions with no exercises)
-      const sessionNameLower = (w.sessionName || '').toLowerCase();
-      const isRunSession = sessionNameLower.includes('run') || sessionNameLower.includes('jog') || sessionNameLower.includes('sprint');
+      const isRunSession = _runRx.test(w.sessionName || '');
       const hasRunning = runExercises.length > 0 || (isRunSession && !(w.exercises || []).length);
       const hasCardio = w.type === 'cardio' || (w.exercises || []).some(e => _isCardioExercise(e.name));
       if (hasRunning) running += durH;
@@ -6194,17 +6224,17 @@ function renderDetailStrHistory(clientId) {
     entries.forEach(e => { if (!grouped[e.exercise]) grouped[e.exercise] = []; grouped[e.exercise].push(e); });
     let html = '';
     Object.keys(grouped).sort().forEach(exName => {
-      html += `<tr><td colspan="6" style="padding:10px 12px;font-weight:600;color:var(--ember);font-family:'Space Grotesk',sans-serif;background:var(--ember-soft);border-bottom:1px solid var(--slate-border);">${exName}</td></tr>`;
+      html += `<tr><td colspan="6" style="padding:6px 8px;font-size:11px;font-weight:600;color:var(--ember);font-family:'Space Grotesk',sans-serif;background:var(--ember-soft);border-bottom:1px solid var(--slate-border);">${_shortenExName(exName)}</td></tr>`;
       grouped[exName].forEach(e => {
         const bestSet = e.sets.reduce((b,s) => cpE1RM(s.weight,s.reps) > cpE1RM(b.weight,b.reps) ? s : b, e.sets[0]);
-        html += `<tr><td class="val">${cpFormatDate(e.date)}</td><td class="val">${e.exercise}</td><td>${e.sets.length} sets</td><td class="val">${bestSet.weight}kg × ${bestSet.reps}</td><td class="val">${Math.round(cpE1RM(bestSet.weight,bestSet.reps))}kg</td><td>${e.rpe||'—'}</td></tr>`;
+        html += `<tr style="font-size:10px;"><td class="val">${cpFormatDate(e.date)}</td><td class="val">${_shortenExName(e.exercise)}</td><td>${e.sets.length}s</td><td class="val">${bestSet.weight}kg×${bestSet.reps}</td><td class="val">${Math.round(cpE1RM(bestSet.weight,bestSet.reps))}kg</td><td>${e.rpe||'—'}</td></tr>`;
       });
     });
     document.getElementById('dtStrHistory').innerHTML = html;
   } else {
     document.getElementById('dtStrHistory').innerHTML = entries.map(e => {
       const bestSet = e.sets.reduce((b,s) => cpE1RM(s.weight,s.reps) > cpE1RM(b.weight,b.reps) ? s : b, e.sets[0]);
-      return `<tr><td class="val">${cpFormatDate(e.date)}</td><td class="val">${e.exercise}</td><td>${e.sets.length} sets</td><td class="val">${bestSet.weight}kg × ${bestSet.reps}</td><td class="val">${Math.round(cpE1RM(bestSet.weight,bestSet.reps))}kg</td><td>${e.rpe||'—'}</td></tr>`;
+      return `<tr style="font-size:10px;"><td class="val">${cpFormatDate(e.date)}</td><td class="val">${_shortenExName(e.exercise)}</td><td>${e.sets.length}s</td><td class="val">${bestSet.weight}kg×${bestSet.reps}</td><td class="val">${Math.round(cpE1RM(bestSet.weight,bestSet.reps))}kg</td><td>${e.rpe||'—'}</td></tr>`;
     }).join('');
   }
   const table = document.getElementById('dtStrTable');
