@@ -905,7 +905,7 @@
     <div class="page" id="clientProgramme">
       <div class="page-header"><h1>My Programme</h1><p>Your current training programme from Coach Adam</p></div>
       <div id="progSummaryCard"></div>
-      <div style="margin-bottom:16px;"><button onclick="openWorkoutLogger()" style="width:100%;padding:14px;border:none;border-radius:14px;background:var(--ember);color:white;font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;letter-spacing:0.3px;-webkit-tap-highlight-color:transparent;">Start Workout</button></div>
+      <div style="margin-bottom:14px;"><button onclick="openWorkoutLogger()" style="width:100%;padding:12px;border:none;border-radius:12px;background:var(--ember);color:white;font-size:13px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;letter-spacing:0.3px;-webkit-tap-highlight-color:transparent;">Start Workout</button></div>
 
       <div class="week-nav">
         <button onclick="changeProgrammeWeek(-1)">&larr; Prev</button>
@@ -920,7 +920,7 @@
       <div class="page-header"><h1>My Progress</h1><p>Track your training journey — log sessions, monitor trends, and review weekly summaries</p></div>
       <div class="kpi-row" id="clientProgressKPIs"></div>
 
-      <div style="margin-bottom:16px;"><button onclick="openWorkoutLogger()" style="width:100%;padding:14px;border:none;border-radius:14px;background:var(--ember);color:white;font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;letter-spacing:0.3px;-webkit-tap-highlight-color:transparent;">Start Workout</button></div>
+      <div style="margin-bottom:14px;"><button onclick="openWorkoutLogger()" style="width:100%;padding:12px;border:none;border-radius:12px;background:var(--ember);color:white;font-size:13px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;letter-spacing:0.3px;-webkit-tap-highlight-color:transparent;">Start Workout</button></div>
 
       <!-- 5 Sub-tabs -->
       <div class="prog-sub-tabs" id="progSubTabs">
@@ -3352,7 +3352,7 @@ function renderProgrammeWeek() {
     } else {
       content = `<p style="font-size:13px;color:var(--text-body);line-height:1.8;">${s.desc}</p>`;
     }
-    el.innerHTML += `<div class="card"><div class="flex-between" style="cursor:pointer;" onclick="this.nextElementSibling.classList.toggle('hidden')"><div><strong style="color:${colour};">${s.day}</strong> — ${s.name}</div><span style="color:var(--text-dim);">▾</span></div><div class="hidden" style="margin-top:14px;">${content}</div></div>`;
+    el.innerHTML += `<div class="card" style="padding:12px 14px;margin-bottom:8px;"><div class="flex-between" style="cursor:pointer;" onclick="this.nextElementSibling.classList.toggle('hidden')"><div style="font-size:13px;"><span style="color:${colour};font-weight:600;">${s.day}</span> <span style="color:var(--text-dim);margin:0 2px;">—</span> <span style="color:var(--text-body);font-weight:500;">${s.name}</span></div><span style="color:var(--text-dim);font-size:11px;">▾</span></div><div class="hidden" style="margin-top:12px;">${content}</div></div>`;
   });
 }
 
@@ -4482,7 +4482,29 @@ function finishWorkout() {
   });
   const rawElapsed = wlStartTime ? Math.floor((Date.now() - wlStartTime) / 1000) : 0;
   const elapsed = rawElapsed + wlElapsedBeforePause;
-  const duration = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
+  let duration = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
+  // For cardio sessions: if the user manually entered a time, use that as the real duration
+  // (covers post-workout logging where the timer just tracks form-filling time)
+  if (wlCurrentSession?.type === 'cardio' && !(exercises.length)) {
+    const manualTime = (document.getElementById('wlCardioTime')?.value || '').trim();
+    if (manualTime) {
+      // Parse the entered time to seconds, compare with timer
+      const tp = manualTime.split(':').map(Number);
+      let manualSecs = 0;
+      if (tp.length >= 3) manualSecs = (tp[0]||0)*3600 + (tp[1]||0)*60 + (tp[2]||0);
+      else if (tp.length === 2) manualSecs = (tp[0]||0)*60 + (tp[1]||0);
+      else manualSecs = (tp[0]||0)*60;
+      // Use the manually entered time as duration (it's the actual workout time)
+      if (manualSecs > 0) {
+        const dH = Math.floor(manualSecs / 3600);
+        const dM = Math.floor((manualSecs % 3600) / 60);
+        const dS = manualSecs % 60;
+        duration = dH > 0
+          ? `${dH}:${String(dM).padStart(2,'0')}:${String(dS).padStart(2,'0')}`
+          : `${dM}:${String(dS).padStart(2,'0')}`;
+      }
+    }
+  }
   // Hide timer bar and rest timer, stop rest countdown
   document.getElementById('wlTimerBar').style.display = 'none';
   document.getElementById('wlPauseBtn').style.display = 'none';
@@ -5259,7 +5281,7 @@ function renderWorkoutHistory() {
       <div style="padding:12px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="toggleHistoryEntry(${wi})">
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--text-bright);">${w.sessionName || 'Workout'}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${w.date ? new Date(w.date + 'T00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}) : '—'} · ${w.duration || '—'} · ${w.totalSets || 0} sets</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${w.date ? new Date(w.date + 'T00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}) : '—'} · ${(w.type === 'cardio' && !(w.exercises||[]).length && w.time) ? w.time : (w.duration || '—')} · ${w.totalSets || 0} sets</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
           <span style="font-size:10px;font-weight:600;color:${typeColor};background:${typeColor}15;padding:2px 8px;border-radius:20px;">${typeLabel}</span>
@@ -5404,13 +5426,38 @@ function saveHistoryEdit(idx) {
         cardioEntry = { date: w.date, activity: w.sessionName, exercise: w.sessionName, sets: [], rpe: w.rpe };
         pd.cardio.push(cardioEntry);
       }
-      cardioEntry.distance = parseFloat(document.getElementById(`histEditDist${idx}`)?.value) || null;
-      cardioEntry.unit = document.getElementById(`histEditDistUnit${idx}`)?.value || 'km';
-      cardioEntry.time = document.getElementById(`histEditTime${idx}`)?.value || null;
-      cardioEntry.avgHR = parseInt(document.getElementById(`histEditAvgHR${idx}`)?.value) || null;
-      cardioEntry.maxHR = parseInt(document.getElementById(`histEditMaxHR${idx}`)?.value) || null;
+      const editDist = parseFloat(document.getElementById(`histEditDist${idx}`)?.value) || null;
+      const editUnit = document.getElementById(`histEditDistUnit${idx}`)?.value || 'km';
+      const editTime = document.getElementById(`histEditTime${idx}`)?.value || null;
+      const editAvgHR = parseInt(document.getElementById(`histEditAvgHR${idx}`)?.value) || null;
+      const editMaxHR = parseInt(document.getElementById(`histEditMaxHR${idx}`)?.value) || null;
+      cardioEntry.distance = editDist;
+      cardioEntry.unit = editUnit;
+      cardioEntry.time = editTime;
+      cardioEntry.avgHR = editAvgHR;
+      cardioEntry.maxHR = editMaxHR;
       // Update date if changed
       if (dateVal && dateVal !== cardioEntry.date) cardioEntry.date = dateVal;
+      // Sync cardio details back to WORKOUT_LOG entry so weekly summary uses correct data
+      w.distance = editDist;
+      w.distUnit = editUnit;
+      w.time = editTime;
+      // Also update w.duration to match the actual workout time (not form-filling time)
+      if (editTime) {
+        const tp = editTime.split(':').map(Number);
+        let secs = 0;
+        if (tp.length >= 3) secs = (tp[0]||0)*3600 + (tp[1]||0)*60 + (tp[2]||0);
+        else if (tp.length === 2) secs = (tp[0]||0)*60 + (tp[1]||0);
+        else secs = (tp[0]||0)*60;
+        if (secs > 0) {
+          const dH = Math.floor(secs / 3600);
+          const dM = Math.floor((secs % 3600) / 60);
+          const dS = secs % 60;
+          w.duration = dH > 0
+            ? `${dH}:${String(dM).padStart(2,'0')}:${String(dS).padStart(2,'0')}`
+            : `${dM}:${String(dS).padStart(2,'0')}`;
+        }
+      }
     }
   }
   // Recalculate volume
@@ -5504,7 +5551,13 @@ function _buildOneWeek(workouts, monday, localDateStr) {
     let strength = 0, running = 0, otherCardio = 0;
     let dayRunKm = 0;
     dayWorkouts.forEach(w => {
-      const dParts = (w.duration || '0:00').split(':').map(Number);
+      // For cardio sessions with no exercises: prefer w.time (actual workout time entered by user)
+      // over w.duration (which may just be the timer/form-filling time)
+      let durSource = w.duration || '0:00';
+      if (w.type === 'cardio' && !(w.exercises || []).length && w.time) {
+        durSource = w.time;
+      }
+      const dParts = String(durSource).split(':').map(Number);
       let totalSecs = 0;
       if (dParts.length >= 3) totalSecs = (dParts[0]||0)*3600 + (dParts[1]||0)*60 + (dParts[2]||0); // H:MM:SS
       else totalSecs = (dParts[0]||0)*60 + (dParts[1]||0); // MM:SS
