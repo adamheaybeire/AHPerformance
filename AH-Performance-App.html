@@ -929,7 +929,6 @@
         <button class="prog-sub-tab" onclick="showProgSection('progStrength')">Strength</button>
         <button class="prog-sub-tab" onclick="showProgSection('progCardio')">Cardio</button>
         <button class="prog-sub-tab" onclick="showProgSection('progBody')">Body</button>
-        <button class="prog-sub-tab" onclick="showProgSection('progWearable')">Wearable</button>
       </div>
 
       <!-- ═══ STRENGTH ═══ -->
@@ -1081,48 +1080,7 @@
         </div>
       </div>
 
-      <!-- ═══ WEARABLE ═══ -->
-      <div class="prog-section" id="progWearable">
-        <div class="prog-form" id="cpWearForm">
-          <h3>Log Wearable Entry</h3>
-          <div class="form-row four">
-            <div class="form-group"><label class="form-label">Date</label><input type="date" id="cpWearDate"></div>
-            <div class="form-group"><label class="form-label">Resting HR (bpm)</label><input type="number" id="cpWearRHR" placeholder="52"></div>
-            <div class="form-group"><label class="form-label">HRV (ms)</label><input type="number" id="cpWearHRV" placeholder="65"></div>
-            <div class="form-group"><label class="form-label">VO2 Max</label><input type="number" id="cpWearVO2" placeholder="48" step="0.1"></div>
-          </div>
-          <div class="form-row four">
-            <div class="form-group"><label class="form-label">Sleep (hours)</label><input type="number" id="cpWearSleep" placeholder="7.5" step="0.1"></div>
-            <div class="form-group"><label class="form-label">Strain (0-21)</label><input type="number" id="cpWearStrain" placeholder="14.5" step="0.1" min="0" max="21"></div>
-            <div class="form-group"><label class="form-label">Steps <span class="sync-badge">auto-sync</span></label><input type="number" id="cpWearSteps" placeholder="8500"></div>
-          </div>
-          <div class="btn-row">
-            <div style="flex:1;"></div>
-            <button class="btn btn-primary" onclick="saveCPWearable()">Save Entry</button>
-          </div>
-          <div style="margin-top:12px;font-size:11px;color:var(--text-dim);line-height:1.6;">
-            <strong style="color:var(--text-muted);">Auto-sync:</strong> In the app, all wearable metrics sync automatically from Apple Health, Google Health Connect, or your device (Garmin, WHOOP, Fitbit). Manual entry is available as a fallback.
-          </div>
-        </div>
-        <div class="card card-ocean">
-          <h3>Trends</h3>
-          <div class="wear-sub-tabs" id="cpWearTabs">
-            <button class="wear-sub-tab active" onclick="setCPWearTab('rhr',this)">RHR</button>
-            <button class="wear-sub-tab" onclick="setCPWearTab('hrv',this)">HRV</button>
-            <button class="wear-sub-tab" onclick="setCPWearTab('vo2',this)">VO2</button>
-            <button class="wear-sub-tab" onclick="setCPWearTab('sleep',this)">Sleep</button>
-            <button class="wear-sub-tab" onclick="setCPWearTab('strain',this)">Strain</button>
-            <button class="wear-sub-tab" onclick="setCPWearTab('steps',this)">Steps</button>
-          </div>
-          <div class="chart-container"><canvas id="cpWearChart"></canvas></div>
-        </div>
-        <div class="card">
-          <h3>Wearable History</h3>
-          <table class="prog-table truncated-table" id="cpWearTable"><thead><tr><th>Date</th><th>RHR</th><th>HRV</th><th>VO2</th><th>Sleep</th><th>Strain</th><th>Steps</th></tr></thead>
-          <tbody id="cpWearHistory"></tbody></table>
-          <span class="toggle-rows" onclick="toggleTableRows('cpWearTable',this)">Show more</span>
-        </div>
-      </div>
+      <!-- ═══ WEARABLE (hidden — future feature) ═══ -->
 
       <!-- ═══ WEEKLY SUMMARY ═══ -->
       <div class="prog-section active" id="progWeekly">
@@ -1134,14 +1092,10 @@
         <div class="summary-grid" id="cpWeeklySummary">
           <div class="summary-stat"><div class="stat-label">Total Workout Hours</div><div class="stat-main text-ember" id="cpWkHours">0h 0m</div><div class="stat-detail" id="cpWkHoursDetail">—</div></div>
           <div class="summary-stat"><div class="stat-label">Total Running KM</div><div class="stat-main text-ocean" id="cpWkRunKm">0 km</div><div class="stat-detail" id="cpWkRunDetail">—</div></div>
-          <div class="summary-stat"><div class="stat-label">Total Steps</div><div class="stat-main text-sage" id="cpWkSteps">0</div><div class="stat-detail" id="cpWkStepsDetail">—</div></div>
-          <div class="summary-stat"><div class="stat-label">Avg Sleep</div><div class="stat-main" id="cpWkSleep">—</div><div class="stat-detail" id="cpWkSleepDetail">—</div></div>
         </div>
         <div class="card" id="cpWkCardioBreakdown" style="display:none;"><h3>Cardio Breakdown</h3><div id="cpWkCardioList" style="margin-top:10px;"></div></div>
         <div class="card"><h3>Daily Workout Hours</h3><div id="cpWkDailyHours"></div><div class="bar-legend"><span><span class="dot" style="background:var(--ember);"></span>Strength</span><span><span class="dot" style="background:var(--ocean);"></span>Running</span><span><span class="dot" style="background:var(--sage);"></span>Other Cardio</span></div></div>
         <div class="card"><h3>Daily Running KM</h3><div class="chart-container"><canvas id="cpWkRunChart"></canvas></div></div>
-        <div class="card"><h3>Daily Steps</h3><div class="chart-container"><canvas id="cpWkStepsChart"></canvas></div></div>
-        <div class="card"><h3>Daily Sleep (hours)</h3><div class="chart-container"><canvas id="cpWkSleepChart"></canvas></div></div>
       </div>
 
       <!-- ═══ WORKOUT HISTORY ═══ -->
@@ -1915,7 +1869,7 @@
         <div class="kpi-row" id="detailKPIs"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
           <div class="card card-ocean">
-            <div class="flex-between mb-12"><h3 style="margin-bottom:0;">Recent Sessions</h3><span class="wearable-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#4A9DC8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Wearable data</span></div>
+            <div class="flex-between mb-12"><h3 style="margin-bottom:0;">Recent Sessions</h3></div>
             <div id="detailSessions"></div>
           </div>
           <div class="card card-sage"><h3>Body Weight Trend</h3><div class="chart-container"><canvas id="detailWeightChart"></canvas></div></div>
@@ -1928,7 +1882,6 @@
           <button class="prog-sub-tab" onclick="showDTProgSection('dtProgStr')">Strength</button>
           <button class="prog-sub-tab" onclick="showDTProgSection('dtProgCard')">Cardio</button>
           <button class="prog-sub-tab" onclick="showDTProgSection('dtProgBody')">Body</button>
-          <button class="prog-sub-tab" onclick="showDTProgSection('dtProgWear')">Wearable</button>
         </div>
 
         <!-- Strength -->
@@ -2008,27 +1961,7 @@
           </div>
         </div>
 
-        <!-- Wearable -->
-        <div class="prog-section" id="dtProgWear">
-          <div class="card card-ocean">
-            <h3>Wearable Trends</h3>
-            <div class="wear-sub-tabs" id="dtWearTabs">
-              <button class="wear-sub-tab active" onclick="setDTWearTab('rhr',this)">RHR</button>
-              <button class="wear-sub-tab" onclick="setDTWearTab('hrv',this)">HRV</button>
-              <button class="wear-sub-tab" onclick="setDTWearTab('vo2',this)">VO2</button>
-              <button class="wear-sub-tab" onclick="setDTWearTab('sleep',this)">Sleep</button>
-              <button class="wear-sub-tab" onclick="setDTWearTab('strain',this)">Strain</button>
-              <button class="wear-sub-tab" onclick="setDTWearTab('steps',this)">Steps</button>
-            </div>
-            <div class="chart-container"><canvas id="detailWearChart"></canvas></div>
-          </div>
-          <div class="card">
-            <h3>Wearable History</h3>
-            <table class="prog-table truncated-table" id="dtWearTable"><thead><tr><th>Date</th><th>RHR</th><th>HRV</th><th>VO2</th><th>Sleep</th><th>Strain</th><th>Steps</th></tr></thead>
-            <tbody id="dtWearHistory"></tbody></table>
-            <span class="toggle-rows" onclick="toggleTableRows('dtWearTable',this)">Show more</span>
-          </div>
-        </div>
+        <!-- Wearable (hidden — future feature) -->
 
         <!-- Weekly Summary -->
         <div class="prog-section active" id="dtProgWeekly">
@@ -2040,14 +1973,10 @@
           <div class="summary-grid">
             <div class="summary-stat"><div class="stat-label">Total Workout Hours</div><div class="stat-main text-ember" id="dtWkHours">—</div><div class="stat-detail" id="dtWkHoursDetail">—</div></div>
             <div class="summary-stat"><div class="stat-label">Total Running KM</div><div class="stat-main text-ocean" id="dtWkRunKm">—</div><div class="stat-detail" id="dtWkRunDetail">—</div></div>
-            <div class="summary-stat"><div class="stat-label">Total Steps</div><div class="stat-main text-sage" id="dtWkSteps">—</div><div class="stat-detail" id="dtWkStepsDetail">—</div></div>
-            <div class="summary-stat"><div class="stat-label">Avg Sleep</div><div class="stat-main" id="dtWkSleep">—</div><div class="stat-detail" id="dtWkSleepDetail">—</div></div>
           </div>
           <div class="card" id="dtWkCardioBreakdown" style="display:none;"><h3>Cardio Breakdown</h3><div id="dtWkCardioList" style="margin-top:10px;"></div></div>
           <div class="card"><h3>Daily Workout Hours</h3><div id="dtWkDailyHours"></div><div class="bar-legend"><span><span class="dot" style="background:var(--ember);"></span>Strength</span><span><span class="dot" style="background:var(--ocean);"></span>Running</span><span><span class="dot" style="background:var(--sage);"></span>Other Cardio</span></div></div>
           <div class="card"><h3>Daily Running KM</h3><div class="chart-container"><canvas id="dtWkRunChart"></canvas></div></div>
-          <div class="card"><h3>Daily Steps</h3><div class="chart-container"><canvas id="dtWkStepsChart"></canvas></div></div>
-          <div class="card"><h3>Daily Sleep (hours)</h3><div class="chart-container"><canvas id="dtWkSleepChart"></canvas></div></div>
         </div>
       </div>
       <div class="tab-content" id="detailProgramme">
@@ -4911,7 +4840,6 @@ function initClientProgress() {
   if (!jw) return;
 
   // KPIs
-  const latestW = pd.wearable[0];
   const bestSquat = pd.strength.filter(e=>e.exercise==='Back Squat').reduce((best,e)=>{
     const maxW = Math.max(...e.sets.map(s=>s.weight));
     const maxR = e.sets.find(s=>s.weight===maxW)?.reps||1;
@@ -4940,11 +4868,11 @@ function initClientProgress() {
     <div class="kpi" style="border-top:3px solid var(--ember);"><div class="kpi-label">Total Sessions</div><div class="kpi-value text-ember">${pd.strength.length + pd.cardio.length}</div><div class="kpi-sub">Logged entries</div></div>
     <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Body Weight</div><div class="kpi-value">${currentWeight||'—'}<span style="font-size:12px;color:var(--text-dim);">kg</span></div><div class="kpi-sub" style="color:${arrowColour};">${arrow} ${arrowLabel}</div></div>
     <div class="kpi" style="border-top:3px solid var(--ocean);"><div class="kpi-label">Squat Est. 1RM</div><div class="kpi-value text-ocean">${Math.round(bestSquat)}<span style="font-size:12px;color:var(--text-dim);">kg</span></div><div class="kpi-sub">Best estimate</div></div>
-    <div class="kpi"><div class="kpi-label">Resting HR</div><div class="kpi-value">${latestW?.rhr||'—'}<span style="font-size:12px;color:var(--text-dim);">bpm</span></div><div class="kpi-sub">Latest</div></div>`;
+    <div class="kpi"><div class="kpi-label">Cardio Sessions</div><div class="kpi-value">${_filterRealCardio(pd.cardio).length}</div><div class="kpi-sub">Logged entries</div></div>`;
 
   // Set today's date on all progress forms
   const today = new Date().toISOString().split('T')[0];
-  ['cpStrDate','cpCardDate','cpMeasDate','cpWearDate'].forEach(id => {
+  ['cpStrDate','cpCardDate','cpMeasDate'].forEach(id => {
     const el = document.getElementById(id);
     if (el && !el.value) el.value = today;
   });
@@ -4981,8 +4909,6 @@ function initClientProgress() {
   renderCPMeasChart();
   renderCPMeasHistory();
   renderCPPhotos();
-  renderCPWearChart();
-  renderCPWearHistory();
 
   cpWeekIdx = 0;
   renderCPWeeklySummary();
@@ -5000,7 +4926,6 @@ function showProgSection(sectionId) {
     if (sectionId === 'progStrength') renderCPStrChart();
     if (sectionId === 'progCardio') renderCPCardChart();
     if (sectionId === 'progBody') renderCPMeasChart();
-    if (sectionId === 'progWearable') renderCPWearChart();
     if (sectionId === 'progWeekly') renderCPWeeklySummary();
     if (sectionId === 'progHistory') renderWorkoutHistory();
   }, 50);
@@ -5699,17 +5624,6 @@ function renderCPWeeklySummary() {
   const runDays = days.filter(d => d.runKm > 0).length;
   document.getElementById('cpWkRunDetail').textContent = runDays ? `${runDays} run${runDays>1?'s':''} this week` : 'No runs';
 
-  const totalSteps = days.reduce((s,d) => s + d.steps, 0);
-  document.getElementById('cpWkSteps').textContent = totalSteps.toLocaleString();
-  document.getElementById('cpWkStepsDetail').textContent = `Avg: ${Math.round(totalSteps/7).toLocaleString()}/day`;
-
-  const sleepArr = days.filter(d => d.sleep > 0);
-  const avgSleep = sleepArr.length ? (sleepArr.reduce((s,d)=>s+d.sleep,0)/sleepArr.length) : 0;
-  document.getElementById('cpWkSleep').textContent = avgSleep ? avgSleep.toFixed(1) + 'h' : '—';
-  const minSl = sleepArr.length ? Math.min(...sleepArr.map(d=>d.sleep)) : 0;
-  const maxSl = sleepArr.length ? Math.max(...sleepArr.map(d=>d.sleep)) : 0;
-  document.getElementById('cpWkSleepDetail').textContent = sleepArr.length ? `Range: ${minSl}h — ${maxSl}h` : '—';
-
   // Daily workout hours bar chart
   const maxH = Math.max(...days.map(d => d.strength + d.running + d.otherCardio), 0.5);
   document.getElementById('cpWkDailyHours').innerHTML = days.map(d => {
@@ -5724,12 +5638,6 @@ function renderCPWeeklySummary() {
   const dayLabels = days.map(d => d.day);
   const runData = days.map(d => d.runKm);
   renderBarChartSimple('cpWkRunChart', dayLabels, runData, 'Running (km)', '#4A9DC8');
-
-  // Daily steps chart
-  renderBarChartSimple('cpWkStepsChart', dayLabels, days.map(d => d.steps), 'Steps', '#8BB07E');
-
-  // Daily sleep chart
-  renderBarChartSimple('cpWkSleepChart', dayLabels, days.map(d => d.sleep), 'Sleep (hours)', '#9B8EC4');
 
   // Cardio breakdown — aggregate all cardio sessions for the week by exercise name
   _renderCardioBreakdown(days, 'cpWkCardioBreakdown', 'cpWkCardioList');
@@ -6152,7 +6060,6 @@ function showDTProgSection(sectionId) {
     if (sectionId === 'dtProgStr') renderDetailStrChart();
     if (sectionId === 'dtProgCard') renderDetailCardChart();
     if (sectionId === 'dtProgBody') renderDetailMeasChart();
-    if (sectionId === 'dtProgWear') renderDetailWearChart();
     if (sectionId === 'dtProgWeekly') renderDTWeeklySummary();
   }, 50);
 }
@@ -6175,8 +6082,6 @@ function initDetailProgress(clientId) {
   renderDetailCardHistory(clientId);
   renderDetailMeasChart();
   renderDetailMeasTable(clientId);
-  renderDetailWearChart();
-  renderDetailWearHistory(clientId);
   dtWeekIdx = 0;
   renderDTWeeklySummary();
 }
@@ -6345,13 +6250,6 @@ function renderDTWeeklySummary() {
   const totalKm = days.reduce((s,d)=>s+d.runKm,0);
   document.getElementById('dtWkRunKm').textContent = `${totalKm.toFixed(1)} km`;
   document.getElementById('dtWkRunDetail').textContent = `${days.filter(d=>d.runKm>0).length} runs`;
-  const totalSteps = days.reduce((s,d)=>s+d.steps,0);
-  document.getElementById('dtWkSteps').textContent = totalSteps.toLocaleString();
-  document.getElementById('dtWkStepsDetail').textContent = `Avg: ${Math.round(totalSteps/7).toLocaleString()}/day`;
-  const sleepArr = days.filter(d=>d.sleep>0);
-  const avgSl = sleepArr.length ? (sleepArr.reduce((s,d)=>s+d.sleep,0)/sleepArr.length) : 0;
-  document.getElementById('dtWkSleep').textContent = avgSl ? avgSl.toFixed(1)+'h' : '—';
-  document.getElementById('dtWkSleepDetail').textContent = sleepArr.length ? `${Math.min(...sleepArr.map(d=>d.sleep))}h — ${Math.max(...sleepArr.map(d=>d.sleep))}h` : '—';
   // Bar chart
   const maxH2 = Math.max(...days.map(d=>d.strength+d.running+d.otherCardio),0.5);
   document.getElementById('dtWkDailyHours').innerHTML = days.map(d => {
@@ -6360,9 +6258,6 @@ function renderDTWeeklySummary() {
   }).join('');
   const dayLabels = days.map(d=>d.day);
   renderBarChartSimple('dtWkRunChart', dayLabels, days.map(d=>d.runKm), 'Running (km)', '#4A9DC8');
-  renderBarChartSimple('dtWkStepsChart', dayLabels, days.map(d=>d.steps), 'Steps', '#8BB07E');
-  renderBarChartSimple('dtWkSleepChart', dayLabels, days.map(d=>d.sleep), 'Sleep (hours)', '#9B8EC4');
-
   // Cardio breakdown
   _renderCardioBreakdown(days, 'dtWkCardioBreakdown', 'dtWkCardioList');
 }
@@ -10753,8 +10648,7 @@ function renderDetailCheckins(clientId) {
     kpiEl.innerHTML = `
       <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Latest Weight</div><div class="kpi-value">${latest.measurements.w}<span style="font-size:12px;color:var(--text-dim);">kg</span></div><div class="kpi-sub">${weightDelta!==null ? (weightDelta>0?'+':'')+weightDelta+'kg vs prev' : 'First check-in'}</div></div>
       <div class="kpi" style="border-top:3px solid var(--ember);"><div class="kpi-label">Adherence</div><div class="kpi-value text-ember">${latest.adherence}<span style="font-size:12px;color:var(--text-dim);">/5</span></div><div class="kpi-sub">This week</div></div>
-      <div class="kpi" style="border-top:3px solid var(--ocean);"><div class="kpi-label">Waist</div><div class="kpi-value text-ocean">${latest.measurements.wa}<span style="font-size:12px;color:var(--text-dim);">cm</span></div><div class="kpi-sub">${waistDelta!==null ? (waistDelta>0?'+':'')+waistDelta+'cm vs prev' : '—'}</div></div>
-      <div class="kpi"><div class="kpi-label">Avg Sleep</div><div class="kpi-value">${latest.auto.avgSleep}</div><div class="kpi-sub">From wearable</div></div>`;
+      <div class="kpi" style="border-top:3px solid var(--ocean);"><div class="kpi-label">Waist</div><div class="kpi-value text-ocean">${latest.measurements.wa}<span style="font-size:12px;color:var(--text-dim);">cm</span></div><div class="kpi-sub">${waistDelta!==null ? (waistDelta>0?'+':'')+waistDelta+'cm vs prev' : '—'}</div></div>`;
   } else if (kpiEl) {
     kpiEl.innerHTML = '';
   }
