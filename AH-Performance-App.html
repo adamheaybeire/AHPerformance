@@ -2482,7 +2482,17 @@ function _applyState(state, _source) {
   if (state.programmeWeeks) Object.assign(PROGRAMME_WEEKS, state.programmeWeeks);
   if (state.progressData) Object.assign(PROGRESS_DATA, state.progressData);
   if (state.wellbeingData && state.wellbeingData.length) { WELLBEING_DATA.length = 0; state.wellbeingData.forEach(w => WELLBEING_DATA.push(w)); }
-  if (state.ptNotifications && state.ptNotifications.length) { PT_NOTIFICATIONS.length = 0; state.ptNotifications.forEach(n => PT_NOTIFICATIONS.push(n)); }
+  if (state.ptNotifications && state.ptNotifications.length) {
+    // Merge notifications: preserve local read/dismissed state, add new ones only
+    const localReadIds = new Set(PT_NOTIFICATIONS.filter(n => n.read).map(n => n.id));
+    const localIds = new Set(PT_NOTIFICATIONS.map(n => n.id));
+    // Update existing notifications from server but keep local read state
+    state.ptNotifications.forEach(sn => {
+      if (localReadIds.has(sn.id)) sn.read = true; // preserve local "read"
+    });
+    PT_NOTIFICATIONS.length = 0;
+    state.ptNotifications.forEach(n => PT_NOTIFICATIONS.push(n));
+  }
   if (state.clientNotifications) Object.assign(CLIENT_NOTIFICATIONS, state.clientNotifications);
   if (state.emailQueue && state.emailQueue.length) { EMAIL_QUEUE.length = 0; state.emailQueue.forEach(e => EMAIL_QUEUE.push(e)); }
   if (state.ptConversations && state.ptConversations.length) { PT_CONVERSATIONS.length = 0; state.ptConversations.forEach(c => PT_CONVERSATIONS.push(c)); }
@@ -5958,8 +5968,10 @@ function submitWellbeing() {
   const now = new Date();
   const dateStr = now.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
 
+  const wbClientRec = CLIENTS.find(c => c.id === cid) || USERS.find(u => u.clientId === cid);
   WELLBEING_DATA.unshift({
     clientId: cid,
+    client: wbClientRec ? wbClientRec.name : 'Unknown',
     date: dateStr,
     mood: selectedMoodValue,
     energy: energy,
@@ -6958,9 +6970,10 @@ function renderPTWellbeing() {
   const el = document.getElementById('ptWellbeingList'); el.innerHTML = '';
   const moodLabels = {1:'Struggling',2:'Low',3:'Neutral',4:'Good',5:'Great'};
   WELLBEING_DATA.forEach(w => {
+    const wbName = w.client || (CLIENTS.find(c => c.id === w.clientId) || {}).name || 'Unknown';
     const isAlert = w.stress==='Very High'||w.stress==='High';
     el.innerHTML += `<div class="card" style="${isAlert?'border-left:3px solid var(--danger);':'border-left:3px solid var(--sage);'}">
-      <div class="flex-between mb-12"><div><strong>${w.client}</strong> <span style="color:var(--text-dim);font-size:12px;">— ${w.date}</span></div>${isAlert?'<span class="status-pill status-attention">High Stress</span>':''}</div>
+      <div class="flex-between mb-12"><div><strong>${wbName}</strong> <span style="color:var(--text-dim);font-size:12px;">— ${w.date}</span></div>${isAlert?'<span class="status-pill status-attention">High Stress</span>':''}</div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;font-size:12px;">
         <div><span style="color:var(--text-dim);">Mood:</span> ${w.mood}/5 ${moodLabels[w.mood]||''}</div>
         <div><span style="color:var(--text-dim);">Energy:</span> ${w.energy}</div>
@@ -8988,6 +9001,9 @@ function dismissPTNotif(nId) {
 function markAllPTNotifsRead() {
   PT_NOTIFICATIONS.forEach(n => n.read = true);
   renderPTNotifications();
+  updateSidebarBadges();
+  // Refresh dashboard KPIs so notification counter updates
+  if (document.getElementById('ptKPIs')) initPTApp();
   scheduleSave();
 }
 
