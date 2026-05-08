@@ -312,6 +312,23 @@
     #clientApp .main{margin-left:0 !important;padding:16px 16px 80px !important;padding-top:calc(16px + env(safe-area-inset-top, 0px)) !important;height:100vh;height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
     #clientApp .mobile-tab-bar{display:block;}
 
+    /* Coach app — full mobile layout */
+    #ptApp .sidebar{display:none !important;}
+    #ptApp .main{margin-left:0 !important;padding:16px 16px 80px !important;padding-top:calc(16px + env(safe-area-inset-top, 0px)) !important;height:100vh;height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+    #ptApp .mobile-tab-bar{display:block;}
+    /* Coach client list — mobile friendly */
+    .client-row{grid-template-columns:36px 1fr !important;gap:8px !important;padding:12px !important;}
+    .client-row .client-meta:nth-child(n+3){display:none !important;}
+    .client-row .client-avatar{width:36px !important;height:36px !important;font-size:13px !important;}
+    /* Coach detail tabs — horizontal scroll on mobile */
+    .detail-tabs{overflow-x:auto !important;white-space:nowrap !important;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:0 !important;padding-bottom:4px;}
+    .detail-tabs::-webkit-scrollbar{display:none;}
+    .detail-tab{font-size:12px !important;padding:8px 12px !important;flex-shrink:0;}
+    .detail-back{font-size:13px;padding:8px 0 4px;}
+    /* Coach page headers — tighter on mobile */
+    #ptApp .page-header h1{font-size:20px !important;}
+    #ptApp .page-header p{font-size:12px !important;}
+
     /* Full-width cards */
     .week-summary{grid-template-columns:1fr !important;}
     .quick-links{grid-template-columns:repeat(3,1fr) !important;gap:8px !important;}
@@ -1790,6 +1807,14 @@
 <!-- ═══════════════════════════════════════ -->
 <div class="app" id="ptApp">
   <nav class="sidebar" id="ptSidebar"></nav>
+  <div class="mobile-tab-bar" id="ptMobileNav">
+    <div class="tab-row">
+      <div class="mobile-tab active" onclick="ptMobileNav('ptClients')"><div class="tab-ic" id="mtPtClients"></div><span class="tab-label">Clients</span></div>
+      <div class="mobile-tab" onclick="ptMobileNav('ptMessages')"><div class="tab-ic" id="mtPtMessages"></div><span class="tab-label">Messages</span></div>
+      <div class="mobile-tab" onclick="ptMobileNav('ptProgrammes')"><div class="tab-ic" id="mtPtProg"></div><span class="tab-label">Programme</span></div>
+      <div class="mobile-tab" onclick="ptMobileNav('ptPush')"><div class="tab-ic" id="mtPtPush"></div><span class="tab-label">Push</span></div>
+    </div>
+  </div>
   <div class="main">
     <!-- PT: Overview Dashboard -->
     <div class="page active" id="ptDash">
@@ -2159,6 +2184,12 @@
         </div>
       </div>
       <div id="ptOnboardContent"></div>
+    </div>
+
+    <!-- PT: Push Messaging (mobile tab) -->
+    <div class="page" id="ptPush">
+      <div class="page-header"><h1>Push Messages</h1><p>Send motivational nudges and reminders</p></div>
+      <div id="ptPushClientList"></div>
     </div>
   </div>
 </div>
@@ -2837,6 +2868,59 @@ function mobileNav(pageId) {
   document.querySelector('#clientApp .main')?.scrollTo(0, 0);
 }
 
+// Coach mobile bottom tab bar navigation
+function ptMobileNav(pageId) {
+  showPTPage(pageId);
+  document.querySelectorAll('#ptMobileNav .mobile-tab').forEach(t => t.classList.remove('active'));
+  const tabs = document.querySelectorAll('#ptMobileNav .mobile-tab');
+  const tabMap = {'ptClients':0,'ptMessages':1,'ptProgrammes':2,'ptPush':3};
+  const idx = tabMap[pageId];
+  if (idx !== undefined && tabs[idx]) tabs[idx].classList.add('active');
+  document.querySelector('#ptApp .main')?.scrollTo(0, 0);
+}
+
+// Render push messaging page — list all clients with quick-send
+function renderPushPage() {
+  const el = document.getElementById('ptPushClientList');
+  if (!el) return;
+  const clients = USERS.filter(u => u.role === 'client');
+  if (!clients.length) { el.innerHTML = '<div class="card" style="text-align:center;padding:24px;"><p style="color:var(--text-dim);font-size:13px;">No clients onboarded yet</p></div>'; return; }
+  const presets = [
+    {label:'Nudge', msg:"It's 11am. Look up from the screen. Move your body. You'll feel better for it."},
+    {label:'Hydrate', msg:'Drink some water. Stay hydrated throughout the day.'},
+    {label:'Log', msg:"Don't forget to log your session today. Every rep counts."},
+    {label:'Recovery', msg:'Rest well tonight. Recovery is where growth happens.'}
+  ];
+  let html = '';
+  clients.forEach(c => {
+    const cid = c.clientId;
+    html += `<div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--ember-soft);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--ember);font-size:14px;">${(c.name||'?')[0].toUpperCase()}</div>
+        <div style="font-weight:600;font-size:14px;">${c.name||'Client'}</div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;">
+        ${presets.map(p => `<button class="btn btn-sm btn-ghost" style="font-size:11px;padding:4px 8px;" onclick="document.getElementById('pushInput_${cid}').value='${p.msg.replace(/'/g,"\\'")}';">${p.label}</button>`).join('')}
+      </div>
+      <textarea id="pushInput_${cid}" placeholder="Write a message..." style="width:100%;min-height:60px;margin-bottom:8px;font-size:13px;"></textarea>
+      <button class="btn btn-sm btn-ember" onclick="sendQuickPush('${cid}')">Send</button>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+function sendQuickPush(clientId) {
+  const input = document.getElementById('pushInput_' + clientId);
+  if (!input || !input.value.trim()) { alert('Please write a message first.'); return; }
+  const client = USERS.find(u => u.clientId === clientId);
+  if (!client) return;
+  if (!client.notifications) client.notifications = [];
+  client.notifications.push({ type: 'coach_message', message: input.value.trim(), date: new Date().toISOString(), dismissed: false });
+  scheduleSave();
+  input.value = '';
+  alert('Message sent to ' + (client.name || 'client') + '!');
+}
+
 function showPTPage(id) {
   document.querySelectorAll('#ptApp .page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -2851,6 +2935,15 @@ function showPTPage(id) {
   if (id === 'ptExercises') { initExLibrary(); }
   if (id === 'ptNutrition') { renderPTNutrition(); }
   if (id === 'ptOnboarding') { renderPTOnboardingView(); }
+  if (id === 'ptPush') { renderPushPage(); }
+  // Sync coach mobile tab bar active state
+  if (document.getElementById('ptMobileNav')) {
+    document.querySelectorAll('#ptMobileNav .mobile-tab').forEach(t => t.classList.remove('active'));
+    const tabs = document.querySelectorAll('#ptMobileNav .mobile-tab');
+    const ptTabMap = {'ptClients':0,'ptClientDetail':0,'ptMessages':1,'ptProgrammes':2,'ptPush':3};
+    const ptIdx = ptTabMap[id];
+    if (ptIdx !== undefined && tabs[ptIdx]) tabs[ptIdx].classList.add('active');
+  }
 }
 
 // ═══════════════════════════════════════
@@ -3111,6 +3204,11 @@ function initClientApp() {
   mtEl('mtCheckin','checkin','currentColor');
   mtEl('mtChat','messages','currentColor');
   mtEl('mtMore','settings','currentColor');
+  // Coach mobile tab bar icons
+  mtEl('mtPtClients','clients','currentColor');
+  mtEl('mtPtMessages','messages','currentColor');
+  mtEl('mtPtProg','programme','currentColor');
+  mtEl('mtPtPush','bell','currentColor');
 
   // More page icons
   const moreEl = (id, name, col) => { const el = document.getElementById(id); if (el) el.innerHTML = ic(name, col, 22); };
@@ -5126,9 +5224,18 @@ function _calcExerciseTrends(strengthEntries) {
   return trends;
 }
 
+function _isCoreExercise(name) {
+  if (!name) return false;
+  const n = name.toLowerCase();
+  const coreKeywords = ['crunch','plank','sit-up','sit up','situp','ab ','abs ','core','russian twist','leg raise','leg lift','flutter kick','dead bug','bird dog','mountain climber','v-up','v up','hollow','superman','back extension','hyperextension','side bend','woodchop','wood chop','pallof','hanging knee','hanging leg','toe touch','bicycle'];
+  return coreKeywords.some(k => n.includes(k));
+}
+
 function renderProgressionOverview(containerId, strengthEntries) {
   const el = document.getElementById(containerId);
   if (!el) return;
+  // Filter out core exercises — they don't progress via weight meaningfully
+  strengthEntries = (strengthEntries || []).filter(e => !_isCoreExercise(e.exercise));
   if (!strengthEntries || !strengthEntries.length) {
     el.innerHTML = '<div style="text-align:center;font-size:12px;color:var(--text-dim);padding:10px;">No strength data logged yet</div>';
     return;
