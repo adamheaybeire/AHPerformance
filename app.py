@@ -218,6 +218,17 @@ os.makedirs(PHOTO_DIR, exist_ok=True)
 print(f'  Photo storage: {PHOTO_DIR}')
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'heic'}
+MEDIA_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'heic', 'mp4', 'mov', 'webm', 'mp3', 'ogg', 'wav', 'm4a', 'aac'}
+MAX_MEDIA_SIZE = 50 * 1024 * 1024  # 50 MB
+
+if DISK_PATH and os.path.isdir(DISK_PATH):
+    MEDIA_DIR = os.path.join(DISK_PATH, 'media')
+else:
+    MEDIA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'media')
+os.makedirs(MEDIA_DIR, exist_ok=True)
+
+def _allowed_media(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in MEDIA_EXTENSIONS
 MAX_PHOTO_SIZE = 10 * 1024 * 1024  # 10 MB
 
 def _allowed_file(filename):
@@ -284,6 +295,41 @@ def list_photos():
         return jsonify({'ok': True, 'photos': photos})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# ─── Media uploads (chat: photo, video, voice) ───
+
+@app.route('/api/upload-media', methods=['POST'])
+def upload_media():
+    """Accept photo/video/audio for chat messages."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Empty filename'}), 400
+    if not _allowed_media(file.filename):
+        return jsonify({'error': 'File type not allowed'}), 400
+    file_data = file.read()
+    if len(file_data) > MAX_MEDIA_SIZE:
+        return jsonify({'error': 'File too large. Maximum 50 MB.'}), 400
+    media_type = request.form.get('type', 'photo')
+    sender = request.form.get('sender', 'unknown')
+    ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'bin'
+    timestamp = int(time.time() * 1000)
+    safe_name = secure_filename(f"{media_type}_{sender}_{timestamp}.{ext}")
+    filepath = os.path.join(MEDIA_DIR, safe_name)
+    with open(filepath, 'wb') as f:
+        f.write(file_data)
+    url = f'/api/media/{safe_name}'
+    print(f'  Media saved: {safe_name} ({len(file_data)} bytes)')
+    return jsonify({'ok': True, 'url': url, 'filename': safe_name, 'type': media_type})
+
+@app.route('/api/media/<filename>', methods=['GET'])
+def serve_media(filename):
+    safe = secure_filename(filename)
+    filepath = os.path.join(MEDIA_DIR, safe)
+    if not os.path.exists(filepath):
+        return jsonify({'error': 'Media not found'}), 404
+    return send_from_directory(MEDIA_DIR, safe)
 
 # ─── Serve the app ───
 

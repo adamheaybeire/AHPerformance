@@ -1416,9 +1416,11 @@
       <div class="card" style="max-height:500px;overflow-y:auto;" id="clientMsgThread"></div>
       <div style="margin-top:12px;">
         <div style="display:flex;gap:8px;margin-bottom:8px;" id="clientMediaBar">
-          <button class="btn btn-sm btn-ghost" onclick="alert('Image upload would open the device camera or photo library.')" title="Upload image"><span style="display:flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Photo</span></button>
-          <button class="btn btn-sm btn-ghost" onclick="alert('Video upload — record or select from library. Max 60s for quick coaching clips.')" title="Upload video"><span style="display:flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> Video</span></button>
-          <button class="btn btn-sm btn-ghost" onclick="alert('Voice note — press and hold to record. Great for quick updates on the go.')" title="Voice note"><span style="display:flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Voice</span></button>
+          <input type="file" id="chatPhotoInput_client" accept="image/*" style="display:none" onchange="chatSendMedia(this,'photo','client')">
+          <input type="file" id="chatVideoInput_client" accept="video/*" style="display:none" onchange="chatSendMedia(this,'video','client')">
+          <button class="btn btn-sm btn-ghost" onclick="document.getElementById('chatPhotoInput_client').click()" title="Send photo"><span style="display:flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Photo</span></button>
+          <button class="btn btn-sm btn-ghost" onclick="document.getElementById('chatVideoInput_client').click()" title="Send video"><span style="display:flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> Video</span></button>
+          <button class="btn btn-sm btn-ghost" id="chatVoiceBtn_client" onclick="chatToggleVoice('client')" title="Voice note"><span style="display:flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> <span id="chatVoiceLabel_client">Voice</span></span></button>
         </div>
         <div style="display:flex;gap:10px;">
           <input type="text" placeholder="Type a message..." style="flex:1;" id="clientMsgInput" onkeydown="if(event.key==='Enter')sendClientMsg()">
@@ -1667,20 +1669,23 @@
           <h3>Progress Photos</h3>
           <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Take photos in the same location and lighting each week for the best comparison.</p>
           <div class="photo-upload-grid">
-            <div class="photo-upload-slot" id="ciPhotoFrontSlot" onclick="document.getElementById('ciPhotoFrontInput').click()">
+            <div class="photo-upload-slot" id="ciPhotoFrontSlot" onclick="ciShowPhotoOptions('front')">
               <span id="ciPhotoFrontIcon"></span>
               <span id="ciPhotoFrontLabel" style="font-size:12px;margin-top:6px;">Front</span>
-              <input type="file" id="ciPhotoFrontInput" accept="image/*" capture="environment" style="display:none" onchange="ciHandlePhotoSelect(this,'front')">
+              <input type="file" id="ciPhotoFrontCamera" accept="image/*" capture="environment" style="display:none" onchange="ciHandlePhotoSelect(this,'front')">
+              <input type="file" id="ciPhotoFrontGallery" accept="image/*" style="display:none" onchange="ciHandlePhotoSelect(this,'front')">
             </div>
-            <div class="photo-upload-slot" id="ciPhotoSideSlot" onclick="document.getElementById('ciPhotoSideInput').click()">
+            <div class="photo-upload-slot" id="ciPhotoSideSlot" onclick="ciShowPhotoOptions('side')">
               <span id="ciPhotoSideIcon"></span>
               <span id="ciPhotoSideLabel" style="font-size:12px;margin-top:6px;">Side</span>
-              <input type="file" id="ciPhotoSideInput" accept="image/*" capture="environment" style="display:none" onchange="ciHandlePhotoSelect(this,'side')">
+              <input type="file" id="ciPhotoSideCamera" accept="image/*" capture="environment" style="display:none" onchange="ciHandlePhotoSelect(this,'side')">
+              <input type="file" id="ciPhotoSideGallery" accept="image/*" style="display:none" onchange="ciHandlePhotoSelect(this,'side')">
             </div>
-            <div class="photo-upload-slot" id="ciPhotoBackSlot" onclick="document.getElementById('ciPhotoBackInput').click()">
+            <div class="photo-upload-slot" id="ciPhotoBackSlot" onclick="ciShowPhotoOptions('back')">
               <span id="ciPhotoBackIcon"></span>
               <span id="ciPhotoBackLabel" style="font-size:12px;margin-top:6px;">Back</span>
-              <input type="file" id="ciPhotoBackInput" accept="image/*" capture="environment" style="display:none" onchange="ciHandlePhotoSelect(this,'back')">
+              <input type="file" id="ciPhotoBackCamera" accept="image/*" capture="environment" style="display:none" onchange="ciHandlePhotoSelect(this,'back')">
+              <input type="file" id="ciPhotoBackGallery" accept="image/*" style="display:none" onchange="ciHandlePhotoSelect(this,'back')">
             </div>
           </div>
           <p style="font-size:11px;color:var(--text-dim);margin-top:10px;">Photos are private and only visible to you and Coach Adam.</p>
@@ -1799,6 +1804,54 @@
       <img id="photoModalImg" src="" alt="Progress photo" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:12px;display:none;">
       <span id="photoModalPlaceholder">No photo available</span>
     </div>
+  </div>
+</div>
+
+<!-- Photo options popup (Camera with Timer / Upload from Gallery) -->
+<div id="ciPhotoOptionsOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9000;align-items:center;justify-content:center;" onclick="ciClosePhotoOptions()">
+  <div style="background:var(--slate-card);border:1px solid var(--slate-border);border-radius:16px;padding:24px;width:280px;text-align:center;" onclick="event.stopPropagation()">
+    <h3 style="margin:0 0 6px;font-size:16px;" id="ciPhotoOptionsTitle">Front Photo</h3>
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:20px;">Choose how to add your photo</p>
+    <button class="btn btn-ember" style="width:100%;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="ciOpenTimerCamera()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Take Photo (with Timer)
+    </button>
+    <button class="btn btn-secondary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="ciOpenGallery()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      Upload from Gallery
+    </button>
+  </div>
+</div>
+
+<!-- Timer camera overlay -->
+<div id="ciTimerCameraOverlay" style="display:none;position:fixed;inset:0;background:#000;z-index:9500;flex-direction:column;">
+  <video id="ciCameraPreview" autoplay playsinline style="flex:1;object-fit:cover;width:100%;"></video>
+  <canvas id="ciCameraCanvas" style="display:none;"></canvas>
+  <!-- Timer countdown display -->
+  <div id="ciTimerCountdown" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:96px;font-weight:800;color:#fff;text-shadow:0 4px 20px rgba(0,0,0,0.6);font-family:'Space Grotesk',sans-serif;z-index:2;"></div>
+  <!-- Pose guide -->
+  <div id="ciPoseGuide" style="position:absolute;top:env(safe-area-inset-top,12px);left:0;right:0;text-align:center;padding:12px;z-index:2;">
+    <div style="display:inline-block;background:rgba(0,0,0,0.6);backdrop-filter:blur(10px);border-radius:12px;padding:8px 20px;">
+      <span style="color:#fff;font-size:14px;font-weight:600;" id="ciPoseLabel">Front Pose</span>
+    </div>
+  </div>
+  <!-- Controls -->
+  <div style="position:absolute;bottom:0;left:0;right:0;padding:20px 24px env(safe-area-inset-bottom,20px);background:linear-gradient(transparent,rgba(0,0,0,0.8));z-index:2;display:flex;align-items:center;justify-content:space-between;">
+    <button onclick="ciCloseCameraOverlay()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:14px;padding:10px 18px;border-radius:12px;cursor:pointer;">Cancel</button>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <!-- Timer selector -->
+      <div style="display:flex;gap:4px;">
+        <button class="ci-timer-btn ci-timer-active" id="ciTimerBtn5" onclick="ciSetTimer(5)" style="background:rgba(232,97,45,0.8);border:none;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer;">5s</button>
+        <button class="ci-timer-btn" id="ciTimerBtn10" onclick="ciSetTimer(10)" style="background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer;">10s</button>
+      </div>
+      <!-- Shutter button -->
+      <button id="ciShutterBtn" onclick="ciStartTimer()" style="width:64px;height:64px;border-radius:50%;border:4px solid #fff;background:transparent;cursor:pointer;position:relative;">
+        <div style="width:48px;height:48px;border-radius:50%;background:#fff;margin:auto;transition:background 0.15s;"></div>
+      </button>
+    </div>
+    <button onclick="ciFlipCamera()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:14px;padding:10px 14px;border-radius:12px;cursor:pointer;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10"/><path d="M3.51 15A9 9 0 0 0 18.36 18.36L23 14"/></svg>
+    </button>
   </div>
 </div>
 
@@ -2115,9 +2168,11 @@
           <div id="ptMsgThread" style="min-height:300px;max-height:450px;overflow-y:auto;"><p style="color:var(--text-muted);text-align:center;padding:60px 0;">Select a conversation</p></div>
           <div style="margin-top:12px;border-top:1px solid var(--slate-border);padding-top:12px;">
             <div style="display:flex;gap:8px;margin-bottom:8px;">
-              <button class="btn btn-sm btn-ghost" onclick="alert('Upload image — form check photos, exercise demos, etc.')" title="Photo"><span style="display:flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Photo</span></button>
-              <button class="btn btn-sm btn-ghost" onclick="alert('Upload video — send form checks, exercise demos, or coaching cue walkthroughs.')" title="Video"><span style="display:flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> Video</span></button>
-              <button class="btn btn-sm btn-ghost" onclick="alert('Voice note — quick audio message for coaching feedback.')" title="Voice"><span style="display:flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Voice</span></button>
+              <input type="file" id="chatPhotoInput_pt" accept="image/*" style="display:none" onchange="chatSendMedia(this,'photo','pt')">
+              <input type="file" id="chatVideoInput_pt" accept="video/*" style="display:none" onchange="chatSendMedia(this,'video','pt')">
+              <button class="btn btn-sm btn-ghost" onclick="document.getElementById('chatPhotoInput_pt').click()" title="Send photo"><span style="display:flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg> Photo</span></button>
+              <button class="btn btn-sm btn-ghost" onclick="document.getElementById('chatVideoInput_pt').click()" title="Send video"><span style="display:flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> Video</span></button>
+              <button class="btn btn-sm btn-ghost" id="chatVoiceBtn_pt" onclick="chatToggleVoice('pt')" title="Voice note"><span style="display:flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> <span id="chatVoiceLabel_pt">Voice</span></span></button>
             </div>
             <div style="display:flex;gap:10px;">
               <input type="text" placeholder="Type a message..." style="flex:1;" id="ptMsgInput" onkeydown="if(event.key==='Enter')sendPTMessage()">
@@ -5941,10 +5996,11 @@ function renderClientMessages() {
   const clientInitials = cv.initials || (loggedInUser.name || '').split(' ').map(w=>w[0]).join('').toUpperCase();
   thread.innerHTML = cv.messages.map(m => {
     const isPT = m.from === 'pt';
+    const content = _renderMsgContent(m);
     if (isPT) {
-      return `<div style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:28px;height:28px;border-radius:8px;background:var(--ember-soft);color:var(--ember);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'Space Grotesk';">AH</div><span style="font-size:12px;font-weight:500;">Coach Adam</span><span style="font-size:10px;color:var(--text-dim);margin-left:auto;">${m.time}</span></div><div style="background:var(--ember-soft);border:1px solid rgba(224,122,58,0.15);border-radius:0 12px 12px 12px;padding:12px 16px;margin-left:36px;font-size:13px;color:var(--text-body);line-height:1.6;">${m.text}</div></div>`;
+      return `<div style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><div style="width:28px;height:28px;border-radius:8px;background:var(--ember-soft);color:var(--ember);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'Space Grotesk';">AH</div><span style="font-size:12px;font-weight:500;">Coach Adam</span><span style="font-size:10px;color:var(--text-dim);margin-left:auto;">${m.time}</span></div><div style="background:var(--ember-soft);border:1px solid rgba(224,122,58,0.15);border-radius:0 12px 12px 12px;padding:12px 16px;margin-left:36px;font-size:13px;color:var(--text-body);line-height:1.6;">${content}</div></div>`;
     } else {
-      return `<div style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;justify-content:flex-end;"><span style="font-size:10px;color:var(--text-dim);">${m.time}</span><span style="font-size:12px;font-weight:500;">You</span><div style="width:28px;height:28px;border-radius:8px;background:var(--ocean-soft);color:var(--ocean);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'Space Grotesk';">${clientInitials}</div></div><div style="background:var(--ocean-soft);border:1px solid rgba(74,157,200,0.15);border-radius:12px 0 12px 12px;padding:12px 16px;margin-right:36px;margin-left:auto;max-width:80%;font-size:13px;color:var(--text-body);line-height:1.6;">${m.text}</div></div>`;
+      return `<div style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;justify-content:flex-end;"><span style="font-size:10px;color:var(--text-dim);">${m.time}</span><span style="font-size:12px;font-weight:500;">You</span><div style="width:28px;height:28px;border-radius:8px;background:var(--ocean-soft);color:var(--ocean);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:'Space Grotesk';">${clientInitials}</div></div><div style="background:var(--ocean-soft);border:1px solid rgba(74,157,200,0.15);border-radius:12px 0 12px 12px;padding:12px 16px;margin-right:36px;margin-left:auto;max-width:80%;font-size:13px;color:var(--text-body);line-height:1.6;">${content}</div></div>`;
     }
   }).join('');
   thread.scrollTop = thread.scrollHeight;
@@ -6039,6 +6095,149 @@ function renderClientGoals() {
       <span class="status-pill ${statusClass}">${statusLabel}</span>
     </div>`;
   }).join('');
+}
+
+// ─── Chat media rendering helper ───
+function _renderMsgContent(m) {
+  if (m.mediaType === 'photo') {
+    return `<img src="${m.mediaUrl}" alt="Photo" style="max-width:100%;border-radius:8px;cursor:pointer;max-height:250px;object-fit:cover;" onclick="window.open('${m.mediaUrl}','_blank')">${m.text ? '<div style="margin-top:6px;font-size:13px;">'+m.text+'</div>' : ''}`;
+  }
+  if (m.mediaType === 'video') {
+    return `<video src="${m.mediaUrl}" controls playsinline style="max-width:100%;border-radius:8px;max-height:250px;"></video>${m.text ? '<div style="margin-top:6px;font-size:13px;">'+m.text+'</div>' : ''}`;
+  }
+  if (m.mediaType === 'voice') {
+    return `<div style="display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg><audio src="${m.mediaUrl}" controls preload="metadata" style="height:32px;max-width:200px;"></audio></div>`;
+  }
+  return m.text || '';
+}
+
+// ─── Chat media: photo, video, voice ───
+let _chatMediaRecorder = null;
+let _chatMediaChunks = [];
+let _chatVoiceRecording = false;
+let _chatVoiceTimer = null;
+let _chatVoiceSecs = 0;
+
+function chatSendMedia(input, mediaType, side) {
+  const file = input.files[0];
+  if (!file) return;
+  // Show uploading indicator
+  const threadId = side === 'pt' ? 'ptMsgThread' : 'clientMsgThread';
+  const thread = document.getElementById(threadId);
+  if (thread) {
+    const uploading = document.createElement('div');
+    uploading.id = 'chatUploadingIndicator';
+    uploading.style.cssText = 'text-align:center;padding:8px;font-size:12px;color:var(--text-dim);';
+    uploading.textContent = 'Uploading ' + mediaType + '...';
+    thread.appendChild(uploading);
+    thread.scrollTop = thread.scrollHeight;
+  }
+  _chatUploadAndSend(file, mediaType, side);
+  input.value = ''; // reset for re-use
+}
+
+function _chatUploadAndSend(file, mediaType, side) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('type', mediaType);
+  formData.append('sender', side);
+
+  fetch('/api/upload-media', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => {
+      // Remove uploading indicator
+      const ind = document.getElementById('chatUploadingIndicator');
+      if (ind) ind.remove();
+      if (!data.ok) { alert('Upload failed: ' + (data.error || 'Unknown error')); return; }
+      // Add message to conversation
+      const now = new Date();
+      const timeStr = now.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      const msg = { from: side === 'pt' ? 'pt' : 'client', text: '', time: timeStr || 'Just now', mediaType: mediaType, mediaUrl: data.url };
+      if (side === 'pt') {
+        if (activePTConvo === null) return;
+        const cv = PT_CONVERSATIONS[activePTConvo];
+        cv.messages.push(msg);
+        cv.preview = mediaType === 'photo' ? '📷 Photo' : mediaType === 'video' ? '🎥 Video' : '🎤 Voice note';
+        cv.time = 'Now';
+        openPTConversation(activePTConvo);
+        const matchedClient = CLIENTS.find(c => c.name === cv.name);
+        if (matchedClient) triggerNewMessage(matchedClient.id, cv.name, '', true);
+      } else {
+        let cv = _getClientConversation();
+        const cid = loggedInUser ? loggedInUser.clientId : 1;
+        const clientRec = CLIENTS.find(c => c.id === cid);
+        const clientName = clientRec ? clientRec.name : 'Client';
+        if (!cv) {
+          const initials = clientName.split(' ').map(w=>w[0]).join('').toUpperCase();
+          cv = { clientId: cid, name: clientName, initials: initials, bg: 'var(--ocean-soft)', colour: 'var(--ocean)', preview: '', time: 'Now', unread: true, messages: [] };
+          PT_CONVERSATIONS.push(cv);
+        }
+        cv.messages.push(msg);
+        cv.preview = mediaType === 'photo' ? '📷 Photo' : mediaType === 'video' ? '🎥 Video' : '🎤 Voice note';
+        cv.time = 'Now';
+        cv.unread = true;
+        renderClientMessages();
+        triggerNewMessage(cid, clientName, '', false);
+      }
+      scheduleSave();
+    })
+    .catch(err => {
+      const ind = document.getElementById('chatUploadingIndicator');
+      if (ind) ind.remove();
+      console.error('Media upload error:', err);
+      alert('Failed to upload ' + mediaType + '. Please try again.');
+    });
+}
+
+function chatToggleVoice(side) {
+  if (_chatVoiceRecording) {
+    // Stop recording
+    if (_chatMediaRecorder && _chatMediaRecorder.state === 'recording') {
+      _chatMediaRecorder.stop();
+    }
+    return;
+  }
+  // Start recording
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    _chatVoiceRecording = true;
+    _chatVoiceSecs = 0;
+    _chatMediaChunks = [];
+    const btn = document.getElementById('chatVoiceBtn_' + side);
+    const label = document.getElementById('chatVoiceLabel_' + side);
+    if (btn) btn.style.background = 'var(--danger)';
+    if (btn) btn.style.color = '#fff';
+    if (label) label.textContent = '0:00 ■';
+
+    _chatVoiceTimer = setInterval(() => {
+      _chatVoiceSecs++;
+      const mins = Math.floor(_chatVoiceSecs / 60);
+      const secs = _chatVoiceSecs % 60;
+      if (label) label.textContent = mins + ':' + String(secs).padStart(2,'0') + ' ■';
+      if (_chatVoiceSecs >= 120) { // max 2 min
+        if (_chatMediaRecorder && _chatMediaRecorder.state === 'recording') _chatMediaRecorder.stop();
+      }
+    }, 1000);
+
+    _chatMediaRecorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4' });
+    _chatMediaRecorder.ondataavailable = e => { if (e.data.size > 0) _chatMediaChunks.push(e.data); };
+    _chatMediaRecorder.onstop = () => {
+      _chatVoiceRecording = false;
+      clearInterval(_chatVoiceTimer);
+      stream.getTracks().forEach(t => t.stop());
+      if (btn) { btn.style.background = ''; btn.style.color = ''; }
+      if (label) label.textContent = 'Voice';
+      if (_chatMediaChunks.length) {
+        const ext = MediaRecorder.isTypeSupported('audio/webm') ? 'webm' : 'm4a';
+        const blob = new Blob(_chatMediaChunks, { type: _chatMediaChunks[0].type });
+        const file = new File([blob], 'voice_note.' + ext, { type: blob.type });
+        _chatUploadAndSend(file, 'voice', side);
+      }
+    };
+    _chatMediaRecorder.start();
+  }).catch(err => {
+    console.error('Microphone error:', err);
+    alert('Could not access microphone. Please check permissions.');
+  });
 }
 
 function sendClientMsg() {
@@ -7054,7 +7253,7 @@ function openPTConversation(idx) {
       <div style="display:flex;${m.from==='pt'?'flex-direction:row-reverse;':''}gap:10px;margin-bottom:12px;">
         <div style="width:28px;height:28px;border-radius:8px;background:${m.from==='pt'?'var(--ember-soft)':'var(--slate-raised)'};color:${m.from==='pt'?'var(--ember)':'var(--text-muted)'};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;font-family:'Space Grotesk';flex-shrink:0;">${m.from==='pt'?'AH':cv.initials}</div>
         <div style="max-width:75%;padding:10px 14px;border-radius:12px;${m.from==='pt'?'background:var(--ember-soft);border-bottom-right-radius:4px;':'background:var(--slate-raised);border-bottom-left-radius:4px;'}">
-          <div style="font-size:13px;color:var(--text-body);line-height:1.5;">${m.text}</div>
+          <div style="font-size:13px;color:var(--text-body);line-height:1.5;">${_renderMsgContent(m)}</div>
           <div style="font-size:10px;color:var(--text-dim);margin-top:4px;${m.from==='pt'?'text-align:right;':''}">${m.time}</div>
         </div>
       </div>
@@ -8354,25 +8553,184 @@ function checkinStep(dir) {
 
 // ─── Photo upload state for current check-in ───
 const _ciPhotos = { front: null, side: null, back: null };
+let _ciCurrentPose = 'front';
+let _ciTimerDuration = 5;
+let _ciTimerInterval = null;
+let _ciCameraStream = null;
+let _ciCameraFacingMode = 'environment';
+
+function ciShowPhotoOptions(pose) {
+  _ciCurrentPose = pose;
+  const title = document.getElementById('ciPhotoOptionsTitle');
+  if (title) title.textContent = pose.charAt(0).toUpperCase() + pose.slice(1) + ' Photo';
+  const overlay = document.getElementById('ciPhotoOptionsOverlay');
+  if (overlay) overlay.style.display = 'flex';
+}
+
+function ciClosePhotoOptions() {
+  const overlay = document.getElementById('ciPhotoOptionsOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function ciOpenGallery() {
+  ciClosePhotoOptions();
+  const cap = _ciCurrentPose.charAt(0).toUpperCase() + _ciCurrentPose.slice(1);
+  document.getElementById('ciPhoto' + cap + 'Gallery').click();
+}
+
+async function ciOpenTimerCamera() {
+  ciClosePhotoOptions();
+  const overlay = document.getElementById('ciTimerCameraOverlay');
+  if (!overlay) return;
+  const poseLabel = document.getElementById('ciPoseLabel');
+  if (poseLabel) poseLabel.textContent = _ciCurrentPose.charAt(0).toUpperCase() + _ciCurrentPose.slice(1) + ' Pose';
+  overlay.style.display = 'flex';
+  // Start camera
+  try {
+    _ciCameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: _ciCameraFacingMode, width: { ideal: 1280 }, height: { ideal: 1920 } },
+      audio: false
+    });
+    const video = document.getElementById('ciCameraPreview');
+    video.srcObject = _ciCameraStream;
+  } catch(e) {
+    console.error('Camera error:', e);
+    alert('Could not access camera. Please check permissions.');
+    ciCloseCameraOverlay();
+  }
+}
+
+function ciCloseCameraOverlay() {
+  const overlay = document.getElementById('ciTimerCameraOverlay');
+  if (overlay) overlay.style.display = 'none';
+  if (_ciTimerInterval) { clearInterval(_ciTimerInterval); _ciTimerInterval = null; }
+  // Stop camera
+  if (_ciCameraStream) {
+    _ciCameraStream.getTracks().forEach(t => t.stop());
+    _ciCameraStream = null;
+  }
+  const countdownEl = document.getElementById('ciTimerCountdown');
+  if (countdownEl) countdownEl.style.display = 'none';
+}
+
+function ciSetTimer(seconds) {
+  _ciTimerDuration = seconds;
+  document.getElementById('ciTimerBtn5').style.background = seconds === 5 ? 'rgba(232,97,45,0.8)' : 'rgba(255,255,255,0.15)';
+  document.getElementById('ciTimerBtn10').style.background = seconds === 10 ? 'rgba(232,97,45,0.8)' : 'rgba(255,255,255,0.15)';
+}
+
+function ciStartTimer() {
+  const shutterBtn = document.getElementById('ciShutterBtn');
+  if (shutterBtn) shutterBtn.style.pointerEvents = 'none';
+  const countdownEl = document.getElementById('ciTimerCountdown');
+  let remaining = _ciTimerDuration;
+  countdownEl.textContent = remaining;
+  countdownEl.style.display = 'block';
+
+  // Play a tick sound effect via AudioContext
+  function playTick(final) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = final ? 880 : 440;
+      gain.gain.value = 0.15;
+      osc.start(); osc.stop(ctx.currentTime + (final ? 0.2 : 0.08));
+    } catch(e) {}
+  }
+
+  playTick(false);
+  _ciTimerInterval = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(_ciTimerInterval);
+      _ciTimerInterval = null;
+      countdownEl.style.display = 'none';
+      playTick(true);
+      ciCapturePhoto();
+      if (shutterBtn) shutterBtn.style.pointerEvents = 'auto';
+    } else {
+      countdownEl.textContent = remaining;
+      if (remaining <= 3) playTick(false);
+    }
+  }, 1000);
+}
+
+function ciCapturePhoto() {
+  const video = document.getElementById('ciCameraPreview');
+  const canvas = document.getElementById('ciCameraCanvas');
+  if (!video || !canvas) return;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  // Mirror if using front camera
+  if (_ciCameraFacingMode === 'user') {
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+  }
+  ctx.drawImage(video, 0, 0);
+
+  // Flash effect
+  const overlay = document.getElementById('ciTimerCameraOverlay');
+  if (overlay) {
+    overlay.style.background = '#fff';
+    setTimeout(() => overlay.style.background = '#000', 150);
+  }
+
+  // Convert to blob and handle like a file upload
+  canvas.toBlob(blob => {
+    if (!blob) return;
+    const file = new File([blob], _ciCurrentPose + '_photo.jpg', { type: 'image/jpeg' });
+    // Create a fake input-like object
+    const fakeInput = { files: [file] };
+    ciCloseCameraOverlay();
+    ciHandlePhotoSelect(fakeInput, _ciCurrentPose);
+  }, 'image/jpeg', 0.85);
+}
+
+async function ciFlipCamera() {
+  _ciCameraFacingMode = _ciCameraFacingMode === 'environment' ? 'user' : 'environment';
+  // Stop current stream
+  if (_ciCameraStream) {
+    _ciCameraStream.getTracks().forEach(t => t.stop());
+  }
+  try {
+    _ciCameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: _ciCameraFacingMode, width: { ideal: 1280 }, height: { ideal: 1920 } },
+      audio: false
+    });
+    const video = document.getElementById('ciCameraPreview');
+    video.srcObject = _ciCameraStream;
+    // Mirror front camera preview
+    video.style.transform = _ciCameraFacingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+  } catch(e) {
+    console.error('Camera flip error:', e);
+  }
+}
 
 function ciHandlePhotoSelect(input, pose) {
   const file = input.files[0];
   if (!file) return;
-  const slot = document.getElementById('ciPhoto' + pose.charAt(0).toUpperCase() + pose.slice(1) + 'Slot');
-  const label = document.getElementById('ciPhoto' + pose.charAt(0).toUpperCase() + pose.slice(1) + 'Label');
-  const icon = document.getElementById('ciPhoto' + pose.charAt(0).toUpperCase() + pose.slice(1) + 'Icon');
+  const cap = pose.charAt(0).toUpperCase() + pose.slice(1);
+  const slot = document.getElementById('ciPhoto' + cap + 'Slot');
 
   // Show preview immediately
   const reader = new FileReader();
   reader.onload = function(e) {
     slot.classList.add('has-photo');
     slot.innerHTML = `<img src="${e.target.result}" alt="${pose}"><div class="photo-uploading">Uploading...</div>`;
-    // Re-attach the file input
-    const newInput = document.createElement('input');
-    newInput.type = 'file'; newInput.id = input.id; newInput.accept = 'image/*';
-    newInput.capture = 'environment'; newInput.style.display = 'none';
-    newInput.onchange = function() { ciHandlePhotoSelect(this, pose); };
-    slot.appendChild(newInput);
+    // Re-attach both file inputs (camera + gallery)
+    const cameraInput = document.createElement('input');
+    cameraInput.type = 'file'; cameraInput.id = 'ciPhoto' + cap + 'Camera'; cameraInput.accept = 'image/*';
+    cameraInput.capture = 'environment'; cameraInput.style.display = 'none';
+    cameraInput.onchange = function() { ciHandlePhotoSelect(this, pose); };
+    slot.appendChild(cameraInput);
+    const galleryInput = document.createElement('input');
+    galleryInput.type = 'file'; galleryInput.id = 'ciPhoto' + cap + 'Gallery'; galleryInput.accept = 'image/*';
+    galleryInput.style.display = 'none';
+    galleryInput.onchange = function() { ciHandlePhotoSelect(this, pose); };
+    slot.appendChild(galleryInput);
   };
   reader.readAsDataURL(file);
 
@@ -8388,10 +8746,8 @@ function ciHandlePhotoSelect(input, pose) {
     .then(data => {
       if (data.ok) {
         _ciPhotos[pose] = data.url;
-        // Remove uploading overlay
         const overlay = slot.querySelector('.photo-uploading');
         if (overlay) overlay.remove();
-        // Add a small checkmark
         const check = document.createElement('div');
         check.style.cssText = 'position:absolute;top:4px;right:4px;background:var(--sage);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:12px;';
         check.textContent = '✓';
@@ -8400,11 +8756,17 @@ function ciHandlePhotoSelect(input, pose) {
         console.error('Photo upload failed:', data.error);
         slot.classList.remove('has-photo');
         slot.innerHTML = `<span style="color:var(--warning);font-size:11px;">Upload failed</span><span style="font-size:12px;margin-top:4px;">${pose}</span>`;
-        const retryInput = document.createElement('input');
-        retryInput.type = 'file'; retryInput.id = input.id; retryInput.accept = 'image/*';
-        retryInput.capture = 'environment'; retryInput.style.display = 'none';
-        retryInput.onchange = function() { ciHandlePhotoSelect(this, pose); };
-        slot.appendChild(retryInput);
+        // Re-attach inputs for retry
+        const ri1 = document.createElement('input');
+        ri1.type = 'file'; ri1.id = 'ciPhoto' + cap + 'Camera'; ri1.accept = 'image/*';
+        ri1.capture = 'environment'; ri1.style.display = 'none';
+        ri1.onchange = function() { ciHandlePhotoSelect(this, pose); };
+        slot.appendChild(ri1);
+        const ri2 = document.createElement('input');
+        ri2.type = 'file'; ri2.id = 'ciPhoto' + cap + 'Gallery'; ri2.accept = 'image/*';
+        ri2.style.display = 'none';
+        ri2.onchange = function() { ciHandlePhotoSelect(this, pose); };
+        slot.appendChild(ri2);
       }
     })
     .catch(err => {
