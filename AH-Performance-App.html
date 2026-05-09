@@ -8573,9 +8573,10 @@ function ciClosePhotoOptions() {
 }
 
 function ciOpenGallery() {
-  ciClosePhotoOptions();
   const cap = _ciCurrentPose.charAt(0).toUpperCase() + _ciCurrentPose.slice(1);
-  document.getElementById('ciPhoto' + cap + 'Gallery').click();
+  const input = document.getElementById('ciPhoto' + cap + 'Gallery');
+  if (input) input.click(); // trigger file picker BEFORE closing overlay (preserves user gesture)
+  setTimeout(() => ciClosePhotoOptions(), 300);
 }
 
 async function ciOpenTimerCamera() {
@@ -8588,7 +8589,7 @@ async function ciOpenTimerCamera() {
   // Start camera
   try {
     _ciCameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: _ciCameraFacingMode, width: { ideal: 1280 }, height: { ideal: 1920 } },
+      video: { facingMode: _ciCameraFacingMode },
       audio: false
     });
     const video = document.getElementById('ciCameraPreview');
@@ -8697,7 +8698,7 @@ async function ciFlipCamera() {
   }
   try {
     _ciCameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: _ciCameraFacingMode, width: { ideal: 1280 }, height: { ideal: 1920 } },
+      video: { facingMode: _ciCameraFacingMode },
       audio: false
     });
     const video = document.getElementById('ciCameraPreview');
