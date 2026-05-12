@@ -88,7 +88,7 @@ SMTP_HOST = os.environ.get('SMTP_HOST', '')       # e.g. smtp-relay.brevo.com
 SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
 SMTP_USER = os.environ.get('SMTP_USER', '')        # e.g. your Brevo login
 SMTP_PASS = os.environ.get('SMTP_PASS', '')        # e.g. your Brevo SMTP key
-SMTP_FROM = os.environ.get('SMTP_FROM', 'adam@ahperformance.ie')
+SMTP_FROM = os.environ.get('SMTP_FROM', 'adam@ahperformance.co.uk')
 SMTP_FROM_NAME = os.environ.get('SMTP_FROM_NAME', 'AH Performance')
 
 # ─── API: Shared data sync ───
