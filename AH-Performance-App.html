@@ -1747,6 +1747,68 @@
       <div class="ob-container" id="obFormContainer"></div>
     </div>
 
+    <!-- CLIENT: Neuro Tracker (FND - coach-enabled per client) -->
+    <div class="page" id="clientNeuro" style="display:none;">
+      <div class="page-header">
+        <h1 style="color:var(--ocean);">Neuro Tracker</h1>
+        <p>Track your nervous system patterns to help optimise your training.</p>
+      </div>
+
+      <!-- Traffic Light Status -->
+      <div class="card" style="margin-bottom:12px;">
+        <h3 style="font-size:14px;margin-bottom:10px;">How are you feeling right now?</h3>
+        <div style="display:flex;gap:8px;" id="ntTrafficLightBtns">
+          <button class="nt-tl-btn" data-val="green" onclick="ntSelectTrafficLight('green')" style="flex:1;padding:14px 8px;border-radius:12px;border:2px solid #2d8a4e;background:rgba(45,138,78,0.1);color:#2d8a4e;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">
+            <div style="font-size:22px;margin-bottom:4px;">&#9679;</div>Green<br><span style="font-weight:400;font-size:11px;">Stable, good to go</span>
+          </button>
+          <button class="nt-tl-btn" data-val="amber" onclick="ntSelectTrafficLight('amber')" style="flex:1;padding:14px 8px;border-radius:12px;border:2px solid #d4a017;background:rgba(212,160,23,0.1);color:#d4a017;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">
+            <div style="font-size:22px;margin-bottom:4px;">&#9679;</div>Amber<br><span style="font-weight:400;font-size:11px;">Some symptoms, adjust</span>
+          </button>
+          <button class="nt-tl-btn" data-val="red" onclick="ntSelectTrafficLight('red')" style="flex:1;padding:14px 8px;border-radius:12px;border:2px solid #c0392b;background:rgba(192,57,43,0.1);color:#c0392b;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">
+            <div style="font-size:22px;margin-bottom:4px;">&#9679;</div>Red<br><span style="font-weight:400;font-size:11px;">Significant disruption</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Metric Sliders -->
+      <div class="card" style="margin-bottom:12px;">
+        <h3 style="font-size:14px;margin-bottom:14px;">Daily Metrics</h3>
+        <div style="display:flex;flex-direction:column;gap:16px;" id="ntMetrics">
+          <div class="nt-slider-row"><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Symptom Severity <span class="nt-val" id="ntSymptomVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntSymptom" oninput="document.getElementById('ntSymptomVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Minimal</span><span>Severe</span></div></div>
+          <div class="nt-slider-row"><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Fatigue Level <span class="nt-val" id="ntFatigueVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntFatigue" oninput="document.getElementById('ntFatigueVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Fresh</span><span>Exhausted</span></div></div>
+          <div class="nt-slider-row"><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Sleep Quality <span class="nt-val" id="ntSleepVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntSleep" oninput="document.getElementById('ntSleepVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Poor</span><span>Excellent</span></div></div>
+          <div class="nt-slider-row"><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Stress Level <span class="nt-val" id="ntStressVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntStress" oninput="document.getElementById('ntStressVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Calm</span><span>Very Stressed</span></div></div>
+          <div class="nt-slider-row"><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Movement Consistency <span class="nt-val" id="ntMovementVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntMovement" oninput="document.getElementById('ntMovementVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Very inconsistent</span><span>Fully controlled</span></div></div>
+          <div class="nt-slider-row"><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Cognitive Load <span class="nt-val" id="ntCognitiveVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntCognitive" oninput="document.getElementById('ntCognitiveVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Clear-headed</span><span>Brain fog</span></div></div>
+        </div>
+      </div>
+
+      <!-- Time of Day + Notes -->
+      <div class="card" style="margin-bottom:12px;">
+        <div style="margin-bottom:14px;">
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">Time of Day</label>
+          <select id="ntTimeOfDay" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:13px;">
+            <option value="morning">Morning</option>
+            <option value="midday">Midday</option>
+            <option value="afternoon">Afternoon</option>
+            <option value="evening">Evening</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">Notes</label>
+          <textarea id="ntNotes" rows="3" placeholder="How are your muscles responding today? Any triggers you noticed?" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+        </div>
+      </div>
+
+      <button class="btn btn-ember" style="width:100%;margin-bottom:24px;" onclick="ntSaveEntry()">Save Today's Log</button>
+
+      <!-- History -->
+      <div class="card">
+        <h3 style="font-size:14px;margin-bottom:12px;">Recent History</h3>
+        <div id="ntHistoryList" style="font-size:13px;color:var(--text-muted);">No entries yet.</div>
+      </div>
+    </div>
+
     <!-- CLIENT: More (mobile overflow menu) -->
     <div class="page" id="clientMore">
       <div class="page-header"><h1>More</h1></div>
@@ -1754,6 +1816,7 @@
         <div class="card" style="cursor:pointer;padding:16px;" onclick="showClientPage('clientWellbeing')"><div style="display:flex;align-items:center;gap:14px;"><span id="moreWellbeingIc"></span><div><div style="font-size:14px;font-weight:500;">Wellbeing</div><div style="font-size:12px;color:var(--text-dim);">Mood, energy, sleep & cycle tracking</div></div></div></div>
         <div class="card" style="cursor:pointer;padding:16px;" onclick="showClientPage('clientNutrition')"><div style="display:flex;align-items:center;gap:14px;"><span id="moreNutritionIc"></span><div><div style="font-size:14px;font-weight:500;">Nutrition</div><div style="font-size:12px;color:var(--text-dim);">Meal plan and guidance</div></div></div></div>
         <div class="card" style="cursor:pointer;padding:16px;" onclick="showClientPage('clientNotifications')"><div style="display:flex;align-items:center;gap:14px;"><span id="moreNotifIc"></span><div><div style="font-size:14px;font-weight:500;">Notifications</div><div style="font-size:12px;color:var(--text-dim);">Updates and alerts</div></div></div></div>
+        <div class="card" id="moreNeuroItem" style="cursor:pointer;padding:16px;display:none;" onclick="showClientPage('clientNeuro')"><div style="display:flex;align-items:center;gap:14px;"><span id="moreNeuroIc"></span><div><div style="font-size:14px;font-weight:500;">Neuro Tracker</div><div style="font-size:12px;color:var(--text-dim);">Track nervous system patterns</div></div></div></div>
         <div class="card" style="cursor:pointer;padding:16px;margin-top:12px;border-color:var(--ember);" onclick="logout()"><div style="display:flex;align-items:center;gap:14px;"><span id="moreLogoutIc"></span><div><div style="font-size:14px;font-weight:500;color:var(--ember);">Log Out</div></div></div></div>
       </div>
     </div>
@@ -1948,6 +2011,7 @@
         <div class="detail-tab" onclick="showDetailTab('detailNotes')">Notes</div>
         <div class="detail-tab" onclick="showDetailTab('detailOnboarding')">Onboarding</div>
         <div class="detail-tab" onclick="showDetailTab('detailFoodDiary')">Food Diary</div>
+        <div class="detail-tab" id="detailNeuroTab" style="display:none;" onclick="showDetailTab('detailNeuro')">Neuro</div>
       </div>
       <div class="tab-content active" id="detailOverview">
         <div class="kpi-row" id="detailKPIs"></div>
@@ -2158,6 +2222,23 @@
           <div id="ptFd7Day"></div>
         </div>
       </div>
+
+      <!-- Neuro Tracker (coach view of client FND data) -->
+      <div class="tab-content" id="detailNeuro">
+        <div class="card" style="padding:16px;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <h3 style="margin:0 0 4px;">Neuro Tracker</h3>
+              <p style="font-size:12px;color:var(--text-dim);margin:0;">Enable FND tracking for this client</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:var(--text-muted);" id="ntToggleLabel">Off</span>
+              <div class="toggle-switch" id="ntCoachToggle" onclick="ntToggleForClient()" style="cursor:pointer;"></div>
+            </div>
+          </div>
+        </div>
+        <div id="ntCoachDataView"></div>
+      </div>
     </div>
 
     <!-- PT: Messages -->
@@ -2303,7 +2384,7 @@ const CLIENTS = [
     id: 1, name: 'Demo Client', initials: 'DC', bg: 'var(--ocean-soft)', colour: 'var(--ocean)',
     email: 'demo@ahperformance.ie',
     programme: 'No programme', week: 0, goal: 'General fitness',
-    status: 'active', compliance: 0, lastActivity: 'Just now',
+    status: 'active', compliance: 0, lastActivity: 'Just now', neuroTracker: true,
     nextCheckin: 'Monday', checkinDay: 'Monday',
     joined: 'Apr 2026',
     squat: [], bench: [], deadlift: [],
@@ -2318,6 +2399,10 @@ const CLIENTS = [
 ];
 
 const WELLBEING_DATA = [];
+
+// Neuro Tracker (FND tracking) — coach-enabled per client
+// Structure: NEURO_DATA[clientId] = [ { date, trafficLight, symptomSeverity, fatigue, sleepQuality, stress, movementConsistency, cognitiveLoad, timeOfDay, notes, customFields } ]
+const NEURO_DATA = {};
 
 const CYCLE_LOG = {};
 
@@ -2493,6 +2578,7 @@ function _buildState() {
     cycleLog: CYCLE_LOG,
     clientNutrition: CLIENT_NUTRITION,
     foodLog: FOOD_LOG,
+    neuroData: NEURO_DATA,
     savedAt: Date.now()
   };
 }
@@ -2558,6 +2644,7 @@ function _applyState(state, _source) {
   if (state.cycleLog) Object.assign(CYCLE_LOG, state.cycleLog);
   if (state.clientNutrition) Object.assign(CLIENT_NUTRITION, state.clientNutrition);
   if (state.foodLog) Object.assign(FOOD_LOG, state.foodLog);
+  if (state.neuroData) Object.assign(NEURO_DATA, state.neuroData);
   // Clean up: fix any "undefined" client names in PT notifications
   PT_NOTIFICATIONS.forEach(n => {
     if (!n.client || n.client === 'undefined' || n.client === 'null') {
@@ -2772,6 +2859,7 @@ function buildSidebars() {
     <div class="nav-item" onclick="showClientPage('clientMessages')"><span class="nav-ic">${ic('messages','currentColor')}</span><span>Messages</span><span class="badge hidden" id="clientMsgBadge"></span></div>
     <div class="nav-item" onclick="showClientPage('clientCheckin')"><span class="nav-ic">${ic('checkin','currentColor')}</span><span>Check In</span><span class="badge checkin-badge hidden" id="clientCheckinBadge">Due</span></div>
     <div class="nav-item" onclick="showClientPage('clientWellbeing')"><span class="nav-ic">${ic('wellbeing','currentColor')}</span><span>Wellbeing</span></div>
+    <div class="nav-item" id="neuroNavItem" style="display:none;" onclick="showClientPage('clientNeuro')"><span class="nav-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/><line x1="9" y1="21" x2="15" y2="21"/><line x1="10" y1="17" x2="10" y2="21"/><line x1="14" y1="17" x2="14" y2="21"/></svg></span><span>Neuro Tracker</span></div>
     <div class="nav-item" onclick="showClientPage('clientNotifications')"><span class="nav-ic">${ic('bell','currentColor')}</span><span>Notifications</span><span class="badge hidden" id="clientNotifSidebarBadge"></span></div>
     <div class="nav-item logout-item" onclick="logout()"><span class="nav-ic">${ic('logout','currentColor')}</span><span>Log out</span></div>`;
 
@@ -2903,6 +2991,7 @@ function showClientPage(id) {
   if (id === 'clientCheckin') resetCheckinWizard();
   if (id === 'clientNotifications') renderClientNotifFullList();
   if (id === 'clientOnboarding') renderClientOnboardingForm();
+  if (id === 'clientNeuro') ntRenderHistory();
   if (id === 'clientMessages') {
     renderClientMessages();
     // Mark message notifications as read and clear badge
@@ -3024,6 +3113,18 @@ function initClientApp() {
 
   const hour = new Date().getHours();
   document.getElementById('clientGreetTime').textContent = hour<12?'morning':hour<17?'afternoon':'evening';
+
+  // Neuro Tracker visibility — coach-enabled per client
+  const _ntCid = clientUser ? clientUser.clientId : null;
+  const _ntClient = _ntCid ? CLIENTS.find(c => c.id === _ntCid) : null;
+  const _ntEnabled = _ntClient && _ntClient.neuroTracker;
+  const ntPage = document.getElementById('clientNeuro');
+  const ntNav = document.getElementById('neuroNavItem');
+  const ntMore = document.getElementById('moreNeuroItem');
+  if (ntPage) ntPage.style.display = _ntEnabled ? '' : 'none';
+  if (ntNav) ntNav.style.display = _ntEnabled ? '' : 'none';
+  if (ntMore) ntMore.style.display = _ntEnabled ? '' : 'none';
+  if (_ntEnabled) ntRenderHistory();
   document.getElementById('clientDateLine').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
   const cid = clientUser ? clientUser.clientId : null;
@@ -6595,6 +6696,12 @@ function openClientDetail(id) {
   // Weekly check-ins
   try { renderDetailCheckins(c.id); } catch (e) { console.warn('renderDetailCheckins failed:', e); }
 
+  // Neuro Tracker tab visibility — always show tab so coach can enable/disable
+  const ntTab = document.getElementById('detailNeuroTab');
+  if (ntTab) ntTab.style.display = '';
+  // Set toggle state
+  ntUpdateCoachToggle(c);
+
   showPTPage('ptClientDetail');
   showDetailTab('detailOverview');
   try { renderPushHistory(); } catch (e) {}
@@ -6867,6 +6974,7 @@ function showDetailTab(tabId) {
   if (tabId === 'detailProgramme') renderDetailProgramme();
   if (tabId === 'detailOnboarding') renderDetailOnboarding();
   if (tabId === 'detailFoodDiary') renderPTFoodDiary();
+  if (tabId === 'detailNeuro') ntRenderCoachView();
 }
 
 // ─── Coach: Food Diary View ───
@@ -8109,6 +8217,349 @@ function fdLookupBarcode(code) {
 // ═══════════════════════════════════════
 //  CYCLE TRACKING — CLIENT SIDE
 // ═══════════════════════════════════════
+// ═══════════════════════════════════════
+//  NEURO TRACKER (FND)
+// ═══════════════════════════════════════
+let _ntTrafficLight = null;
+
+function ntSelectTrafficLight(val) {
+  _ntTrafficLight = val;
+  document.querySelectorAll('#ntTrafficLightBtns button').forEach(b => {
+    const v = b.getAttribute('data-val');
+    if (v === val) {
+      b.style.borderWidth = '3px';
+      b.style.fontWeight = '700';
+      b.style.opacity = '1';
+    } else {
+      b.style.borderWidth = '2px';
+      b.style.fontWeight = '600';
+      b.style.opacity = '0.4';
+    }
+  });
+}
+
+function ntSaveEntry() {
+  const cid = loggedInUser ? loggedInUser.clientId : null;
+  if (!cid) return;
+  if (!_ntTrafficLight) { alert('Please select your traffic light status (Green / Amber / Red)'); return; }
+
+  const entry = {
+    date: new Date().toISOString(),
+    trafficLight: _ntTrafficLight,
+    symptomSeverity: parseInt(document.getElementById('ntSymptom')?.value) || 5,
+    fatigue: parseInt(document.getElementById('ntFatigue')?.value) || 5,
+    sleepQuality: parseInt(document.getElementById('ntSleep')?.value) || 5,
+    stress: parseInt(document.getElementById('ntStress')?.value) || 5,
+    movementConsistency: parseInt(document.getElementById('ntMovement')?.value) || 5,
+    cognitiveLoad: parseInt(document.getElementById('ntCognitive')?.value) || 5,
+    timeOfDay: document.getElementById('ntTimeOfDay')?.value || 'morning',
+    notes: (document.getElementById('ntNotes')?.value || '').trim()
+  };
+
+  if (!NEURO_DATA[cid]) NEURO_DATA[cid] = [];
+  NEURO_DATA[cid].unshift(entry);
+  scheduleSave();
+
+  // Reset form
+  _ntTrafficLight = null;
+  document.querySelectorAll('#ntTrafficLightBtns button').forEach(b => { b.style.borderWidth = '2px'; b.style.fontWeight = '600'; b.style.opacity = '1'; });
+  ['ntSymptom','ntFatigue','ntSleep','ntStress','ntMovement','ntCognitive'].forEach(id => { const el = document.getElementById(id); if (el) el.value = 5; });
+  document.querySelectorAll('.nt-val').forEach(el => el.textContent = '5');
+  const notes = document.getElementById('ntNotes'); if (notes) notes.value = '';
+
+  // Notify coach
+  PT_NOTIFICATIONS.unshift({
+    id: 'neuro_' + Date.now(),
+    type: 'neuro',
+    client: loggedInUser.name,
+    clientId: cid,
+    message: 'Neuro check-in logged: ' + entry.trafficLight.toUpperCase(),
+    date: new Date().toISOString(),
+    read: false
+  });
+
+  ntRenderHistory();
+  alert('Neuro check-in saved!');
+}
+
+function ntRenderHistory() {
+  const cid = loggedInUser ? loggedInUser.clientId : null;
+  const el = document.getElementById('ntHistoryList');
+  if (!el || !cid) return;
+  const entries = NEURO_DATA[cid] || [];
+  if (!entries.length) { el.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">No entries yet. Log your first check-in above.</p>'; return; }
+
+  const tlColors = { green: '#2d8a4e', amber: '#d4a017', red: '#c0392b' };
+  const tlLabels = { green: 'Green', amber: 'Amber', red: 'Red' };
+
+  el.innerHTML = entries.slice(0, 14).map(e => {
+    const d = new Date(e.date);
+    const dateStr = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    const timeStr = e.timeOfDay ? e.timeOfDay.charAt(0).toUpperCase() + e.timeOfDay.slice(1) : '';
+    const tlCol = tlColors[e.trafficLight] || 'var(--text-dim)';
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--slate-border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${tlCol};"></span>
+          <span style="font-weight:500;font-size:13px;color:var(--text-bright);">${dateStr}</span>
+          <span style="font-size:11px;color:var(--text-dim);">${timeStr}</span>
+        </div>
+        <span style="font-size:11px;font-weight:600;color:${tlCol};">${tlLabels[e.trafficLight] || ''}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px 12px;font-size:11px;color:var(--text-muted);">
+        <div>Symptoms: <b>${e.symptomSeverity}/10</b></div>
+        <div>Fatigue: <b>${e.fatigue}/10</b></div>
+        <div>Sleep: <b>${e.sleepQuality}/10</b></div>
+        <div>Stress: <b>${e.stress}/10</b></div>
+        <div>Movement: <b>${e.movementConsistency}/10</b></div>
+        <div>Cognitive: <b>${e.cognitiveLoad}/10</b></div>
+      </div>
+      ${e.notes ? `<div style="margin-top:6px;font-size:12px;color:var(--text-body);font-style:italic;">"${e.notes}"</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── Coach-side Neuro Tracker functions ──
+
+function ntUpdateCoachToggle(client) {
+  const toggle = document.getElementById('ntCoachToggle');
+  const label = document.getElementById('ntToggleLabel');
+  if (!toggle || !client) return;
+  const enabled = !!client.neuroTracker;
+  toggle.classList.toggle('active', enabled);
+  if (label) label.textContent = enabled ? 'On' : 'Off';
+}
+
+function ntToggleForClient() {
+  if (!currentDetailClient) return;
+  currentDetailClient.neuroTracker = !currentDetailClient.neuroTracker;
+  // Also update in CLIENTS array
+  const c = CLIENTS.find(x => x.id === currentDetailClient.id);
+  if (c) c.neuroTracker = currentDetailClient.neuroTracker;
+  ntUpdateCoachToggle(currentDetailClient);
+  ntRenderCoachView();
+  scheduleSave();
+}
+
+function ntRenderCoachView() {
+  const el = document.getElementById('ntCoachDataView');
+  if (!el || !currentDetailClient) return;
+  const cid = currentDetailClient.id;
+  const entries = NEURO_DATA[cid] || [];
+
+  if (!currentDetailClient.neuroTracker) {
+    el.innerHTML = '<div class="card" style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">Neuro Tracker is disabled for this client. Toggle it on above to enable FND tracking in their app.</div>';
+    return;
+  }
+
+  if (!entries.length) {
+    el.innerHTML = '<div class="card" style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">Neuro Tracker is enabled but no entries logged yet. The client will see a "Neuro Tracker" section in their app.</div>';
+    return;
+  }
+
+  const tlColors = { green: '#2d8a4e', amber: '#d4a017', red: '#c0392b' };
+  const tlLabels = { green: 'Green', amber: 'Amber', red: 'Red' };
+  const metricLabels = { symptomSeverity: 'Symptoms', fatigue: 'Fatigue', sleepQuality: 'Sleep', stress: 'Stress', movementConsistency: 'Movement', cognitiveLoad: 'Cognitive' };
+
+  // Latest traffic light status
+  const latest = entries[0];
+  const latestTL = latest.trafficLight;
+
+  // Traffic light summary card
+  let html = `<div class="card" style="padding:16px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+      <span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${tlColors[latestTL]};"></span>
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text-bright);">Current Status: ${tlLabels[latestTL]}</div>
+        <div style="font-size:11px;color:var(--text-dim);">Last logged: ${new Date(latest.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} (${latest.timeOfDay || ''})</div>
+      </div>
+    </div>`;
+
+  // Latest metrics
+  html += `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">`;
+  Object.keys(metricLabels).forEach(key => {
+    const val = latest[key] || 0;
+    const pct = val * 10;
+    const col = val <= 3 ? '#2d8a4e' : val <= 6 ? '#d4a017' : '#c0392b';
+    html += `<div style="text-align:center;"><div style="font-size:10px;color:var(--text-dim);margin-bottom:2px;">${metricLabels[key]}</div><div style="font-size:18px;font-weight:700;color:${col};">${val}</div><div style="height:3px;background:var(--slate-border);border-radius:2px;margin-top:2px;"><div style="height:100%;width:${pct}%;background:${col};border-radius:2px;"></div></div></div>`;
+  });
+  html += `</div>`;
+  if (latest.notes) html += `<div style="margin-top:10px;font-size:12px;color:var(--text-body);font-style:italic;border-left:3px solid var(--ocean);padding-left:10px;">"${latest.notes}"</div>`;
+  html += `</div>`;
+
+  // Traffic light timeline
+  html += `<div class="card" style="padding:16px;margin-bottom:12px;">
+    <h3 style="font-size:14px;margin-bottom:10px;">Traffic Light Timeline</h3>
+    <div style="display:flex;gap:3px;flex-wrap:wrap;">`;
+  entries.slice(0, 30).reverse().forEach(e => {
+    const d = new Date(e.date);
+    const label = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    html += `<div title="${label}: ${tlLabels[e.trafficLight]}" style="width:14px;height:14px;border-radius:3px;background:${tlColors[e.trafficLight]};cursor:default;"></div>`;
+  });
+  html += `</div></div>`;
+
+  // Full history
+  html += `<div class="card" style="padding:16px;">
+    <h3 style="font-size:14px;margin-bottom:10px;">All Entries (${entries.length})</h3>`;
+  entries.slice(0, 21).forEach(e => {
+    const d = new Date(e.date);
+    const dateStr = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    html += `<div style="padding:8px 0;border-bottom:1px solid var(--slate-border);font-size:12px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${tlColors[e.trafficLight]};"></span>
+        <span style="font-weight:500;color:var(--text-bright);">${dateStr}</span>
+        <span style="color:var(--text-dim);">${e.timeOfDay || ''}</span>
+        <span style="margin-left:auto;font-weight:600;color:${tlColors[e.trafficLight]};">${tlLabels[e.trafficLight]}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px 10px;font-size:11px;color:var(--text-muted);">
+        <div>Sym: ${e.symptomSeverity}</div><div>Fat: ${e.fatigue}</div><div>Slp: ${e.sleepQuality}</div>
+        <div>Str: ${e.stress}</div><div>Mov: ${e.movementConsistency}</div><div>Cog: ${e.cognitiveLoad}</div>
+      </div>
+      ${e.notes ? `<div style="margin-top:4px;font-style:italic;color:var(--text-body);">"${e.notes}"</div>` : ''}
+    </div>`;
+  });
+  html += `</div>`;
+
+  // Export button
+  html += `<button onclick="ntExportReport()" class="btn btn-ocean" style="width:100%;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:8px;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Export Report for Medical Professional
+  </button>`;
+
+  el.innerHTML = html;
+}
+
+function ntExportReport() {
+  if (!currentDetailClient) return;
+  const cid = currentDetailClient.id;
+  const entries = NEURO_DATA[cid] || [];
+  if (!entries.length) { alert('No data to export.'); return; }
+
+  const clientName = currentDetailClient.name || 'Client';
+  const reportDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const tlColors = { green: '#2d8a4e', amber: '#d4a017', red: '#c0392b' };
+  const tlLabels = { green: 'Green — Stable', amber: 'Amber — Some symptoms present', red: 'Red — Significant disruption' };
+
+  // Calculate averages
+  const avg = (arr, key) => arr.length ? (arr.reduce((s, e) => s + (e[key] || 0), 0) / arr.length).toFixed(1) : '—';
+  const greenCount = entries.filter(e => e.trafficLight === 'green').length;
+  const amberCount = entries.filter(e => e.trafficLight === 'amber').length;
+  const redCount = entries.filter(e => e.trafficLight === 'red').length;
+  const dateRange = entries.length > 1
+    ? new Date(entries[entries.length-1].date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) + ' – ' + new Date(entries[0].date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})
+    : new Date(entries[0].date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+
+  let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Neurological Performance Profile — ${clientName}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;line-height:1.5;padding:32px;max-width:900px;margin:0 auto;font-size:13px;}
+  h1{font-size:20px;margin-bottom:4px;color:#1a1a1a;}
+  h2{font-size:16px;margin:24px 0 10px;color:#333;border-bottom:2px solid #e0e0e0;padding-bottom:6px;}
+  h3{font-size:13px;margin:16px 0 6px;color:#555;}
+  .header{border-bottom:3px solid #1a1a1a;padding-bottom:12px;margin-bottom:20px;}
+  .subtitle{font-size:12px;color:#666;margin-bottom:2px;}
+  .meta{display:flex;gap:30px;margin-top:8px;font-size:12px;color:#555;}
+  .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0;}
+  .summary-box{border:1px solid #ddd;border-radius:6px;padding:12px;text-align:center;}
+  .summary-box .val{font-size:22px;font-weight:700;}
+  .summary-box .label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;}
+  .avg-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:12px 0;}
+  .avg-box{text-align:center;padding:8px;border:1px solid #eee;border-radius:4px;}
+  .avg-box .val{font-size:16px;font-weight:700;}
+  .avg-box .label{font-size:9px;color:#888;}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:11px;}
+  th{background:#f5f5f5;border:1px solid #ddd;padding:6px 8px;text-align:left;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;}
+  td{border:1px solid #ddd;padding:5px 8px;}
+  .tl-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;}
+  .note{font-style:italic;color:#555;font-size:11px;}
+  .footer{margin-top:30px;padding-top:12px;border-top:2px solid #e0e0e0;font-size:10px;color:#999;}
+  .disclaimer{background:#f9f9f9;border:1px solid #e0e0e0;border-radius:6px;padding:12px;margin-top:16px;font-size:11px;color:#666;}
+  @media print{body{padding:16px;font-size:11px;} .no-print{display:none;}}
+</style></head><body>
+<div class="header">
+  <p class="subtitle">Neurological Performance Profile</p>
+  <h1>${clientName}</h1>
+  <div class="meta">
+    <div><strong>Report Date:</strong> ${reportDate}</div>
+    <div><strong>Tracking Period:</strong> ${dateRange}</div>
+    <div><strong>Total Entries:</strong> ${entries.length}</div>
+    <div><strong>Coach:</strong> Adam Heayberd, AH Performance</div>
+  </div>
+</div>
+
+<button class="no-print" onclick="window.print()" style="padding:10px 24px;background:#1a1a1a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;margin-bottom:20px;">Print / Save as PDF</button>
+
+<h2>Condition Context</h2>
+<p>This client has been diagnosed with <strong>Functional Neurological Disorder (FND)</strong>. FND is a disorder of nervous system functioning where symptoms — including fluctuating motor output, fatigue disproportionate to load, and variable movement control — arise from disrupted neural processing rather than structural damage. Symptom severity can vary significantly day-to-day and is influenced by stress, sleep, cognitive load, and environmental factors.</p>
+<p style="margin-top:6px;">This tracker monitors key neurological performance indicators to identify patterns, triggers, and responses to graded exercise programming.</p>
+
+<h2>Traffic Light Summary</h2>
+<div class="summary-grid">
+  <div class="summary-box" style="border-left:4px solid #2d8a4e;"><div class="val" style="color:#2d8a4e;">${greenCount}</div><div class="label">Green Days</div><div style="font-size:10px;color:#888;">Stable, normal function</div></div>
+  <div class="summary-box" style="border-left:4px solid #d4a017;"><div class="val" style="color:#d4a017;">${amberCount}</div><div class="label">Amber Days</div><div style="font-size:10px;color:#888;">Symptoms present, adjusted</div></div>
+  <div class="summary-box" style="border-left:4px solid #c0392b;"><div class="val" style="color:#c0392b;">${redCount}</div><div class="label">Red Days</div><div style="font-size:10px;color:#888;">Significant disruption</div></div>
+</div>
+
+<h2>Average Metrics (1-10 Scale)</h2>
+<div class="avg-grid">
+  <div class="avg-box"><div class="val">${avg(entries,'symptomSeverity')}</div><div class="label">Symptom Severity</div></div>
+  <div class="avg-box"><div class="val">${avg(entries,'fatigue')}</div><div class="label">Fatigue</div></div>
+  <div class="avg-box"><div class="val">${avg(entries,'sleepQuality')}</div><div class="label">Sleep Quality</div></div>
+  <div class="avg-box"><div class="val">${avg(entries,'stress')}</div><div class="label">Stress</div></div>
+  <div class="avg-box"><div class="val">${avg(entries,'movementConsistency')}</div><div class="label">Movement Consistency</div></div>
+  <div class="avg-box"><div class="val">${avg(entries,'cognitiveLoad')}</div><div class="label">Cognitive Load</div></div>
+</div>
+
+<h2>Daily Log</h2>
+<table>
+  <tr><th>Date</th><th>Time</th><th>Status</th><th>Symptoms</th><th>Fatigue</th><th>Sleep</th><th>Stress</th><th>Movement</th><th>Cognitive</th><th>Notes</th></tr>`;
+
+  entries.forEach(e => {
+    const d = new Date(e.date);
+    const dateStr = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    const tod = e.timeOfDay ? e.timeOfDay.charAt(0).toUpperCase() + e.timeOfDay.slice(1) : '';
+    html += `<tr>
+      <td>${dateStr}</td>
+      <td>${tod}</td>
+      <td><span class="tl-dot" style="background:${tlColors[e.trafficLight]};"></span>${e.trafficLight ? e.trafficLight.charAt(0).toUpperCase() + e.trafficLight.slice(1) : ''}</td>
+      <td style="text-align:center;">${e.symptomSeverity}</td>
+      <td style="text-align:center;">${e.fatigue}</td>
+      <td style="text-align:center;">${e.sleepQuality}</td>
+      <td style="text-align:center;">${e.stress}</td>
+      <td style="text-align:center;">${e.movementConsistency}</td>
+      <td style="text-align:center;">${e.cognitiveLoad}</td>
+      <td class="note">${e.notes || '—'}</td>
+    </tr>`;
+  });
+
+  html += `</table>
+
+<h2>Scale Reference</h2>
+<table style="max-width:600px;">
+  <tr><th>Metric</th><th>1 (Low)</th><th>10 (High)</th></tr>
+  <tr><td>Symptom Severity</td><td>Minimal/no symptoms</td><td>Severe disruption</td></tr>
+  <tr><td>Fatigue Level</td><td>Fresh and energised</td><td>Exhausted</td></tr>
+  <tr><td>Sleep Quality</td><td>Poor, disrupted</td><td>Excellent, restorative</td></tr>
+  <tr><td>Stress Level</td><td>Calm and relaxed</td><td>Very stressed</td></tr>
+  <tr><td>Movement Consistency</td><td>Very inconsistent, unreliable</td><td>Fully controlled</td></tr>
+  <tr><td>Cognitive Load</td><td>Clear-headed</td><td>Significant brain fog</td></tr>
+</table>
+
+<div class="disclaimer">
+  <strong>Disclaimer:</strong> This data has been self-reported by the client through a daily tracking tool as part of a graded exercise programme managed by their strength and conditioning coach. It is intended to support clinical assessment and is not a diagnostic tool. All metrics are subjective 1-10 scales. The traffic light system (Green/Amber/Red) is used to guide session intensity autoregulation.
+</div>
+
+<div class="footer">
+  <p>Generated by AH Performance Neuro Tracker · ${reportDate}</p>
+  <p>Coach: Adam Heayberd · adam@ahperformance.co.uk</p>
+</div>
+</body></html>`;
+
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+  else { alert('Pop-up blocked. Please allow pop-ups for this site.'); }
+}
+
 function toggleCycleTracking() {
   const toggle = document.getElementById('cycleToggle');
   const content = document.getElementById('cycleContent');
@@ -9361,7 +9812,8 @@ function renderPTNotifications() {
     'workout': {icon:'dumbbell', colour:'var(--sage-text)'},
     'wellbeing': {icon:'wellbeing', colour:'var(--warning)'},
     'inactivity': {icon:'bolt', colour:'var(--danger)'},
-    'email': {icon:'messages', colour:'var(--sage-text)'}
+    'email': {icon:'messages', colour:'var(--sage-text)'},
+    'neuro': {icon:'bolt', colour:'var(--ocean)'}
   };
   listEl.innerHTML = PT_NOTIFICATIONS.map(n => {
     const ti = ptTypeIcons[n.type] || {icon:'bell', colour:'var(--text-muted)'};
