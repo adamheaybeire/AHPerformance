@@ -4614,6 +4614,11 @@ function finishWorkout() {
       }
     }
   }
+  // Save elapsed time so we can resume if needed
+  wlElapsedBeforePause += rawElapsed;
+  wlStartTime = null;
+  // Stop the main timer interval
+  if (wlTimerInterval) { clearInterval(wlTimerInterval); wlTimerInterval = null; }
   // Hide timer bar and rest timer, stop rest countdown
   document.getElementById('wlTimerBar').style.display = 'none';
   document.getElementById('wlPauseBtn').style.display = 'none';
@@ -4642,10 +4647,29 @@ function finishWorkout() {
     <div style="margin-top:16px;">
       <textarea class="wl-notes-input" id="wlSessionNotes" placeholder="Any overall session notes..." rows="2"></textarea>
     </div>
+    <button onclick="resumeWorkout()" style="margin-top:16px;width:100%;padding:12px;background:none;border:1px solid var(--ocean);color:var(--ocean);border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;">← Back to Workout</button>
   </div>`;
   // Change footer button
   document.getElementById('wlFinishBtn').textContent = 'Save & Close';
   document.getElementById('wlFinishBtn').onclick = function() { saveWorkoutLog(duration, totalDone, totalVolume); };
+}
+
+function resumeWorkout() {
+  if (!wlActive || !wlCurrentSession) return;
+  // Restart the timer from where it left off
+  wlStartTime = Date.now();
+  if (wlTimerInterval) clearInterval(wlTimerInterval);
+  wlTimerInterval = setInterval(updateWLTimer, 1000);
+  // Show timer bar and pause button again
+  document.getElementById('wlTimerBar').style.display = 'flex';
+  document.getElementById('wlPauseBtn').style.display = 'inline-block';
+  wlPaused = false;
+  // Re-render the exercises (all set data is still in wlSetData)
+  renderWLActiveSession();
+  // Reset footer buttons
+  document.getElementById('wlFinishBtn').textContent = 'Finish Workout';
+  document.getElementById('wlFinishBtn').onclick = finishWorkout;
+  document.getElementById('wlDiscardBtn').style.display = '';
 }
 
 function wlSelectRPE(val) {
