@@ -1751,61 +1751,137 @@
     <div class="page" id="clientNeuro" style="display:none;">
       <div class="page-header">
         <h1 style="color:var(--ocean);">Neuro Tracker</h1>
-        <p>Track your nervous system patterns to help optimise your training.</p>
+        <p>Track patterns in your nervous system to inform your training.</p>
       </div>
 
-      <!-- Traffic Light Status -->
-      <div class="card" style="margin-bottom:12px;">
-        <h3 style="font-size:14px;margin-bottom:10px;">How are you feeling right now?</h3>
-        <div style="display:flex;gap:8px;" id="ntTrafficLightBtns">
-          <button class="nt-tl-btn" data-val="green" onclick="ntSelectTrafficLight('green')" style="flex:1;padding:14px 8px;border-radius:12px;border:2px solid #2d8a4e;background:rgba(45,138,78,0.1);color:#2d8a4e;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">
-            <div style="font-size:22px;margin-bottom:4px;">&#9679;</div>Green<br><span style="font-weight:400;font-size:11px;">Stable, good to go</span>
-          </button>
-          <button class="nt-tl-btn" data-val="amber" onclick="ntSelectTrafficLight('amber')" style="flex:1;padding:14px 8px;border-radius:12px;border:2px solid #d4a017;background:rgba(212,160,23,0.1);color:#d4a017;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">
-            <div style="font-size:22px;margin-bottom:4px;">&#9679;</div>Amber<br><span style="font-weight:400;font-size:11px;">Some symptoms, adjust</span>
-          </button>
-          <button class="nt-tl-btn" data-val="red" onclick="ntSelectTrafficLight('red')" style="flex:1;padding:14px 8px;border-radius:12px;border:2px solid #c0392b;background:rgba(192,57,43,0.1);color:#c0392b;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">
-            <div style="font-size:22px;margin-bottom:4px;">&#9679;</div>Red<br><span style="font-weight:400;font-size:11px;">Significant disruption</span>
-          </button>
+      <!-- Tab switcher -->
+      <div style="display:flex;gap:0;margin-bottom:16px;border-radius:12px;overflow:hidden;border:1px solid var(--slate-border);">
+        <button id="ntTabDaily" onclick="ntSwitchTab('daily')" style="flex:1;padding:12px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:var(--ocean);color:#fff;font-family:'Space Grotesk',sans-serif;">Daily Baseline</button>
+        <button id="ntTabEpisode" onclick="ntSwitchTab('episode')" style="flex:1;padding:12px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:var(--slate-card);color:var(--text-muted);font-family:'Space Grotesk',sans-serif;">Log Episode</button>
+        <button id="ntTabHistory" onclick="ntSwitchTab('history')" style="flex:1;padding:12px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:var(--slate-card);color:var(--text-muted);font-family:'Space Grotesk',sans-serif;">History</button>
+      </div>
+
+      <!-- ═══ DAILY BASELINE TAB ═══ -->
+      <div id="ntDailyTab">
+        <div class="card" style="margin-bottom:12px;">
+          <h3 style="font-size:14px;margin-bottom:10px;">How are you feeling right now?</h3>
+          <div style="display:flex;gap:8px;" id="ntTrafficLightBtns">
+            <button class="nt-tl-btn" data-val="green" onclick="ntSelectTrafficLight('green')" style="flex:1;padding:14px 8px;border-radius:12px;border:2px solid #2d8a4e;background:rgba(45,138,78,0.1);color:#2d8a4e;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">
+              <div style="font-size:22px;margin-bottom:4px;">&#9679;</div>Green<br><span style="font-weight:400;font-size:11px;">Stable, good to go</span>
+            </button>
+            <button class="nt-tl-btn" data-val="amber" onclick="ntSelectTrafficLight('amber')" style="flex:1;padding:14px 8px;border-radius:12px;border:2px solid #d4a017;background:rgba(212,160,23,0.1);color:#d4a017;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">
+              <div style="font-size:22px;margin-bottom:4px;">&#9679;</div>Amber<br><span style="font-weight:400;font-size:11px;">Some symptoms, adjust</span>
+            </button>
+            <button class="nt-tl-btn" data-val="red" onclick="ntSelectTrafficLight('red')" style="flex:1;padding:14px 8px;border-radius:12px;border:2px solid #c0392b;background:rgba(192,57,43,0.1);color:#c0392b;font-size:12px;font-weight:600;cursor:pointer;text-align:center;">
+              <div style="font-size:22px;margin-bottom:4px;">&#9679;</div>Red<br><span style="font-weight:400;font-size:11px;">Significant disruption</span>
+            </button>
+          </div>
         </div>
-      </div>
-
-      <!-- Metric Sliders -->
-      <div class="card" style="margin-bottom:12px;">
-        <h3 style="font-size:14px;margin-bottom:14px;">Daily Metrics</h3>
-        <div style="display:flex;flex-direction:column;gap:16px;" id="ntMetrics">
-          <div class="nt-slider-row"><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Symptom Severity <span class="nt-val" id="ntSymptomVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntSymptom" oninput="document.getElementById('ntSymptomVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Minimal</span><span>Severe</span></div></div>
-          <div class="nt-slider-row"><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Fatigue Level <span class="nt-val" id="ntFatigueVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntFatigue" oninput="document.getElementById('ntFatigueVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Fresh</span><span>Exhausted</span></div></div>
-          <div class="nt-slider-row"><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Sleep Quality <span class="nt-val" id="ntSleepVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntSleep" oninput="document.getElementById('ntSleepVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Poor</span><span>Excellent</span></div></div>
-          <div class="nt-slider-row"><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Stress Level <span class="nt-val" id="ntStressVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntStress" oninput="document.getElementById('ntStressVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Calm</span><span>Very Stressed</span></div></div>
-          <div class="nt-slider-row"><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Movement Consistency <span class="nt-val" id="ntMovementVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntMovement" oninput="document.getElementById('ntMovementVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Very inconsistent</span><span>Fully controlled</span></div></div>
-          <div class="nt-slider-row"><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Cognitive Load <span class="nt-val" id="ntCognitiveVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntCognitive" oninput="document.getElementById('ntCognitiveVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Clear-headed</span><span>Brain fog</span></div></div>
+        <div class="card" style="margin-bottom:12px;">
+          <h3 style="font-size:14px;margin-bottom:14px;">Daily Metrics</h3>
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <div><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Symptom Severity <span class="nt-val" id="ntSymptomVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntSymptom" oninput="document.getElementById('ntSymptomVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Minimal</span><span>Severe</span></div></div>
+            <div><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Fatigue Level <span class="nt-val" id="ntFatigueVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntFatigue" oninput="document.getElementById('ntFatigueVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Fresh</span><span>Exhausted</span></div></div>
+            <div><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Sleep Quality <span class="nt-val" id="ntSleepVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntSleep" oninput="document.getElementById('ntSleepVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Poor</span><span>Excellent</span></div></div>
+            <div><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Stress Level <span class="nt-val" id="ntStressVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntStress" oninput="document.getElementById('ntStressVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Calm</span><span>Very Stressed</span></div></div>
+            <div><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Movement Consistency <span class="nt-val" id="ntMovementVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntMovement" oninput="document.getElementById('ntMovementVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Very inconsistent</span><span>Fully controlled</span></div></div>
+            <div><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Cognitive Load <span class="nt-val" id="ntCognitiveVal">5</span></label><input type="range" min="1" max="10" value="5" id="ntCognitive" oninput="document.getElementById('ntCognitiveVal').textContent=this.value" style="width:100%;accent-color:var(--ocean);"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Clear-headed</span><span>Brain fog</span></div></div>
+          </div>
         </div>
+        <div class="card" style="margin-bottom:12px;">
+          <div style="margin-bottom:14px;">
+            <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">Time of Day</label>
+            <select id="ntTimeOfDay" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:13px;">
+              <option value="morning">Morning</option><option value="midday">Midday</option><option value="afternoon">Afternoon</option><option value="evening">Evening</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">Notes</label>
+            <textarea id="ntNotes" rows="2" placeholder="How are your muscles responding today?" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+          </div>
+        </div>
+        <button class="btn btn-ember" style="width:100%;" onclick="ntSaveEntry()">Save Daily Baseline</button>
       </div>
 
-      <!-- Time of Day + Notes -->
-      <div class="card" style="margin-bottom:12px;">
-        <div style="margin-bottom:14px;">
-          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">Time of Day</label>
-          <select id="ntTimeOfDay" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:13px;">
-            <option value="morning">Morning</option>
-            <option value="midday">Midday</option>
-            <option value="afternoon">Afternoon</option>
-            <option value="evening">Evening</option>
+      <!-- ═══ EPISODE LOG TAB ═══ -->
+      <div id="ntEpisodeTab" style="display:none;">
+        <div class="card" style="margin-bottom:12px;border-left:4px solid #c0392b;">
+          <h3 style="font-size:14px;margin-bottom:4px;">Log an Episode</h3>
+          <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">Something just happened? Record it now. The time is saved automatically.</p>
+
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">What were you doing?</label>
+          <select id="neActivity" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:13px;margin-bottom:12px;">
+            <option value="">Select activity...</option>
+            <option value="Strength Training">Strength Training</option>
+            <option value="Aerobic / Cardio">Aerobic / Cardio</option>
+            <option value="Walking">Walking</option>
+            <option value="Work / Desk">Work / Desk</option>
+            <option value="Household Tasks">Household Tasks</option>
+            <option value="Rest / Home">Rest / Home</option>
+            <option value="Social Situation">Social Situation</option>
+            <option value="Driving">Driving</option>
+            <option value="Other">Other</option>
           </select>
+
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">Specific exercise or detail <span style="font-weight:400;color:var(--text-dim);">(optional)</span></label>
+          <input type="text" id="neExerciseDetail" placeholder="e.g. Squats set 3, Walking upstairs" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:13px;margin-bottom:12px;box-sizing:border-box;">
+
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">What happened?</label>
+          <textarea id="neWhatHappened" rows="2" placeholder="e.g. Legs gave way on rep 4, tremor started in right hand, couldn't maintain grip" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:13px;resize:vertical;box-sizing:border-box;margin-bottom:14px;"></textarea>
         </div>
-        <div>
-          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">Notes</label>
-          <textarea id="ntNotes" rows="3" placeholder="How are your muscles responding today? Any triggers you noticed?" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:13px;resize:vertical;box-sizing:border-box;"></textarea>
+
+        <div class="card" style="margin-bottom:12px;">
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Symptom Severity <span class="nt-val" id="neSeverityVal">5</span></label><input type="range" min="1" max="10" value="5" id="neSeverity" oninput="document.getElementById('neSeverityVal').textContent=this.value" style="width:100%;accent-color:#c0392b;"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Mild</span><span>Severe</span></div></div>
+            <div><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Movement Consistency <span class="nt-val" id="neMovementVal">5</span></label><input type="range" min="1" max="10" value="5" id="neMovement" oninput="document.getElementById('neMovementVal').textContent=this.value" style="width:100%;accent-color:#c0392b;"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>No control</span><span>Full control</span></div></div>
+            <div><label style="font-size:13px;font-weight:500;display:flex;justify-content:space-between;">Emotional / Cognitive Load <span class="nt-val" id="neCogVal">5</span></label><input type="range" min="1" max="10" value="5" id="neCognitive" oninput="document.getElementById('neCogVal').textContent=this.value" style="width:100%;accent-color:#c0392b;"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);"><span>Clear</span><span>Overwhelmed</span></div></div>
+          </div>
         </div>
+
+        <div class="card" style="margin-bottom:12px;">
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">How quickly did fatigue come on?</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;" id="neFatigueOnsetBtns">
+            <button onclick="neSelectBtn('neFatigueOnsetBtns','Immediate',this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">Immediate</button>
+            <button onclick="neSelectBtn('neFatigueOnsetBtns','Gradual (minutes)',this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">Gradual (minutes)</button>
+            <button onclick="neSelectBtn('neFatigueOnsetBtns','Over the session',this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">Over the session</button>
+          </div>
+
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">How long to recover?</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;" id="neRecoveryBtns">
+            <button onclick="neSelectBtn('neRecoveryBtns','< 5 min',this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">&lt; 5 min</button>
+            <button onclick="neSelectBtn('neRecoveryBtns','5-15 min',this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">5-15 min</button>
+            <button onclick="neSelectBtn('neRecoveryBtns','15-30 min',this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">15-30 min</button>
+            <button onclick="neSelectBtn('neRecoveryBtns','30-60 min',this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">30-60 min</button>
+            <button onclick="neSelectBtn('neRecoveryBtns','> 1 hour',this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">&gt; 1 hour</button>
+            <button onclick="neSelectBtn('neRecoveryBtns','Didn\'t fully recover',this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">Didn't fully recover</button>
+          </div>
+
+          <label style="font-size:13px;font-weight:500;display:block;margin-bottom:6px;">What helped? <span style="font-weight:400;color:var(--text-dim);">(select all that apply)</span></label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;" id="neWhatHelpedBtns">
+            <button onclick="neToggleBtn(this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">Rest</button>
+            <button onclick="neToggleBtn(this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">Distraction</button>
+            <button onclick="neToggleBtn(this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">Changed exercise</button>
+            <button onclick="neToggleBtn(this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">Breathing</button>
+            <button onclick="neToggleBtn(this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">Music</button>
+            <button onclick="neToggleBtn(this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">Reduced load</button>
+            <button onclick="neToggleBtn(this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">External cueing</button>
+            <button onclick="neToggleBtn(this)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:12px;cursor:pointer;">Nothing helped</button>
+          </div>
+        </div>
+
+        <button class="btn" style="width:100%;background:#c0392b;color:#fff;border:none;padding:16px;border-radius:14px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;" onclick="ntSaveEpisode()">Save Episode</button>
       </div>
 
-      <button class="btn btn-ember" style="width:100%;margin-bottom:24px;" onclick="ntSaveEntry()">Save Today's Log</button>
-
-      <!-- History -->
-      <div class="card">
-        <h3 style="font-size:14px;margin-bottom:12px;">Recent History</h3>
-        <div id="ntHistoryList" style="font-size:13px;color:var(--text-muted);">No entries yet.</div>
+      <!-- ═══ HISTORY TAB ═══ -->
+      <div id="ntHistoryTab" style="display:none;">
+        <div class="card" style="margin-bottom:12px;">
+          <h3 style="font-size:14px;margin-bottom:8px;">Daily Baselines</h3>
+          <div id="ntHistoryList" style="font-size:13px;color:var(--text-muted);">No entries yet.</div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:14px;margin-bottom:8px;">Episodes</h3>
+          <div id="ntEpisodeHistoryList" style="font-size:13px;color:var(--text-muted);">No episodes logged.</div>
+        </div>
       </div>
     </div>
 
@@ -2403,6 +2479,8 @@ const WELLBEING_DATA = [];
 // Neuro Tracker (FND tracking) — coach-enabled per client
 // Structure: NEURO_DATA[clientId] = [ { date, trafficLight, symptomSeverity, fatigue, sleepQuality, stress, movementConsistency, cognitiveLoad, timeOfDay, notes, customFields } ]
 const NEURO_DATA = {};
+// Episode log: NEURO_EPISODES[clientId] = [ { date, activity, exerciseDetail, whatHappened, severity, fatigueOnset, movementConsistency, cognitiveLoad, recoveryTime, whatHelped, notes } ]
+const NEURO_EPISODES = {};
 
 const CYCLE_LOG = {};
 
@@ -2579,6 +2657,7 @@ function _buildState() {
     clientNutrition: CLIENT_NUTRITION,
     foodLog: FOOD_LOG,
     neuroData: NEURO_DATA,
+    neuroEpisodes: NEURO_EPISODES,
     savedAt: Date.now()
   };
 }
@@ -2645,6 +2724,7 @@ function _applyState(state, _source) {
   if (state.clientNutrition) Object.assign(CLIENT_NUTRITION, state.clientNutrition);
   if (state.foodLog) Object.assign(FOOD_LOG, state.foodLog);
   if (state.neuroData) Object.assign(NEURO_DATA, state.neuroData);
+  if (state.neuroEpisodes) Object.assign(NEURO_EPISODES, state.neuroEpisodes);
   // Clean up: fix any "undefined" client names in PT notifications
   PT_NOTIFICATIONS.forEach(n => {
     if (!n.client || n.client === 'undefined' || n.client === 'null') {
@@ -8319,6 +8399,157 @@ function ntRenderHistory() {
   }).join('');
 }
 
+// ── Episode Log functions ──
+
+function ntSwitchTab(tab) {
+  const tabs = { daily: 'ntDailyTab', episode: 'ntEpisodeTab', history: 'ntHistoryTab' };
+  const btns = { daily: 'ntTabDaily', episode: 'ntTabEpisode', history: 'ntTabHistory' };
+  Object.keys(tabs).forEach(k => {
+    const el = document.getElementById(tabs[k]);
+    const btn = document.getElementById(btns[k]);
+    if (el) el.style.display = k === tab ? '' : 'none';
+    if (btn) {
+      btn.style.background = k === tab ? 'var(--ocean)' : 'var(--slate-card)';
+      btn.style.color = k === tab ? '#fff' : 'var(--text-muted)';
+    }
+  });
+  if (tab === 'history') { ntRenderHistory(); ntRenderEpisodeHistory(); }
+}
+
+let _neSelectedValues = {};
+
+function neSelectBtn(groupId, value, btn) {
+  const grp = document.getElementById(groupId);
+  if (!grp) return;
+  grp.querySelectorAll('button').forEach(b => {
+    b.style.background = 'var(--slate-card)';
+    b.style.color = 'var(--text-body)';
+    b.style.borderColor = 'var(--slate-border)';
+  });
+  btn.style.background = 'rgba(192,57,43,0.15)';
+  btn.style.color = '#c0392b';
+  btn.style.borderColor = '#c0392b';
+  _neSelectedValues[groupId] = value;
+}
+
+function neToggleBtn(btn) {
+  const isActive = btn.getAttribute('data-active') === '1';
+  if (isActive) {
+    btn.setAttribute('data-active', '0');
+    btn.style.background = 'var(--slate-card)';
+    btn.style.color = 'var(--text-body)';
+    btn.style.borderColor = 'var(--slate-border)';
+  } else {
+    btn.setAttribute('data-active', '1');
+    btn.style.background = 'rgba(192,57,43,0.15)';
+    btn.style.color = '#c0392b';
+    btn.style.borderColor = '#c0392b';
+  }
+}
+
+function ntSaveEpisode() {
+  const cid = loggedInUser ? loggedInUser.clientId : null;
+  if (!cid) return;
+
+  const activity = document.getElementById('neActivity')?.value;
+  if (!activity) { alert('Please select what you were doing.'); return; }
+
+  const whatHappened = (document.getElementById('neWhatHappened')?.value || '').trim();
+  if (!whatHappened) { alert('Please describe what happened.'); return; }
+
+  // Gather "what helped" selections
+  const whatHelped = [];
+  document.querySelectorAll('#neWhatHelpedBtns button[data-active="1"]').forEach(b => {
+    whatHelped.push(b.textContent.trim());
+  });
+
+  const episode = {
+    id: 'ep_' + Date.now(),
+    date: new Date().toISOString(),
+    activity: activity,
+    exerciseDetail: (document.getElementById('neExerciseDetail')?.value || '').trim(),
+    whatHappened: whatHappened,
+    severity: parseInt(document.getElementById('neSeverity')?.value) || 5,
+    movementConsistency: parseInt(document.getElementById('neMovement')?.value) || 5,
+    cognitiveLoad: parseInt(document.getElementById('neCognitive')?.value) || 5,
+    fatigueOnset: _neSelectedValues['neFatigueOnsetBtns'] || '',
+    recoveryTime: _neSelectedValues['neRecoveryBtns'] || '',
+    whatHelped: whatHelped
+  };
+
+  if (!NEURO_EPISODES[cid]) NEURO_EPISODES[cid] = [];
+  NEURO_EPISODES[cid].unshift(episode);
+  scheduleSave();
+
+  // Reset form
+  document.getElementById('neActivity').value = '';
+  document.getElementById('neExerciseDetail').value = '';
+  document.getElementById('neWhatHappened').value = '';
+  ['neSeverity','neMovement','neCognitive'].forEach(id => { const el = document.getElementById(id); if (el) el.value = 5; });
+  ['neSeverityVal','neMovementVal','neCogVal'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '5'; });
+  ['neFatigueOnsetBtns','neRecoveryBtns'].forEach(gid => {
+    const grp = document.getElementById(gid);
+    if (grp) grp.querySelectorAll('button').forEach(b => {
+      b.style.background = 'var(--slate-card)'; b.style.color = 'var(--text-body)'; b.style.borderColor = 'var(--slate-border)';
+    });
+  });
+  document.querySelectorAll('#neWhatHelpedBtns button').forEach(b => {
+    b.setAttribute('data-active', '0');
+    b.style.background = 'var(--slate-card)'; b.style.color = 'var(--text-body)'; b.style.borderColor = 'var(--slate-border)';
+  });
+  _neSelectedValues = {};
+
+  // Notify coach
+  PT_NOTIFICATIONS.unshift({
+    id: 'neuro_ep_' + Date.now(),
+    type: 'neuro',
+    client: loggedInUser.name,
+    clientId: cid,
+    message: 'FND episode logged during: ' + episode.activity + ' (severity ' + episode.severity + '/10)',
+    date: new Date().toISOString(),
+    read: false
+  });
+
+  alert('Episode saved.');
+  ntSwitchTab('history');
+}
+
+function ntRenderEpisodeHistory() {
+  const cid = loggedInUser ? loggedInUser.clientId : null;
+  const el = document.getElementById('ntEpisodeHistoryList');
+  if (!el || !cid) return;
+  const episodes = NEURO_EPISODES[cid] || [];
+  if (!episodes.length) { el.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">No episodes logged yet.</p>'; return; }
+
+  const sevCol = v => v <= 3 ? '#2d8a4e' : v <= 6 ? '#d4a017' : '#c0392b';
+
+  el.innerHTML = episodes.slice(0, 20).map(ep => {
+    const d = new Date(ep.date);
+    const dateStr = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const helped = (ep.whatHelped || []).join(', ');
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--slate-border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${sevCol(ep.severity)};"></span>
+          <span style="font-weight:500;font-size:13px;color:var(--text-bright);">${dateStr}</span>
+          <span style="font-size:11px;color:var(--text-dim);">${timeStr}</span>
+        </div>
+        <span style="font-size:11px;font-weight:600;color:${sevCol(ep.severity)};">${ep.severity}/10</span>
+      </div>
+      <div style="font-size:12px;color:var(--text-body);margin-bottom:4px;"><b>${ep.activity}</b>${ep.exerciseDetail ? ' — ' + ep.exerciseDetail : ''}</div>
+      <div style="font-size:12px;color:var(--text-muted);font-style:italic;margin-bottom:4px;">"${ep.whatHappened}"</div>
+      <div style="display:flex;gap:10px;font-size:11px;color:var(--text-dim);flex-wrap:wrap;">
+        <span>Movement: ${ep.movementConsistency}/10</span>
+        <span>Cognitive: ${ep.cognitiveLoad}/10</span>
+        ${ep.fatigueOnset ? `<span>Onset: ${ep.fatigueOnset}</span>` : ''}
+        ${ep.recoveryTime ? `<span>Recovery: ${ep.recoveryTime}</span>` : ''}
+      </div>
+      ${helped ? `<div style="margin-top:4px;font-size:11px;color:var(--ocean);">Helped: ${helped}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
 // ── Coach-side Neuro Tracker functions ──
 
 function ntUpdateCoachToggle(client) {
@@ -8420,6 +8651,75 @@ function ntRenderCoachView() {
   });
   html += `</div>`;
 
+  // Episode log section
+  const episodes = NEURO_EPISODES[cid] || [];
+  if (episodes.length) {
+    const sevCol = v => v <= 3 ? '#2d8a4e' : v <= 6 ? '#d4a017' : '#c0392b';
+    html += `<div class="card" style="padding:16px;margin-top:12px;">
+      <h3 style="font-size:14px;margin-bottom:10px;">Episode Log (${episodes.length})</h3>`;
+    episodes.slice(0, 20).forEach(ep => {
+      const d = new Date(ep.date);
+      const dateStr = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+      const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      const helped = (ep.whatHelped || []).join(', ');
+      html += `<div style="padding:8px 0;border-bottom:1px solid var(--slate-border);font-size:12px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${sevCol(ep.severity)};"></span>
+          <span style="font-weight:500;color:var(--text-bright);">${dateStr} ${timeStr}</span>
+          <span style="margin-left:auto;font-weight:600;color:${sevCol(ep.severity)};">Severity: ${ep.severity}/10</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-body);margin-bottom:3px;"><b>${ep.activity}</b>${ep.exerciseDetail ? ' — ' + ep.exerciseDetail : ''}</div>
+        <div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-bottom:3px;">"${ep.whatHappened}"</div>
+        <div style="display:flex;gap:8px;font-size:10px;color:var(--text-dim);flex-wrap:wrap;">
+          <span>Movement: ${ep.movementConsistency}/10</span>
+          <span>Cognitive: ${ep.cognitiveLoad}/10</span>
+          ${ep.fatigueOnset ? `<span>Onset: ${ep.fatigueOnset}</span>` : ''}
+          ${ep.recoveryTime ? `<span>Recovery: ${ep.recoveryTime}</span>` : ''}
+        </div>
+        ${helped ? `<div style="margin-top:3px;font-size:10px;color:var(--ocean);">Helped: ${helped}</div>` : ''}
+      </div>`;
+    });
+
+    // Activity trigger analysis
+    const activityCounts = {};
+    const activitySeverity = {};
+    episodes.forEach(ep => {
+      activityCounts[ep.activity] = (activityCounts[ep.activity] || 0) + 1;
+      activitySeverity[ep.activity] = (activitySeverity[ep.activity] || 0) + ep.severity;
+    });
+    const sorted = Object.keys(activityCounts).sort((a, b) => activityCounts[b] - activityCounts[a]);
+    if (sorted.length) {
+      html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--slate-border);">
+        <div style="font-size:12px;font-weight:600;color:var(--text-bright);margin-bottom:6px;">Trigger Analysis</div>`;
+      sorted.forEach(act => {
+        const count = activityCounts[act];
+        const avgSev = (activitySeverity[act] / count).toFixed(1);
+        html += `<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;color:var(--text-muted);">
+          <span>${act}</span>
+          <span>${count} episode${count > 1 ? 's' : ''} · avg severity ${avgSev}/10</span>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    // Recovery patterns
+    const recoveryCounts = {};
+    episodes.forEach(ep => { if (ep.recoveryTime) recoveryCounts[ep.recoveryTime] = (recoveryCounts[ep.recoveryTime] || 0) + 1; });
+    const recKeys = Object.keys(recoveryCounts);
+    if (recKeys.length) {
+      html += `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--slate-border);">
+        <div style="font-size:12px;font-weight:600;color:var(--text-bright);margin-bottom:6px;">Recovery Patterns</div>`;
+      recKeys.sort((a, b) => recoveryCounts[b] - recoveryCounts[a]).forEach(r => {
+        html += `<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;color:var(--text-muted);">
+          <span>${r}</span><span>${recoveryCounts[r]}x</span>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+  }
+
   // Export button
   html += `<button onclick="ntExportReport()" class="btn btn-ocean" style="width:100%;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:8px;">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -8482,7 +8782,8 @@ function ntExportReport() {
   <div class="meta">
     <div><strong>Report Date:</strong> ${reportDate}</div>
     <div><strong>Tracking Period:</strong> ${dateRange}</div>
-    <div><strong>Total Entries:</strong> ${entries.length}</div>
+    <div><strong>Daily Baselines:</strong> ${entries.length}</div>
+    <div><strong>Episodes:</strong> ${(NEURO_EPISODES[cid] || []).length}</div>
     <div><strong>Coach:</strong> Adam Heayberd, AH Performance</div>
   </div>
 </div>
@@ -8532,8 +8833,80 @@ function ntExportReport() {
     </tr>`;
   });
 
-  html += `</table>
+  html += `</table>`;
 
+  // Episode log in export
+  const epExport = NEURO_EPISODES[cid] || [];
+  if (epExport.length) {
+    html += `<h2>Episode Log (${epExport.length} episodes)</h2>
+    <p style="margin-bottom:8px;">Episodes are recorded in real-time when FND symptoms manifest during daily activities or training. Each entry captures the context, severity, and recovery response.</p>
+    <table>
+      <tr><th>Date / Time</th><th>Activity</th><th>Detail</th><th>What Happened</th><th>Severity</th><th>Movement</th><th>Cognitive</th><th>Fatigue Onset</th><th>Recovery</th><th>What Helped</th></tr>`;
+    epExport.forEach(ep => {
+      const d = new Date(ep.date);
+      const dateStr = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+      const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      const helped = (ep.whatHelped || []).join(', ');
+      html += `<tr>
+        <td>${dateStr}<br>${timeStr}</td>
+        <td>${ep.activity}</td>
+        <td>${ep.exerciseDetail || '—'}</td>
+        <td class="note">${ep.whatHappened}</td>
+        <td style="text-align:center;">${ep.severity}</td>
+        <td style="text-align:center;">${ep.movementConsistency}</td>
+        <td style="text-align:center;">${ep.cognitiveLoad}</td>
+        <td>${ep.fatigueOnset || '—'}</td>
+        <td>${ep.recoveryTime || '—'}</td>
+        <td>${helped || '—'}</td>
+      </tr>`;
+    });
+    html += `</table>`;
+
+    // Trigger analysis summary
+    const actCounts = {};
+    const actSev = {};
+    epExport.forEach(ep => {
+      actCounts[ep.activity] = (actCounts[ep.activity] || 0) + 1;
+      actSev[ep.activity] = (actSev[ep.activity] || 0) + ep.severity;
+    });
+    const actSorted = Object.keys(actCounts).sort((a, b) => actCounts[b] - actCounts[a]);
+    if (actSorted.length) {
+      html += `<h3>Episode Trigger Summary</h3><table style="max-width:500px;">
+        <tr><th>Activity</th><th>Episodes</th><th>Avg Severity</th></tr>`;
+      actSorted.forEach(act => {
+        html += `<tr><td>${act}</td><td style="text-align:center;">${actCounts[act]}</td><td style="text-align:center;">${(actSev[act]/actCounts[act]).toFixed(1)}/10</td></tr>`;
+      });
+      html += `</table>`;
+    }
+
+    // Recovery pattern summary
+    const recCounts = {};
+    epExport.forEach(ep => { if (ep.recoveryTime) recCounts[ep.recoveryTime] = (recCounts[ep.recoveryTime] || 0) + 1; });
+    const recKeys = Object.keys(recCounts);
+    if (recKeys.length) {
+      html += `<h3>Recovery Pattern Summary</h3><table style="max-width:400px;">
+        <tr><th>Recovery Time</th><th>Occurrences</th></tr>`;
+      recKeys.sort((a, b) => recCounts[b] - recCounts[a]).forEach(r => {
+        html += `<tr><td>${r}</td><td style="text-align:center;">${recCounts[r]}</td></tr>`;
+      });
+      html += `</table>`;
+    }
+
+    // What helped summary
+    const helpCounts = {};
+    epExport.forEach(ep => (ep.whatHelped || []).forEach(h => { helpCounts[h] = (helpCounts[h] || 0) + 1; }));
+    const helpKeys = Object.keys(helpCounts);
+    if (helpKeys.length) {
+      html += `<h3>Effective Interventions</h3><table style="max-width:400px;">
+        <tr><th>Intervention</th><th>Times Reported Helpful</th></tr>`;
+      helpKeys.sort((a, b) => helpCounts[b] - helpCounts[a]).forEach(h => {
+        html += `<tr><td>${h}</td><td style="text-align:center;">${helpCounts[h]}</td></tr>`;
+      });
+      html += `</table>`;
+    }
+  }
+
+  html += `
 <h2>Scale Reference</h2>
 <table style="max-width:600px;">
   <tr><th>Metric</th><th>1 (Low)</th><th>10 (High)</th></tr>
