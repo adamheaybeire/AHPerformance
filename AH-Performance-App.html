@@ -4910,9 +4910,21 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
       }
     });
   }
+  // Smart type detection: if session type isn't explicitly 'cardio', check if it looks like cardio
+  let _resolvedType = wlCurrentSession.type || 'strength';
+  if (_resolvedType !== 'cardio') {
+    const _sn = (wlCurrentSession.name || '').toLowerCase();
+    const _cardioKeywords = ['run','jog','sprint','cycle','swim','walk','row','bike','cardio','threshold','tempo','interval','fartlek'];
+    const _nameIsCardio = _cardioKeywords.some(k => _sn.includes(k));
+    const _allExCardio = exerciseLogs.length > 0 && exerciseLogs.every(ex => {
+      const en = (ex.exercise || '').toLowerCase();
+      return en.includes('run') || en.includes('jog') || en.includes('sprint') || en.includes('cycle') || en.includes('swim') || en.includes('walk') || en.includes('row') || en.includes('bike') || en.includes('cardio');
+    });
+    if (_nameIsCardio || _allExCardio) _resolvedType = 'cardio';
+  }
   // Capture cardio distance/time at session level for weekly summary
   let sessionDistance = null, sessionDistUnit = 'km', sessionTime = null;
-  const isCardioType = (wlCurrentSession.type === 'cardio');
+  const isCardioType = (_resolvedType === 'cardio');
   if (isCardioType) {
     sessionDistance = parseFloat(document.getElementById('wlCardioDistance')?.value) || null;
     sessionDistUnit = document.getElementById('wlCardioDistUnit')?.value || 'km';
@@ -4923,7 +4935,7 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
     date: today,
     sessionName: wlCurrentSession.name,
     day: wlCurrentSession.day || '',
-    type: wlCurrentSession.type || 'strength',
+    type: _resolvedType,
     duration: duration,
     exercises: exerciseLogs,
     totalSets: totalSets,
@@ -4942,7 +4954,7 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
   WORKOUT_LOG[cid].sort((a,b) => (b.date||'').localeCompare(a.date||''));
   // Also save individual exercise data to PROGRESS_DATA for charting
   if (!PROGRESS_DATA[cid]) PROGRESS_DATA[cid] = { strength: [], cardio: [], measurements: [], wearable: [], weekly: [] };
-  const isCardioSession = (wlCurrentSession.type === 'cardio');
+  const isCardioSession = (_resolvedType === 'cardio');
   // If session type is 'cardio' and no exercise logs captured (generic cardio view), create entry from session
   if (isCardioSession && exerciseLogs.length === 0) {
     const cardioNotes = document.getElementById('wlCardioNotes')?.value || '';
@@ -10987,7 +10999,14 @@ function convertBuilderToClientFormat(builderProgramme, weekNumber, programmeNam
             });
           });
         }
-        sessions.push({ day: abbr, type: 'strength', name: sessionName, exercises: exercises, supersets: supersets });
+        // Determine type: if all exercises are cardio-pattern OR all names look like cardio, mark as cardio
+        const _allExCardio = sess.exercises.every(item => {
+          const mp = (item.movementPattern || '').toLowerCase();
+          const nm = (item.resolvedName || item.exerciseId || '').toLowerCase();
+          return mp === 'cardio' || nm.includes('run') || nm.includes('jog') || nm.includes('sprint') || nm.includes('cycle') || nm.includes('swim') || nm.includes('walk') || nm.includes('row') || nm.includes('bike') || nm.includes('cardio');
+        });
+        const _sessType = _allExCardio ? 'cardio' : 'strength';
+        sessions.push({ day: abbr, type: _sessType, name: sessionName, exercises: exercises, supersets: supersets });
       }
     });
   });
