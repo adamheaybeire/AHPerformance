@@ -4064,7 +4064,8 @@ function startWorkoutSession(weekKey, sessionIdx) {
       const sets = [];
       for (let s = 0; s < numSets; s++) {
         if (isCardio) {
-          sets.push({ weight: prescribed.reps || '', reps: '', done: false });
+          // For cardio: weight=Time, reps=Distance. Put prescribed value into Distance.
+          sets.push({ weight: '', reps: prescribed.reps || '', done: false });
         } else {
           sets.push({ weight: (ex.w && ex.w !== '—') ? parseFloat(ex.w) || '' : '', reps: prescribed.reps || '', done: false });
         }
@@ -4856,14 +4857,14 @@ function finishWorkout() {
     <div style="margin-top:16px;">
       <textarea class="wl-notes-input" id="wlSessionNotes" placeholder="Any overall session notes..." rows="2"></textarea>
     </div>
-    <button onclick="resumeWorkout()" style="margin-top:16px;width:100%;padding:12px;background:none;border:1px solid var(--ocean);color:var(--ocean);border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;">← Back to Workout</button>
+    <button onclick="wlBackToExercises()" style="margin-top:16px;width:100%;padding:12px;background:none;border:1px solid var(--ocean);color:var(--ocean);border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif;">← Back to Workout</button>
   </div>`;
   // Change footer button
   document.getElementById('wlFinishBtn').textContent = 'Save & Close';
   document.getElementById('wlFinishBtn').onclick = function() { saveWorkoutLog(duration, totalDone, totalVolume); };
 }
 
-function resumeWorkout() {
+function wlBackToExercises() {
   if (!wlActive || !wlCurrentSession) return;
   // Restart the timer from where it left off
   wlStartTime = Date.now();
