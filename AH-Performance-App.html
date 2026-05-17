@@ -32,6 +32,23 @@
     --cycle-primary:#C47A9B;--cycle-soft:rgba(196,122,155,0.08);--cycle-border:rgba(196,122,155,0.20);--cycle-text:#D48FA8;
   }
 
+  body.light-mode{
+    --ember:#d4630e;--ember-hover:#b85508;--ember-soft:rgba(212,99,14,0.08);--ember-glow:rgba(212,99,14,0.12);
+    --sage:#5a8c4e;--sage-soft:rgba(90,140,78,0.08);--sage-border:rgba(90,140,78,0.2);--sage-text:#4a7a40;
+    --ocean:#2b7da8;--ocean-soft:rgba(43,125,168,0.08);--ocean-border:rgba(43,125,168,0.2);--ocean-text:#1f6b94;
+    --slate-bg:#f8fafc;--slate-deep:#f1f5f9;--slate-card:#ffffff;--slate-raised:#f1f5f9;--slate-border:#e2e8f0;--slate-hover:#e8ecf0;
+    --text-bright:#0f172a;--text-body:#334155;--text-muted:#64748b;--text-dim:#94a3b8;
+    --danger:#dc2626;--danger-soft:rgba(220,38,38,0.08);
+    --warning:#d97706;--warning-soft:rgba(217,119,6,0.08);
+    --wb-bg:#f8fafc;--wb-card:#ffffff;--wb-accent:#5a8c4e;--wb-soft:rgba(90,140,78,0.04);--wb-border:rgba(90,140,78,0.15);
+    --cycle-primary:#b05577;--cycle-soft:rgba(176,85,119,0.06);--cycle-border:rgba(176,85,119,0.18);--cycle-text:#9e4068;
+  }
+  body.light-mode{background:#f8fafc;}
+
+  /* Theme toggle button */
+  .theme-toggle{position:fixed;top:calc(12px + env(safe-area-inset-top, 0px));right:12px;z-index:9999;width:38px;height:38px;border-radius:50%;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);transition:all 0.3s;}
+  .theme-toggle:hover{border-color:var(--ember);color:var(--ember);}
+
   body{font-family:'Inter',-apple-system,sans-serif;background:#0B1117;color:var(--text-bright);line-height:1.6;min-height:100vh;}
   .sg{font-family:'Space Grotesk',sans-serif;}
   a{color:var(--ocean);text-decoration:none;}a:hover{text-decoration:underline;}
@@ -742,6 +759,9 @@
 </style>
 </head>
 <body>
+
+<!-- Theme Toggle -->
+<button class="theme-toggle" id="themeToggleBtn" onclick="ahToggleTheme()" aria-label="Toggle light/dark mode">&#9788;</button>
 
 <!-- PWA Update Banner -->
 <div class="update-banner" id="updateBanner">
@@ -2436,6 +2456,27 @@
 </div>
 
 <script>
+// ═══════════════════════════════════════
+//  THEME TOGGLE (Light / Dark)
+// ═══════════════════════════════════════
+function ahToggleTheme() {
+  const isLight = document.body.classList.toggle('light-mode');
+  const btn = document.getElementById('themeToggleBtn');
+  btn.innerHTML = isLight ? '&#9790;' : '&#9788;'; // moon when light, sun when dark
+  try { localStorage.setItem('ah_theme', isLight ? 'light' : 'dark'); } catch(e) {}
+}
+// Apply saved theme immediately
+(function() {
+  try {
+    const saved = localStorage.getItem('ah_theme');
+    if (saved === 'light') {
+      document.body.classList.add('light-mode');
+      const btn = document.getElementById('themeToggleBtn');
+      if (btn) btn.innerHTML = '&#9790;';
+    }
+  } catch(e) {}
+})();
+
 // ═══════════════════════════════════════
 //  SVG ICON SYSTEM
 // ═══════════════════════════════════════
