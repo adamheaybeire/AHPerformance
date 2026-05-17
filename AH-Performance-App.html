@@ -4036,9 +4036,8 @@ function renderWLSessionPicker(showResume) {
   const _wkMonStr = _wkMon.toISOString().slice(0,10);
   const _wkSun = new Date(_wkMon.getTime() + 6*24*60*60*1000);
   const _wkSunStr = _wkSun.toISOString().slice(0,10);
-  // Only count workouts logged AFTER the current programme was assigned (prevents old programme's logs from matching)
-  const _progAssignedAt = progWeeks._assignedAt || 0;
-  const weekLogs = cid && WORKOUT_LOG[cid] ? WORKOUT_LOG[cid].filter(w => w.date >= _wkMonStr && w.date <= _wkSunStr && (w.timestamp || 0) >= _progAssignedAt) : [];
+  const _currentProgName = (week.label || '').toLowerCase();
+  const weekLogs = cid && WORKOUT_LOG[cid] ? WORKOUT_LOG[cid].filter(w => w.date >= _wkMonStr && w.date <= _wkSunStr) : [];
 
   html += `<div style="margin-bottom:12px;"><h3 style="color:var(--text-bright);font-size:15px;margin-bottom:2px;">${week.label || 'Current Week'}</h3><p style="font-size:11px;color:var(--text-dim);">Tap a session to start</p></div>`;
   html += '<div class="wl-session-pick">';
@@ -4049,6 +4048,9 @@ function renderWLSessionPicker(showResume) {
     const desc = isCardio ? (s.desc || 'Cardio session') : `${exCount} exercise${exCount !== 1 ? 's' : ''}`;
     const sNameLower = (s.name || '').toLowerCase();
     const logged = weekLogs.some(l => {
+      // Only match logs from the CURRENT programme (ignore old programme's logs even if same session name)
+      const lProgLabel = (l._programmeName || '').toLowerCase();
+      if (lProgLabel && _currentProgName && lProgLabel !== _currentProgName) return false;
       const lName = (l.sessionName || '').toLowerCase();
       const lProgName = (l._programmeSessionName || '').toLowerCase();
       return lName === sNameLower || lProgName === sNameLower;
@@ -4072,6 +4074,7 @@ function startWorkoutSession(weekKey, sessionIdx) {
   wlCurrentSession = JSON.parse(JSON.stringify(week.sessions[sessionIdx]));
   wlCurrentSession._weekKey = weekKey;
   wlCurrentSession._sessionIdx = sessionIdx;
+  wlCurrentSession._programmeName = week.label || '';
   wlActive = true;
   wlPaused = false;
   wlSetData = {};
@@ -4995,6 +4998,7 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
     date: today,
     sessionName: wlCurrentSession.name,
     _programmeSessionName: wlCurrentSession.name,
+    _programmeName: wlCurrentSession._programmeName || '',
     day: wlCurrentSession.day || '',
     type: _resolvedType,
     duration: duration,
