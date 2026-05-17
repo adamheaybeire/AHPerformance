@@ -4050,7 +4050,7 @@ function renderWLSessionPicker(showResume) {
     const logged = weekLogs.some(l => {
       // Only match logs from the CURRENT programme (ignore old programme's logs even if same session name)
       const lProgLabel = (l._programmeName || '').toLowerCase();
-      if (lProgLabel && _currentProgName && lProgLabel !== _currentProgName) return false;
+      if (_currentProgName && lProgLabel !== _currentProgName) return false;
       const lName = (l.sessionName || '').toLowerCase();
       const lProgName = (l._programmeSessionName || '').toLowerCase();
       return lName === sNameLower || lProgName === sNameLower;
