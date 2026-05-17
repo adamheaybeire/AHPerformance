@@ -585,7 +585,7 @@
   .checkin-badge{background:var(--ember)!important;color:white!important;font-size:9px!important;padding:1px 6px!important;}
 
   /* Client notification bell (top-right of greeting) */
-  .client-notif-bell{position:absolute;top:16px;right:16px;cursor:pointer;padding:8px;border-radius:10px;transition:background 0.15s;}
+  .client-notif-bell{cursor:pointer;padding:8px;border-radius:10px;transition:background 0.15s;}
   .client-notif-bell:hover{background:rgba(255,255,255,0.05);}
   .client-notif-count{position:absolute;top:2px;right:2px;background:var(--danger);color:white;font-size:9px;font-weight:700;font-family:'Space Grotesk',sans-serif;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
   .client-notif-dropdown{position:absolute;top:44px;right:0;width:340px;background:var(--slate-card);border:1px solid var(--slate-border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:100;overflow:hidden;max-height:400px;overflow-y:auto;}
@@ -878,7 +878,7 @@
           <span class="sg" style="font-size:13px;font-weight:700;color:var(--ember);">AH</span>
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
-          <div class="client-notif-bell" onclick="toggleClientNotifs()" style="position:relative;">
+          <div class="client-notif-bell" onclick="toggleClientNotifs()" style="position:relative;display:flex;align-items:center;">
             <span id="clientNotifBellIcon"></span>
             <span class="client-notif-count hidden" id="clientNotifCount">0</span>
           </div>
