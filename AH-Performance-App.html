@@ -4047,8 +4047,28 @@ function renderWLSessionPicker(showResume) {
     const desc = isCardio ? (s.desc || 'Cardio session') : `${exCount} exercise${exCount !== 1 ? 's' : ''}`;
     // Match by session name (case-insensitive) across the whole week
     // Also check _programmeSessionName in case user renamed it in edit
+    // For cardio/run sessions: also match any run workout logged on the same day of the week
     const sNameLower = (s.name || '').toLowerCase();
-    const logged = weekLogs.some(l => (l.sessionName || '').toLowerCase() === sNameLower || (l._programmeSessionName || '').toLowerCase() === sNameLower);
+    const _sRunRx = /run|jog|sprint|track|threshold|tempo|interval|fartlek|hevo|parkrun/i;
+    const _sIsRun = isCardio || _sRunRx.test(s.name || '');
+    const _sDayLower = (s.day || '').toLowerCase();
+    const logged = weekLogs.some(l => {
+      // Direct name match (exact or programme original)
+      const lName = (l.sessionName || '').toLowerCase();
+      const lProgName = (l._programmeSessionName || '').toLowerCase();
+      if (lName === sNameLower || lProgName === sNameLower) return true;
+      // For run/cardio sessions: match any run/cardio workout on the same day of the week
+      if (_sIsRun) {
+        const lType = l.type || '';
+        const lIsRun = lType === 'cardio' || _sRunRx.test(l.sessionName || '');
+        if (lIsRun && l.date) {
+          const lDate = new Date(l.date + 'T12:00:00');
+          const lDay = lDate.toLocaleDateString('en-GB', { weekday: 'long' }).toLowerCase();
+          if (lDay === _sDayLower) return true;
+        }
+      }
+      return false;
+    });
     html += `<div class="wl-session-card ${typeClass}" onclick="startWorkoutSession(${latestKey}, ${i})" ${logged ? 'style="opacity:0.5;"' : ''}>
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div><h3>${s.day} — ${s.name}</h3><p>${desc}</p></div>
