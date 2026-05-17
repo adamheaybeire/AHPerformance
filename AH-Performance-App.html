@@ -4036,10 +4036,7 @@ function renderWLSessionPicker(showResume) {
   const _wkMonStr = _wkMon.toISOString().slice(0,10);
   const _wkSun = new Date(_wkMon.getTime() + 6*24*60*60*1000);
   const _wkSunStr = _wkSun.toISOString().slice(0,10);
-  // Also check previous week (in case programme was just reassigned and sessions were logged last week)
-  const _prevMon = new Date(_wkMon.getTime() - 7*24*60*60*1000);
-  const _prevMonStr = _prevMon.toISOString().slice(0,10);
-  const weekLogs = cid && WORKOUT_LOG[cid] ? WORKOUT_LOG[cid].filter(w => w.date >= _prevMonStr && w.date <= _wkSunStr) : [];
+  const weekLogs = cid && WORKOUT_LOG[cid] ? WORKOUT_LOG[cid].filter(w => w.date >= _wkMonStr && w.date <= _wkSunStr) : [];
 
   html += `<div style="margin-bottom:12px;"><h3 style="color:var(--text-bright);font-size:15px;margin-bottom:2px;">${week.label || 'Current Week'}</h3><p style="font-size:11px;color:var(--text-dim);">Tap a session to start</p></div>`;
   html += '<div class="wl-session-pick">';
