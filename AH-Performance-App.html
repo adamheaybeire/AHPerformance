@@ -45,9 +45,7 @@
   }
   body.light-mode{background:#f8fafc;}
 
-  /* Theme toggle button */
-  .theme-toggle{position:fixed;top:calc(14px + env(safe-area-inset-top, 0px));right:52px;z-index:9999;width:28px;height:28px;border-radius:50%;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.15);transition:all 0.3s;}
-  .theme-toggle:hover{border-color:var(--ember);color:var(--ember);}
+  /* Theme toggle button — inline next to notification bell on home */
 
   body{font-family:'Inter',-apple-system,sans-serif;background:#0B1117;color:var(--text-bright);line-height:1.6;min-height:100vh;}
   .sg{font-family:'Space Grotesk',sans-serif;}
@@ -760,9 +758,6 @@
 </head>
 <body>
 
-<!-- Theme Toggle -->
-<button class="theme-toggle" id="themeToggleBtn" onclick="ahToggleTheme()" aria-label="Toggle light/dark mode">&#9788;</button>
-
 <!-- PWA Update Banner -->
 <div class="update-banner" id="updateBanner">
   <span class="update-msg">A new version is available</span>
@@ -882,9 +877,12 @@
         <div style="width:30px;height:30px;border-radius:8px;border:1.5px solid var(--ember);display:flex;align-items:center;justify-content:center;">
           <span class="sg" style="font-size:13px;font-weight:700;color:var(--ember);">AH</span>
         </div>
-        <div class="client-notif-bell" onclick="toggleClientNotifs()" style="position:relative;">
-          <span id="clientNotifBellIcon"></span>
-          <span class="client-notif-count hidden" id="clientNotifCount">0</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="client-notif-bell" onclick="toggleClientNotifs()" style="position:relative;">
+            <span id="clientNotifBellIcon"></span>
+            <span class="client-notif-count hidden" id="clientNotifCount">0</span>
+          </div>
+          <button onclick="ahToggleTheme()" id="themeToggleBtn" style="width:24px;height:24px;border-radius:50%;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-muted);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="Toggle light/dark mode">&#9788;</button>
         </div>
         <div class="client-notif-dropdown hidden" id="clientNotifDropdown">
           <div style="padding:12px 16px;border-bottom:1px solid var(--slate-border);display:flex;justify-content:space-between;align-items:center;">
@@ -4048,8 +4046,9 @@ function renderWLSessionPicker(showResume) {
     const exCount = s.exercises ? s.exercises.length : 0;
     const desc = isCardio ? (s.desc || 'Cardio session') : `${exCount} exercise${exCount !== 1 ? 's' : ''}`;
     // Match by session name (case-insensitive) across the whole week
+    // Also check _programmeSessionName in case user renamed it in edit
     const sNameLower = (s.name || '').toLowerCase();
-    const logged = weekLogs.some(l => (l.sessionName || '').toLowerCase() === sNameLower);
+    const logged = weekLogs.some(l => (l.sessionName || '').toLowerCase() === sNameLower || (l._programmeSessionName || '').toLowerCase() === sNameLower);
     html += `<div class="wl-session-card ${typeClass}" onclick="startWorkoutSession(${latestKey}, ${i})" ${logged ? 'style="opacity:0.5;"' : ''}>
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div><h3>${s.day} — ${s.name}</h3><p>${desc}</p></div>
@@ -4328,6 +4327,21 @@ function _filterRealCardio(cardioEntries) {
     const n = (e.activity || e.exercise || '').toLowerCase();
     return !abWords.some(k => n.includes(k));
   });
+}
+
+// Normalize running-variant activity names to "Outdoor Run" for cardio progress grouping
+function _normalizeCardioActivity(name) {
+  if (!name) return name;
+  const n = name.toLowerCase();
+  const runKeywords = ['run','jog','sprint','track','threshold','tempo','interval','fartlek','hevo','5k','10k','marathon','half marathon','parkrun'];
+  const isRunning = runKeywords.some(k => n.includes(k));
+  if (isRunning) return 'Outdoor Run';
+  // Normalize other common cardio types
+  if (n.includes('cycle') || n.includes('bike') || n.includes('spin')) return 'Cycling';
+  if (n.includes('swim')) return 'Swimming';
+  if (n.includes('row')) return 'Rowing';
+  if (n.includes('walk') || n.includes('hike')) return 'Walking';
+  return name; // Keep original name for anything else
 }
 
 function _isSledExercise(name) {
@@ -4956,7 +4970,7 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
   let _resolvedType = wlCurrentSession.type || 'strength';
   if (_resolvedType !== 'cardio') {
     const _sn = (wlCurrentSession.name || '').toLowerCase();
-    const _cardioKeywords = ['run','jog','sprint','cycle','swim','walk','row','bike','cardio','threshold','tempo','interval','fartlek'];
+    const _cardioKeywords = ['run','jog','sprint','cycle','swim','walk','row','bike','cardio','threshold','tempo','interval','fartlek','track','hevo','parkrun'];
     const _nameIsCardio = _cardioKeywords.some(k => _sn.includes(k));
     const _allExCardio = exerciseLogs.length > 0 && exerciseLogs.every(ex => {
       const en = (ex.exercise || '').toLowerCase();
@@ -4976,6 +4990,7 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
   const entry = {
     date: today,
     sessionName: wlCurrentSession.name,
+    _programmeSessionName: wlCurrentSession.name,
     day: wlCurrentSession.day || '',
     type: _resolvedType,
     duration: duration,
@@ -5005,10 +5020,11 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
     const cardioTime = document.getElementById('wlCardioTime')?.value || duration || null;
     const cardioAvgHR = parseInt(document.getElementById('wlCardioAvgHR')?.value) || null;
     const cardioMaxHR = parseInt(document.getElementById('wlCardioMaxHR')?.value) || null;
+    const _normActivity = _normalizeCardioActivity(wlCurrentSession.name);
     PROGRESS_DATA[cid].cardio.push({
       date: today,
-      activity: wlCurrentSession.name,
-      exercise: wlCurrentSession.name,
+      activity: _normActivity,
+      exercise: _normActivity,
       distance: cardioDist,
       unit: cardioUnit,
       time: cardioTime,
@@ -5046,10 +5062,11 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
       const timeMins = Math.floor(totalTimeSec/60);
       const timeSecs = totalTimeSec % 60;
       const timeStr = totalTimeSec > 0 ? `${timeMins}:${String(timeSecs).padStart(2,'0')}` : '';
+      const _normExActivity = _normalizeCardioActivity(ex.name) || _normalizeCardioActivity(wlCurrentSession.name) || ex.name;
       PROGRESS_DATA[cid].cardio.push({
         date: today,
-        activity: ex.name,
-        exercise: ex.name,
+        activity: _normExActivity,
+        exercise: _normExActivity,
         distance: totalDist > 0 ? totalDist : null,
         unit: distUnit,
         time: timeStr || null,
@@ -5295,10 +5312,11 @@ function saveQuickRun() {
   WORKOUT_LOG[cid].sort((a,b) => (b.date||'').localeCompare(a.date||''));
   // Save to PROGRESS_DATA for cardio charts
   if (!PROGRESS_DATA[cid]) PROGRESS_DATA[cid] = { strength: [], cardio: [], measurements: [], wearable: [], weekly: [] };
+  const _normQRActivity = _normalizeCardioActivity(name) || name;
   PROGRESS_DATA[cid].cardio.push({
     date: date,
-    activity: name,
-    exercise: name,
+    activity: _normQRActivity,
+    exercise: _normQRActivity,
     distance: dist > 0 ? dist : null,
     unit: distUnit,
     time: timeStr || null,
@@ -5630,7 +5648,8 @@ function saveCPCardio() {
   if (!cid) return;
   if (!PROGRESS_DATA[cid]) PROGRESS_DATA[cid] = { strength: [], cardio: [], measurements: [], wearable: [], weekly: [] };
   const pd = PROGRESS_DATA[cid];
-  pd.cardio.unshift({date, activity, distance, unit, time, avgHR, maxHR, rpe, notes});
+  const _normManualAct = _normalizeCardioActivity(activity) || activity;
+  pd.cardio.unshift({date, activity: _normManualAct, distance, unit, time, avgHR, maxHR, rpe, notes});
   pd.cardio.sort((a,b) => b.date.localeCompare(a.date));
   scheduleSave();
   // Reset
@@ -5853,11 +5872,12 @@ function editWorkoutEntry(idx) {
   html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Session Name</label><input type="text" id="histEditName${idx}" value="${(w.sessionName||'').replace(/"/g,'&quot;')}" style="${fieldStyle}"></div>`;
   // Detect cardio/run session early so we can hide Duration for those
   const _wNameLower = (w.sessionName || '').toLowerCase();
-  const _isRunOrCardio = w.type === 'cardio' || _wNameLower.includes('run') || _wNameLower.includes('jog') || _wNameLower.includes('sprint') || _wNameLower.includes('cycle') || _wNameLower.includes('swim') || _wNameLower.includes('walk') || _wNameLower.includes('row');
+  const _isRunOrCardio = w.type === 'cardio' || _wNameLower.includes('run') || _wNameLower.includes('jog') || _wNameLower.includes('sprint') || _wNameLower.includes('cycle') || _wNameLower.includes('swim') || _wNameLower.includes('walk') || _wNameLower.includes('row') || _wNameLower.includes('track') || _wNameLower.includes('threshold') || _wNameLower.includes('tempo') || _wNameLower.includes('fartlek') || _wNameLower.includes('interval') || _wNameLower.includes('hevo');
   // Cardio Details — placed right after Session Name, above Date
   if (_isRunOrCardio && (!w.exercises || w.exercises.length === 0)) {
     const pd = PROGRESS_DATA[cid];
-    const cardioEntry = pd?.cardio?.find(c => c.date === w.date && (c.activity === w.sessionName || c.exercise === w.sessionName));
+    const _normWName = _normalizeCardioActivity(w.sessionName) || w.sessionName;
+    const cardioEntry = pd?.cardio?.find(c => c.date === w.date && (c.activity === w.sessionName || c.exercise === w.sessionName || c.activity === _normWName));
     html += `<div style="margin-bottom:10px;padding:10px;background:var(--slate-raised);border-radius:8px;">
       <div style="font-size:11px;font-weight:600;color:var(--ocean);margin-bottom:8px;">Cardio Details</div>
       <div style="display:grid;grid-template-columns:1fr 60px 1fr;gap:6px;margin-bottom:8px;">
@@ -5946,15 +5966,19 @@ function saveHistoryEdit(idx) {
   w.notes = document.getElementById(`histEditNotes${idx}`)?.value || '';
   // Update cardio progress entry if this is a generic cardio/run session
   const _sNameLower = (w.sessionName || '').toLowerCase();
-  const _isSaveRunOrCardio = w.type === 'cardio' || _sNameLower.includes('run') || _sNameLower.includes('jog') || _sNameLower.includes('sprint') || _sNameLower.includes('cycle') || _sNameLower.includes('swim') || _sNameLower.includes('walk') || _sNameLower.includes('row');
+  const _isSaveRunOrCardio = w.type === 'cardio' || _sNameLower.includes('run') || _sNameLower.includes('jog') || _sNameLower.includes('sprint') || _sNameLower.includes('cycle') || _sNameLower.includes('swim') || _sNameLower.includes('walk') || _sNameLower.includes('row') || _sNameLower.includes('track') || _sNameLower.includes('threshold') || _sNameLower.includes('tempo') || _sNameLower.includes('fartlek') || _sNameLower.includes('interval') || _sNameLower.includes('hevo');
   if (_isSaveRunOrCardio && (!w.exercises || w.exercises.length === 0)) {
     const pd = PROGRESS_DATA[cid];
     if (pd?.cardio) {
-      let cardioEntry = pd.cardio.find(c => c.date === w.date && (c.activity === w.sessionName || c.exercise === w.sessionName));
+      const _normSaveName = _normalizeCardioActivity(w.sessionName) || w.sessionName;
+      let cardioEntry = pd.cardio.find(c => c.date === w.date && (c.activity === _normSaveName || c.activity === w.sessionName || c.exercise === w.sessionName));
       if (!cardioEntry) {
-        cardioEntry = { date: w.date, activity: w.sessionName, exercise: w.sessionName, sets: [], rpe: w.rpe };
+        cardioEntry = { date: w.date, activity: _normSaveName, exercise: _normSaveName, sets: [], rpe: w.rpe };
         pd.cardio.push(cardioEntry);
       }
+      // Ensure normalized name
+      cardioEntry.activity = _normSaveName;
+      cardioEntry.exercise = _normSaveName;
       const editDist = parseFloat(document.getElementById(`histEditDist${idx}`)?.value) || null;
       const editUnit = document.getElementById(`histEditDistUnit${idx}`)?.value || 'km';
       const editTime = document.getElementById(`histEditTime${idx}`)?.value || null;
@@ -6109,7 +6133,7 @@ function _buildOneWeek(workouts, monday, localDateStr) {
       if (dParts.length >= 3) totalSecs = (dParts[0]||0)*3600 + (dParts[1]||0)*60 + (dParts[2]||0); // H:MM:SS
       else totalSecs = (dParts[0]||0)*60 + (dParts[1]||0); // MM:SS
       const durH = parseFloat((totalSecs / 3600).toFixed(3));
-      const _runRx = /\brun\b|\brunning\b|\bjog\b|\bjogging\b|\bsprint\b/i;
+      const _runRx = /\brun\b|\brunning\b|\bjog\b|\bjogging\b|\bsprint\b|\btrack\b|\bthreshold\b|\btempo\b|\binterval\b|\bfartlek\b|\bhevo\b/i;
       const runExercises = (w.exercises || []).filter(e => _runRx.test(e.name || ''));
       // Also check session name for running (covers pure cardio sessions with no exercises)
       const isRunSession = _runRx.test(w.sessionName || '');
