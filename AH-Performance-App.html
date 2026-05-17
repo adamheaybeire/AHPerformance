@@ -4036,7 +4036,9 @@ function renderWLSessionPicker(showResume) {
   const _wkMonStr = _wkMon.toISOString().slice(0,10);
   const _wkSun = new Date(_wkMon.getTime() + 6*24*60*60*1000);
   const _wkSunStr = _wkSun.toISOString().slice(0,10);
-  const weekLogs = cid && WORKOUT_LOG[cid] ? WORKOUT_LOG[cid].filter(w => w.date >= _wkMonStr && w.date <= _wkSunStr) : [];
+  // Only count workouts logged AFTER the current programme was assigned (prevents old programme's logs from matching)
+  const _progAssignedAt = progWeeks._assignedAt || 0;
+  const weekLogs = cid && WORKOUT_LOG[cid] ? WORKOUT_LOG[cid].filter(w => w.date >= _wkMonStr && w.date <= _wkSunStr && (w.timestamp || 0) >= _progAssignedAt) : [];
 
   html += `<div style="margin-bottom:12px;"><h3 style="color:var(--text-bright);font-size:15px;margin-bottom:2px;">${week.label || 'Current Week'}</h3><p style="font-size:11px;color:var(--text-dim);">Tap a session to start</p></div>`;
   html += '<div class="wl-session-pick">';
@@ -4045,9 +4047,6 @@ function renderWLSessionPicker(showResume) {
     const typeClass = isCardio ? 'cardio' : 'strength';
     const exCount = s.exercises ? s.exercises.length : 0;
     const desc = isCardio ? (s.desc || 'Cardio session') : `${exCount} exercise${exCount !== 1 ? 's' : ''}`;
-    // Match by session name (case-insensitive) across the whole week
-    // Also check _programmeSessionName in case user renamed it in edit
-    // For cardio/run sessions: also match any run workout logged on the same day of the week
     const sNameLower = (s.name || '').toLowerCase();
     const logged = weekLogs.some(l => {
       const lName = (l.sessionName || '').toLowerCase();
@@ -11144,11 +11143,12 @@ window.addEventListener('message', function(e) {
     if (!CLIENT_PROGRAMMES) window.CLIENT_PROGRAMMES = {};
     if (!CLIENT_PROGRAMMES[clientId]) CLIENT_PROGRAMMES[clientId] = {};
     // If this is a new programme (not update), clear old weeks to avoid confusion
-    // but archive them so workout history still makes sense
     if (!isUpdate) {
       CLIENT_PROGRAMMES[clientId] = {};
     }
     Object.assign(CLIENT_PROGRAMMES[clientId], converted);
+    // Store assignment timestamp so LOGGED badge only counts workouts logged under this programme
+    CLIENT_PROGRAMMES[clientId]._assignedAt = Date.now();
 
     // If this is James Wilson (demo), also update global PROGRAMME_WEEKS
     if (clientId === 1) {

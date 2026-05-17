@@ -1,7 +1,7 @@
 // AH Performance — Service Worker
 // Enables offline access and "Add to Home Screen" as a real app
 
-const CACHE_NAME = 'ah-performance-v72';
+const CACHE_NAME = 'ah-performance-v73';
 const ASSETS_TO_CACHE = [
   '/AH-Performance-App.html',
   '/AH-Programme-Builder.html',
