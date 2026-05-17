@@ -4036,7 +4036,10 @@ function renderWLSessionPicker(showResume) {
   const _wkMonStr = _wkMon.toISOString().slice(0,10);
   const _wkSun = new Date(_wkMon.getTime() + 6*24*60*60*1000);
   const _wkSunStr = _wkSun.toISOString().slice(0,10);
-  const weekLogs = cid && WORKOUT_LOG[cid] ? WORKOUT_LOG[cid].filter(w => w.date >= _wkMonStr && w.date <= _wkSunStr) : [];
+  // Also check previous week (in case programme was just reassigned and sessions were logged last week)
+  const _prevMon = new Date(_wkMon.getTime() - 7*24*60*60*1000);
+  const _prevMonStr = _prevMon.toISOString().slice(0,10);
+  const weekLogs = cid && WORKOUT_LOG[cid] ? WORKOUT_LOG[cid].filter(w => w.date >= _prevMonStr && w.date <= _wkSunStr) : [];
 
   html += `<div style="margin-bottom:12px;"><h3 style="color:var(--text-bright);font-size:15px;margin-bottom:2px;">${week.label || 'Current Week'}</h3><p style="font-size:11px;color:var(--text-dim);">Tap a session to start</p></div>`;
   html += '<div class="wl-session-pick">';
@@ -4057,14 +4060,24 @@ function renderWLSessionPicker(showResume) {
       const lName = (l.sessionName || '').toLowerCase();
       const lProgName = (l._programmeSessionName || '').toLowerCase();
       if (lName === sNameLower || lProgName === sNameLower) return true;
-      // For run/cardio sessions: match any run/cardio workout on the same day of the week
+      // For cardio/run sessions: match any cardio workout on the same day of the week
       if (_sIsRun) {
         const lType = l.type || '';
         const lIsRun = lType === 'cardio' || _sRunRx.test(l.sessionName || '');
         if (lIsRun && l.date) {
           const lDate = new Date(l.date + 'T12:00:00');
-          const lDay = lDate.toLocaleDateString('en-GB', { weekday: 'long' }).toLowerCase();
+          const lDay = lDate.toLocaleDateString('en-GB', { weekday: 'short' }).slice(0,3).toLowerCase();
           if (lDay === _sDayLower) return true;
+        }
+      }
+      // For any cardio session: also match if log type is cardio and dates fall on the same weekday
+      if (isCardio && l.date) {
+        const lType = l.type || '';
+        const lIsCardio = lType === 'cardio' || _sRunRx.test(l.sessionName || '');
+        if (lIsCardio) {
+          const lDate2 = new Date(l.date + 'T12:00:00');
+          const lDay2 = lDate2.toLocaleDateString('en-GB', { weekday: 'short' }).slice(0,3).toLowerCase();
+          if (lDay2 === _sDayLower) return true;
         }
       }
       return false;
@@ -11158,6 +11171,11 @@ window.addEventListener('message', function(e) {
     const converted = convertBuilderToClientFormat(programme, weekNumber, programmeName);
     if (!CLIENT_PROGRAMMES) window.CLIENT_PROGRAMMES = {};
     if (!CLIENT_PROGRAMMES[clientId]) CLIENT_PROGRAMMES[clientId] = {};
+    // If this is a new programme (not update), clear old weeks to avoid confusion
+    // but archive them so workout history still makes sense
+    if (!isUpdate) {
+      CLIENT_PROGRAMMES[clientId] = {};
+    }
     Object.assign(CLIENT_PROGRAMMES[clientId], converted);
 
     // If this is James Wilson (demo), also update global PROGRAMME_WEEKS
