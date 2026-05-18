@@ -2731,9 +2731,11 @@ function _buildState() {
 
 function _applyState(state, _source) {
   if (!state || !state.savedAt) return;
-  // SAFETY: never replace existing clients with fewer clients (protects against data wipe)
+  // SAFETY: block if incoming state has drastically fewer clients (protects against data wipe from empty deploys)
+  // Allow small reductions (1-2 clients) — these are legitimate deletions
   const incomingClients = (state.clients || []).length;
-  if (CLIENTS.length > 0 && incomingClients < CLIENTS.length) {
+  const clientDiff = CLIENTS.length - incomingClients;
+  if (CLIENTS.length > 2 && clientDiff > 2) {
     console.warn('AH Performance: BLOCKED state apply — would reduce clients from ' + CLIENTS.length + ' to ' + incomingClients + ' (source: ' + (_source||'unknown') + ')');
     return;
   }
@@ -2765,10 +2767,11 @@ function _applyState(state, _source) {
     USERS.length = 0;
     savedUsers.forEach(u => USERS.push(u));
   }
-  if (state.workoutLog) Object.assign(WORKOUT_LOG, state.workoutLog);
-  if (state.checkinLog) Object.assign(CHECKIN_LOG, state.checkinLog);
-  if (state.programmeWeeks) Object.assign(PROGRAMME_WEEKS, state.programmeWeeks);
-  if (state.progressData) Object.assign(PROGRESS_DATA, state.progressData);
+  // FULL REPLACE for dict-shaped stores (prevents deleted client data from resurrecting via Object.assign merge)
+  if (state.workoutLog) { Object.keys(WORKOUT_LOG).forEach(k => delete WORKOUT_LOG[k]); Object.assign(WORKOUT_LOG, state.workoutLog); }
+  if (state.checkinLog) { Object.keys(CHECKIN_LOG).forEach(k => delete CHECKIN_LOG[k]); Object.assign(CHECKIN_LOG, state.checkinLog); }
+  if (state.programmeWeeks) { Object.keys(PROGRAMME_WEEKS).forEach(k => delete PROGRAMME_WEEKS[k]); Object.assign(PROGRAMME_WEEKS, state.programmeWeeks); }
+  if (state.progressData) { Object.keys(PROGRESS_DATA).forEach(k => delete PROGRESS_DATA[k]); Object.assign(PROGRESS_DATA, state.progressData); }
   if (state.wellbeingData && state.wellbeingData.length) { WELLBEING_DATA.length = 0; state.wellbeingData.forEach(w => WELLBEING_DATA.push(w)); }
   if (state.ptNotifications && state.ptNotifications.length) {
     // Merge notifications: preserve local read/dismissed state, add new ones only
@@ -2781,17 +2784,17 @@ function _applyState(state, _source) {
     PT_NOTIFICATIONS.length = 0;
     state.ptNotifications.forEach(n => PT_NOTIFICATIONS.push(n));
   }
-  if (state.clientNotifications) Object.assign(CLIENT_NOTIFICATIONS, state.clientNotifications);
+  if (state.clientNotifications) { Object.keys(CLIENT_NOTIFICATIONS).forEach(k => delete CLIENT_NOTIFICATIONS[k]); Object.assign(CLIENT_NOTIFICATIONS, state.clientNotifications); }
   if (state.emailQueue && state.emailQueue.length) { EMAIL_QUEUE.length = 0; state.emailQueue.forEach(e => EMAIL_QUEUE.push(e)); }
   if (state.ptConversations && state.ptConversations.length) { PT_CONVERSATIONS.length = 0; state.ptConversations.forEach(c => PT_CONVERSATIONS.push(c)); }
   if (state.onboardingSubmissions && state.onboardingSubmissions.length) { ONBOARDING_SUBMISSIONS.length = 0; state.onboardingSubmissions.forEach(s => ONBOARDING_SUBMISSIONS.push(s)); }
-  if (state.clientProgrammes && typeof CLIENT_PROGRAMMES !== 'undefined') Object.assign(CLIENT_PROGRAMMES, state.clientProgrammes);
+  if (state.clientProgrammes && typeof CLIENT_PROGRAMMES !== 'undefined') { Object.keys(CLIENT_PROGRAMMES).forEach(k => delete CLIENT_PROGRAMMES[k]); Object.assign(CLIENT_PROGRAMMES, state.clientProgrammes); }
   if (state.ptProgrammes && typeof PT_PROGRAMMES !== 'undefined') { PT_PROGRAMMES.length = 0; state.ptProgrammes.forEach(p => PT_PROGRAMMES.push(p)); }
-  if (state.cycleLog) Object.assign(CYCLE_LOG, state.cycleLog);
-  if (state.clientNutrition) Object.assign(CLIENT_NUTRITION, state.clientNutrition);
-  if (state.foodLog) Object.assign(FOOD_LOG, state.foodLog);
-  if (state.neuroData) Object.assign(NEURO_DATA, state.neuroData);
-  if (state.neuroEpisodes) Object.assign(NEURO_EPISODES, state.neuroEpisodes);
+  if (state.cycleLog) { Object.keys(CYCLE_LOG).forEach(k => delete CYCLE_LOG[k]); Object.assign(CYCLE_LOG, state.cycleLog); }
+  if (state.clientNutrition) { Object.keys(CLIENT_NUTRITION).forEach(k => delete CLIENT_NUTRITION[k]); Object.assign(CLIENT_NUTRITION, state.clientNutrition); }
+  if (state.foodLog) { Object.keys(FOOD_LOG).forEach(k => delete FOOD_LOG[k]); Object.assign(FOOD_LOG, state.foodLog); }
+  if (state.neuroData) { Object.keys(NEURO_DATA).forEach(k => delete NEURO_DATA[k]); Object.assign(NEURO_DATA, state.neuroData); }
+  if (state.neuroEpisodes) { Object.keys(NEURO_EPISODES).forEach(k => delete NEURO_EPISODES[k]); Object.assign(NEURO_EPISODES, state.neuroEpisodes); }
   // Clean up: fix any "undefined" client names in PT notifications
   PT_NOTIFICATIONS.forEach(n => {
     if (!n.client || n.client === 'undefined' || n.client === 'null') {
@@ -5298,9 +5301,15 @@ function saveQuickRun() {
     durationStr = tH > 0 ? tH + ':' + String(tM).padStart(2,'0') + ':' + String(tS).padStart(2,'0') : tM + ':' + String(tS).padStart(2,'0');
   }
   // Save to WORKOUT_LOG
+  // Get current programme name so LOGGED badge can match
+  const _qrProgWeeks = getClientProgrammeWeeks();
+  const _qrWeekKeys = Object.keys(_qrProgWeeks).map(Number).sort();
+  const _qrProgName = _qrWeekKeys.length ? (_qrProgWeeks[_qrWeekKeys[_qrWeekKeys.length - 1]].label || '') : '';
   const entry = {
     date: date,
     sessionName: name,
+    _programmeSessionName: name,
+    _programmeName: _qrProgName,
     day: '',
     type: 'cardio',
     duration: durationStr,
@@ -6020,6 +6029,20 @@ function saveHistoryEdit(idx) {
         }
       }
     }
+  }
+  // Sync strength exercise edits back to PROGRESS_DATA
+  if (w.exercises && w.exercises.length && PROGRESS_DATA[cid]?.strength) {
+    const pd = PROGRESS_DATA[cid];
+    w.exercises.forEach(ex => {
+      const exName = (ex.name || '').toLowerCase();
+      // Find matching strength progress entry by date + exercise name
+      const progEntry = pd.strength.find(s => s.date === w.date && (s.exercise || '').toLowerCase() === exName);
+      if (progEntry) {
+        progEntry.sets = ex.sets;
+        progEntry.rpe = w.rpe;
+        if (dateVal && dateVal !== progEntry.date) progEntry.date = dateVal;
+      }
+    });
   }
   // Recalculate volume
   let vol = 0, sets = 0;
@@ -7145,6 +7168,16 @@ function removeClient() {
   if (typeof CLIENT_PROGRAMMES !== 'undefined') delete CLIENT_PROGRAMMES[cid];
   delete PROGRAMME_WEEKS[cid];
   delete CYCLE_LOG[cid];
+  delete FOOD_LOG[cid];
+  delete CLIENT_NUTRITION[cid];
+  if (typeof NEURO_DATA !== 'undefined') delete NEURO_DATA[cid];
+  if (typeof NEURO_EPISODES !== 'undefined') delete NEURO_EPISODES[cid];
+  // Remove wellbeing entries for this client
+  if (WELLBEING_DATA && WELLBEING_DATA.length) {
+    for (let i = WELLBEING_DATA.length - 1; i >= 0; i--) {
+      if (WELLBEING_DATA[i].clientId === cid) WELLBEING_DATA.splice(i, 1);
+    }
+  }
   // Remove PT notifications about this client
   for (let i = PT_NOTIFICATIONS.length - 1; i >= 0; i--) {
     if (PT_NOTIFICATIONS[i].clientId === cid) PT_NOTIFICATIONS.splice(i, 1);
@@ -9566,11 +9599,9 @@ function toggleWorkoutDetail(wId) {
 }
 
 function saveWorkoutNote(wId, note) {
-  // In production, this would save to the database
-  // For demo, find the workout and update the note
   for (const cId in WORKOUT_LOG) {
     const w = WORKOUT_LOG[cId].find(x => x.id === wId);
-    if (w) { w.notes = note; break; }
+    if (w) { w.notes = note; scheduleSave(); break; }
   }
 }
 
@@ -11114,6 +11145,9 @@ window.addEventListener('message', function(e) {
     // If so, UPDATE it in place instead of creating a duplicate
     let existing = PT_PROGRAMMES.find(p => p.clientId === clientId && p.weekNumber === weekNumber && p.status === 'active');
     let isUpdate = false;
+
+    // Deactivate ALL other active programmes for this client (prevents accumulation)
+    PT_PROGRAMMES.filter(p => p.clientId === clientId && p.status === 'active' && p !== existing).forEach(p => { p.status = 'inactive'; });
 
     if (existing) {
       // Update in place
