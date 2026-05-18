@@ -4980,13 +4980,17 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
   let _resolvedType = wlCurrentSession.type || 'strength';
   if (_resolvedType !== 'cardio') {
     const _sn = (wlCurrentSession.name || '').toLowerCase();
-    const _cardioKeywords = ['run','jog','sprint','cycle','swim','walk','row','bike','cardio','threshold','tempo','interval','fartlek','track','hevo','parkrun'];
+    const _cardioKeywords = ['run','jog','sprint','cycle','swim','walk','row','bike','threshold','tempo','interval','fartlek','track','hevo','parkrun'];
     const _nameIsCardio = _cardioKeywords.some(k => _sn.includes(k));
-    const _allExCardio = exerciseLogs.length > 0 && exerciseLogs.every(ex => {
-      const en = (ex.exercise || '').toLowerCase();
-      return en.includes('run') || en.includes('jog') || en.includes('sprint') || en.includes('cycle') || en.includes('swim') || en.includes('walk') || en.includes('row') || en.includes('bike') || en.includes('cardio');
-    });
-    if (_nameIsCardio || _allExCardio) _resolvedType = 'cardio';
+    const _isCardioEx = (en) => /\brun\b|jog|sprint|cycle|swim|walk|row|bike|ski.*erg|assault.*bike|cardio/i.test(en);
+    const _allExCardio = exerciseLogs.length > 0 && exerciseLogs.every(ex => _isCardioEx(ex.name || ''));
+    // Only use session name as hint if there are NO logged exercises (pure cardio session)
+    // If exercises exist, let the exercises determine the type — mixed sessions stay as 'strength'
+    if (exerciseLogs.length === 0 && _nameIsCardio) {
+      _resolvedType = 'cardio';
+    } else if (_allExCardio) {
+      _resolvedType = 'cardio';
+    }
   }
   // Capture cardio distance/time at session level for weekly summary
   let sessionDistance = null, sessionDistUnit = 'km', sessionTime = null;
