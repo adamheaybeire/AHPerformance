@@ -533,6 +533,17 @@ function renderExerciseSlot(day, idx) {
         <button onclick="togglePerSide(${idx})" class="per-side-btn ${item.perSide ? 'active' : ''}" title="Toggle Left/Right per side">${item.perSide ? 'L / R' : 'Both'}</button>
       </div>` : '';
 
+  const dropsetToggle = showWeight ? `<div class="slot-field" style="display:flex;align-items:center;gap:6px">
+        <label style="white-space:nowrap">Dropset</label>
+        <button onclick="toggleDropset(${idx})" class="per-side-btn ${item.dropset ? 'active' : ''}" title="Enable dropset — reduce weight after each set" style="${item.dropset ? 'background:var(--danger);color:#fff;border-color:var(--danger)' : ''}">${item.dropset ? 'ON' : 'OFF'}</button>
+      </div>${item.dropset ? `<div class="slot-field">
+        <label>Drop %</label>
+        <input type="number" value="${item.dropPercent || 30}" min="10" max="60" step="5" onchange="updateField(${idx},'dropPercent',parseInt(this.value))" style="width:55px" title="Weight reduction percentage for each drop" />
+      </div><div class="slot-field">
+        <label>Drops</label>
+        <input type="number" value="${item.dropCount || 1}" min="1" max="3" onchange="updateField(${idx},'dropCount',parseInt(this.value))" style="width:45px" title="Number of drops per set" />
+      </div>` : ''}` : '';
+
   return `<div class="exercise-slot" data-idx="${idx}" draggable="true" ondragstart="dragStartReorder(event,${idx})" ondragover="dragOverReorder(event)" ondrop="dropReorder(event,${idx})" ondragend="dragEndReorder(event)" style="cursor:grab;">
     <div class="slot-top">
       <div class="slot-exercise-name">
@@ -569,6 +580,7 @@ function renderExerciseSlot(day, idx) {
         <input type="text" value="${item.rest}" onchange="updateField(${idx},'rest',this.value)" style="width:70px" placeholder="90s" />
       </div>
       ${perSideToggle}
+      ${dropsetToggle}
       <div class="slot-field">
         <label>Coach Note</label>
         <input type="text" class="note-input" value="${item.note || ''}" onchange="updateField(${idx},'note',this.value)" placeholder="Client-specific note..." />
@@ -760,6 +772,16 @@ function dragEndReorder(e) {
 
 function updateField(idx, field, value) {
   currentSession().exercises[idx][field] = value;
+  // Re-render if dropset fields changed (to show/hide drop config)
+  if (field === 'dropset' || field === 'dropPercent' || field === 'dropCount') renderDay();
+}
+
+function toggleDropset(idx) {
+  const item = currentSession().exercises[idx];
+  item.dropset = !item.dropset;
+  if (item.dropset && !item.dropPercent) item.dropPercent = 30;
+  if (item.dropset && !item.dropCount) item.dropCount = 1;
+  renderDay();
 }
 
 function togglePerSide(idx) {
