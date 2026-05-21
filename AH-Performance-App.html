@@ -6252,13 +6252,12 @@ function _buildOneWeek(workouts, monday, localDateStr) {
         strength += durH * strCount / total;
       } else {
         // Pure session (no exercises) — use session type/name
-        const hasRunning = isRunSession;
-        if (hasRunning) running += durH;
+        if (isRunSession) running += durH;
         else if (w.type === 'cardio') otherCardio += durH;
         else strength += durH;
       }
       // Session-level distance (from pure cardio sessions logged via quick log or generic cardio)
-      if (hasRunning && w.distance && w.distance > 0) {
+      if (isRunSession && w.distance && w.distance > 0) {
         let km = w.distance;
         const unit = (w.distUnit || 'km').toLowerCase();
         if (unit === 'mi' || unit === 'miles') km *= 1.60934;
