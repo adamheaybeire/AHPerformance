@@ -4119,7 +4119,13 @@ function startWorkoutSession(weekKey, sessionIdx) {
       const baseWeight = (ex.w && ex.w !== '—') ? parseFloat(ex.w) || '' : '';
       for (let s = 0; s < numSets; s++) {
         if (isCardio) {
-          sets.push({ weight: '', reps: prescribed.reps || '', done: false });
+          const _prescReps = prescribed.reps || '';
+          // If prescribed reps look like a time value (contains ':'), put in weight (time column)
+          if (_prescReps.includes(':')) {
+            sets.push({ weight: _prescReps, reps: '', done: false });
+          } else {
+            sets.push({ weight: '', reps: _prescReps, done: false });
+          }
         } else {
           sets.push({ weight: baseWeight, reps: prescribed.reps || '', done: false });
           // Add drop sets after each normal set if dropset is enabled
@@ -4347,9 +4353,13 @@ function _isCardioExercise(name) {
 function _filterRealCardio(cardioEntries) {
   if (!cardioEntries) return [];
   const abWords = ['crunch','ab air','air bike crunch','bicycle crunch','ab bike'];
+  // Also filter out strength exercises that got incorrectly saved to cardio
+  const strengthIndicators = ['bench','press','squat','deadlift','curl ','curls','fly','flye','pullup','pull-up','pull up','push-up','pushup','lat pull','tricep','bicep','dumbbell','barbell','cable','hammer','extension','kickback','shrug','lateral raise','lunge','plank','chest','pec '];
   return cardioEntries.filter(e => {
     const n = (e.activity || e.exercise || '').toLowerCase();
-    return !abWords.some(k => n.includes(k));
+    if (abWords.some(k => n.includes(k))) return false;
+    if (strengthIndicators.some(k => n.includes(k))) return false;
+    return true;
   });
 }
 
@@ -5082,7 +5092,7 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
     });
   }
   exerciseLogs.forEach(ex => {
-    if (ex.isCardio || isCardioSession) {
+    if (ex.isCardio) {
       // Extract aggregate distance and time from cardio sets for progress charting
       let totalDist = 0, totalTimeSec = 0;
       const isSled = _isSledExercise(ex.name);
@@ -5113,7 +5123,7 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
         date: today,
         activity: _normExActivity,
         exercise: _normExActivity,
-        distance: totalDist > 0 ? totalDist : null,
+        distance: totalDist > 0 ? Math.round(totalDist * 100) / 100 : null,
         unit: distUnit,
         time: timeStr || null,
         sets: ex.sets,
@@ -5729,13 +5739,13 @@ function renderCPCardChart() {
   const labels = entries.map(e => cpFormatDate(e.date));
   let data, label, colour;
   if (met === 'time') {
-    data = entries.map(e => cpTimeToSec(e.time));
-    label = 'Time (sec)'; colour = '#4A9DC8';
+    data = entries.map(e => Math.round(cpTimeToSec(e.time) / 60 * 10) / 10);
+    label = 'Time (min)'; colour = '#4A9DC8';
   } else if (met === 'hr') {
     data = entries.map(e => e.avgHR || 0);
     label = 'Avg HR'; colour = '#D45B5B';
   } else {
-    data = entries.map(e => e.distance || 0);
+    data = entries.map(e => Math.round((e.distance || 0) * 100) / 100);
     label = 'Distance'; colour = '#8BB07E';
   }
   renderChart('cpCardChart', labels, data, label, colour);
@@ -5750,7 +5760,7 @@ function renderCPCardHistory() {
   const entries = filter ? realCardio.filter(e => (e.activity || e.exercise) === filter) : realCardio;
   document.getElementById('cpCardHistory').innerHTML = entries.map(e => {
     const actName = e.activity || e.exercise || '—';
-    const distStr = e.distance ? `${e.distance} ${e.unit || ''}` : '—';
+    const distStr = e.distance ? `${Math.round(e.distance * 100) / 100} ${e.unit || ''}` : '—';
     return `<tr><td class="val">${cpFormatDate(e.date)}</td><td class="val">${actName}</td><td>${distStr}</td><td class="val">${e.time||'—'}</td><td>${e.avgHR?e.avgHR+' bpm':'—'}</td><td>${e.rpe||'—'}</td></tr>`;
   }).join('');
 }
@@ -6066,17 +6076,43 @@ function saveHistoryEdit(idx) {
       }
     }
   }
-  // Sync strength exercise edits back to PROGRESS_DATA
-  if (w.exercises && w.exercises.length && PROGRESS_DATA[cid]?.strength) {
+  // Sync exercise edits back to PROGRESS_DATA (strength AND cardio)
+  if (w.exercises && w.exercises.length && PROGRESS_DATA[cid]) {
     const pd = PROGRESS_DATA[cid];
     w.exercises.forEach(ex => {
       const exName = (ex.name || '').toLowerCase();
-      // Find matching strength progress entry by date + exercise name
-      const progEntry = pd.strength.find(s => s.date === w.date && (s.exercise || '').toLowerCase() === exName);
-      if (progEntry) {
-        progEntry.sets = ex.sets;
-        progEntry.rpe = w.rpe;
-        if (dateVal && dateVal !== progEntry.date) progEntry.date = dateVal;
+      // Sync strength progress entries
+      if (pd.strength) {
+        const progEntry = pd.strength.find(s => s.date === w.date && (s.exercise || '').toLowerCase() === exName);
+        if (progEntry) {
+          progEntry.sets = ex.sets;
+          progEntry.rpe = w.rpe;
+          if (dateVal && dateVal !== progEntry.date) progEntry.date = dateVal;
+        }
+      }
+      // Sync cardio progress entries — recalculate distance/time from sets
+      if (pd.cardio && (_isCardioExercise(ex.name) || _isSledExercise(ex.name))) {
+        const _normName = _normalizeCardioActivity(ex.name) || ex.name;
+        const cardioEntry = pd.cardio.find(c => c.date === w.date && ((c.activity || '').toLowerCase() === _normName.toLowerCase() || (c.exercise || '').toLowerCase() === _normName.toLowerCase() || (c.activity || '').toLowerCase() === exName || (c.exercise || '').toLowerCase() === exName));
+        if (cardioEntry) {
+          let totalDist = 0, totalTimeSec = 0;
+          const isSled = _isSledExercise(ex.name);
+          (ex.sets || []).forEach(s => {
+            if (isSled) { totalDist += parseFloat(s.reps) || 0; }
+            else {
+              totalDist += parseFloat(s.reps) || 0;
+              const ts = String(s.weight || '');
+              if (ts.includes(':')) { const p = ts.split(':'); totalTimeSec += (parseInt(p[0])||0)*60 + (parseInt(p[1])||0); }
+              else totalTimeSec += (parseFloat(ts)||0)*60;
+            }
+          });
+          cardioEntry.distance = totalDist > 0 ? Math.round(totalDist * 100) / 100 : null;
+          const timeMins = Math.floor(totalTimeSec/60);
+          const timeSecs = totalTimeSec % 60;
+          cardioEntry.time = totalTimeSec > 0 ? timeMins + ':' + String(timeSecs).padStart(2,'0') : null;
+          cardioEntry.rpe = w.rpe;
+          if (dateVal && dateVal !== cardioEntry.date) cardioEntry.date = dateVal;
+        }
       }
     });
   }
@@ -6204,11 +6240,23 @@ function _buildOneWeek(workouts, monday, localDateStr) {
       const runExercises = (w.exercises || []).filter(e => _runRx.test(e.name || ''));
       // Also check session name for running (covers pure cardio sessions with no exercises)
       const isRunSession = _runRx.test(w.sessionName || '');
-      const hasRunning = runExercises.length > 0 || (isRunSession && !(w.exercises || []).length);
-      const hasCardio = w.type === 'cardio' || (w.exercises || []).some(e => _isCardioExercise(e.name));
-      if (hasRunning) running += durH;
-      else if (hasCardio) otherCardio += durH;
-      else strength += durH;
+      const exList = w.exercises || [];
+      if (exList.length > 0) {
+        // Proportional split: categorise each exercise individually
+        const runCount = runExercises.length;
+        const otherCardioCount = exList.filter(e => _isCardioExercise(e.name) && !_runRx.test(e.name || '')).length;
+        const strCount = exList.length - runCount - otherCardioCount;
+        const total = exList.length;
+        running += durH * runCount / total;
+        otherCardio += durH * otherCardioCount / total;
+        strength += durH * strCount / total;
+      } else {
+        // Pure session (no exercises) — use session type/name
+        const hasRunning = isRunSession;
+        if (hasRunning) running += durH;
+        else if (w.type === 'cardio') otherCardio += durH;
+        else strength += durH;
+      }
       // Session-level distance (from pure cardio sessions logged via quick log or generic cardio)
       if (hasRunning && w.distance && w.distance > 0) {
         let km = w.distance;
@@ -6340,7 +6388,7 @@ function _renderCardioBreakdown(days, containerId, listId) {
   container.style.display = '';
   list.innerHTML = names.map(name => {
     const c = cardioByName[name];
-    const dist = c.distance > 0 ? `${c.distance % 1 === 0 ? c.distance : c.distance.toFixed(1)} ${c.unit}` : '—';
+    const dist = c.distance > 0 ? `${c.distance % 1 === 0 ? c.distance : (Math.round(c.distance*100)/100).toFixed(1)} ${c.unit}` : '—';
     const mins = Math.floor(c.timeSec/60);
     const secs = c.timeSec % 60;
     const time = c.timeSec > 0 ? `${mins}:${String(secs).padStart(2,'0')}` : '—';
@@ -7072,9 +7120,9 @@ function renderDetailCardChart() {
   const entries = _filterRealCardio(pd.cardio).filter(e => (e.activity || e.exercise) === act).sort((a,b) => (a.date||'').localeCompare(b.date||''));
   const labels = entries.map(e => cpFormatDate(e.date));
   let data, label, colour;
-  if (met === 'time') { data = entries.map(e => cpTimeToSec(e.time)); label = 'Time (sec)'; colour = '#4A9DC8'; }
+  if (met === 'time') { data = entries.map(e => Math.round(cpTimeToSec(e.time) / 60 * 10) / 10); label = 'Time (min)'; colour = '#4A9DC8'; }
   else if (met === 'hr') { data = entries.map(e => e.avgHR||0); label = 'Avg HR'; colour = '#D45B5B'; }
-  else { data = entries.map(e => e.distance||0); label = 'Distance'; colour = '#8BB07E'; }
+  else { data = entries.map(e => Math.round((e.distance||0) * 100) / 100); label = 'Distance'; colour = '#8BB07E'; }
   renderChart('detailCardChart', labels, data, label, colour);
 }
 
@@ -7083,7 +7131,7 @@ function renderDetailCardHistory(clientId) {
   if (!pd) return;
   document.getElementById('dtCardHistory').innerHTML = _filterRealCardio(pd.cardio).map(e => {
     const actName = e.activity || e.exercise || '—';
-    const distStr = e.distance ? `${e.distance} ${e.unit || 'km'}` : '—';
+    const distStr = e.distance ? `${Math.round(e.distance * 100) / 100} ${e.unit || 'km'}` : '—';
     return `<tr><td class="val">${cpFormatDate(e.date)}</td><td class="val">${actName}</td><td>${distStr}</td><td class="val">${e.time||'—'}</td><td>${e.avgHR?e.avgHR+' bpm':'—'}</td><td>${e.rpe||'—'}</td></tr>`;
   }).join('');
 }
