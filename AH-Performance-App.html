@@ -3532,11 +3532,11 @@ function initClientApp() {
       <div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text-dim);font-size:13px;">Your nutrition plan will appear here once Coach Adam sets it up for you.</div>`;
   }
 
-  // Programme
-  renderProgrammeWeek();
+  // Programme (wrapped in try-catch so errors don't break icons/messages below)
+  try { renderProgrammeWeek(); } catch(e) { console.error('renderProgrammeWeek error:', e); }
 
   // Messages
-  renderClientMessages();
+  try { renderClientMessages(); } catch(e) { console.error('renderClientMessages error:', e); }
 
   // Cycle tracking icons
   const shieldEl = document.getElementById('cycleShieldIcon');
@@ -3641,6 +3641,7 @@ function renderProgrammeSummary() {
   }
   const totalWeeks = weekKeys.length;
   const latestWeek = progWeeks[weekKeys[weekKeys.length - 1]];
+  if (!latestWeek) return;
   const sessions = latestWeek.sessions || [];
   const strengthCount = sessions.filter(s => s.type !== 'cardio').length;
   const cardioCount = sessions.filter(s => s.type === 'cardio').length;
@@ -3690,9 +3691,10 @@ function renderProgrammeWeek() {
   }
   const week = progWeeks[currentProgrammeWeek];
   if (!week) return;
-  document.getElementById('progWeekLabel').textContent = week.label;
+  document.getElementById('progWeekLabel').textContent = week.label || 'Week ' + currentProgrammeWeek;
   const el = document.getElementById('programmeContent');
   el.innerHTML = '';
+  if (!week.sessions || !week.sessions.length) { el.innerHTML = '<div class="card" style="text-align:center;padding:24px;color:var(--text-dim);font-size:13px;">No sessions in this week yet.</div>'; return; }
   const isMobile = window.innerWidth <= 768;
   week.sessions.forEach(s => {
     const isCardio = s.type === 'cardio';
@@ -11470,6 +11472,7 @@ function showDetailProgrammeWeek(clientId, weekNum) {
   const el = document.getElementById('detailProgWeekContent');
   if (!el) return;
 
+  if (!week.sessions || !week.sessions.length) { el.innerHTML = '<p style="color:var(--text-dim);font-size:13px;text-align:center;padding:20px;">No sessions in this week.</p>'; return; }
   el.innerHTML = week.sessions.map(s => {
     const isCardio = s.type === 'cardio';
     const colour = isCardio ? 'var(--ocean)' : 'var(--ember)';
