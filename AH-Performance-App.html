@@ -2774,7 +2774,16 @@ function _applyState(state, _source) {
   // FULL REPLACE for dict-shaped stores (prevents deleted client data from resurrecting via Object.assign merge)
   if (state.workoutLog) { Object.keys(WORKOUT_LOG).forEach(k => delete WORKOUT_LOG[k]); Object.assign(WORKOUT_LOG, state.workoutLog); }
   if (state.checkinLog) { Object.keys(CHECKIN_LOG).forEach(k => delete CHECKIN_LOG[k]); Object.assign(CHECKIN_LOG, state.checkinLog); }
-  if (state.programmeWeeks) { Object.keys(PROGRAMME_WEEKS).forEach(k => delete PROGRAMME_WEEKS[k]); Object.assign(PROGRAMME_WEEKS, state.programmeWeeks); }
+  if (state.programmeWeeks) {
+    const _pwSess = (obj) => { let n=0; Object.values(obj||{}).forEach(wk => { n += (wk && wk.sessions) ? wk.sessions.length : 0; }); return n; };
+    const inPW = _pwSess(state.programmeWeeks);
+    const curPW = _pwSess(PROGRAMME_WEEKS);
+    if (inPW > 0 || curPW === 0) {
+      Object.keys(PROGRAMME_WEEKS).forEach(k => delete PROGRAMME_WEEKS[k]); Object.assign(PROGRAMME_WEEKS, state.programmeWeeks);
+    } else {
+      console.warn('AH Performance: BLOCKED programmeWeeks overwrite — incoming has 0 sessions, current has ' + curPW);
+    }
+  }
   if (state.progressData) { Object.keys(PROGRESS_DATA).forEach(k => delete PROGRESS_DATA[k]); Object.assign(PROGRESS_DATA, state.progressData); }
   if (state.wellbeingData && state.wellbeingData.length) { WELLBEING_DATA.length = 0; state.wellbeingData.forEach(w => WELLBEING_DATA.push(w)); }
   if (state.ptNotifications && state.ptNotifications.length) {
@@ -2792,8 +2801,29 @@ function _applyState(state, _source) {
   if (state.emailQueue && state.emailQueue.length) { EMAIL_QUEUE.length = 0; state.emailQueue.forEach(e => EMAIL_QUEUE.push(e)); }
   if (state.ptConversations && state.ptConversations.length) { PT_CONVERSATIONS.length = 0; state.ptConversations.forEach(c => PT_CONVERSATIONS.push(c)); }
   if (state.onboardingSubmissions && state.onboardingSubmissions.length) { ONBOARDING_SUBMISSIONS.length = 0; state.onboardingSubmissions.forEach(s => ONBOARDING_SUBMISSIONS.push(s)); }
-  if (state.clientProgrammes && typeof CLIENT_PROGRAMMES !== 'undefined') { Object.keys(CLIENT_PROGRAMMES).forEach(k => delete CLIENT_PROGRAMMES[k]); Object.assign(CLIENT_PROGRAMMES, state.clientProgrammes); }
-  if (state.ptProgrammes && typeof PT_PROGRAMMES !== 'undefined') { PT_PROGRAMMES.length = 0; state.ptProgrammes.forEach(p => PT_PROGRAMMES.push(p)); }
+  // Programme data protection: never overwrite rich programme data with empty data
+  if (state.clientProgrammes && typeof CLIENT_PROGRAMMES !== 'undefined') {
+    // Count total sessions in incoming vs current
+    const _cpCount = (obj) => { let n=0; Object.values(obj||{}).forEach(w => { if(w && typeof w==='object') Object.values(w).forEach(wk => { n += (wk && wk.sessions) ? wk.sessions.length : 0; }); }); return n; };
+    const incomingSessions = _cpCount(state.clientProgrammes);
+    const currentSessions = _cpCount(CLIENT_PROGRAMMES);
+    if (incomingSessions > 0 || currentSessions === 0) {
+      Object.keys(CLIENT_PROGRAMMES).forEach(k => delete CLIENT_PROGRAMMES[k]);
+      Object.assign(CLIENT_PROGRAMMES, state.clientProgrammes);
+    } else {
+      console.warn('AH Performance: BLOCKED clientProgrammes overwrite — incoming has 0 sessions, current has ' + currentSessions + ' (source: ' + (_source||'unknown') + ')');
+    }
+  }
+  if (state.ptProgrammes && typeof PT_PROGRAMMES !== 'undefined') {
+    // Don't replace programmes that have weeks with empty ones
+    const incomingHasData = state.ptProgrammes.some(p => p.weeks && Object.keys(p.weeks).length > 0);
+    const currentHasData = PT_PROGRAMMES.some(p => p.weeks && Object.keys(p.weeks).length > 0);
+    if (incomingHasData || !currentHasData) {
+      PT_PROGRAMMES.length = 0; state.ptProgrammes.forEach(p => PT_PROGRAMMES.push(p));
+    } else {
+      console.warn('AH Performance: BLOCKED ptProgrammes overwrite — incoming has no week data (source: ' + (_source||'unknown') + ')');
+    }
+  }
   if (state.cycleLog) { Object.keys(CYCLE_LOG).forEach(k => delete CYCLE_LOG[k]); Object.assign(CYCLE_LOG, state.cycleLog); }
   if (state.clientNutrition) { Object.keys(CLIENT_NUTRITION).forEach(k => delete CLIENT_NUTRITION[k]); Object.assign(CLIENT_NUTRITION, state.clientNutrition); }
   if (state.foodLog) { Object.keys(FOOD_LOG).forEach(k => delete FOOD_LOG[k]); Object.assign(FOOD_LOG, state.foodLog); }
