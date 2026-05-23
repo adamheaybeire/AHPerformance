@@ -4065,7 +4065,9 @@ function renderWLSessionPicker(showResume) {
   }
   const latestKey = weekKeys[weekKeys.length - 1];
   const week = progWeeks[latestKey];
+  if (!week) { html += `<p style="color:var(--text-dim);text-align:center;padding:20px;">Programme data not loaded yet. Try refreshing.</p>`; body.innerHTML = html; return; }
   const sessions = week.sessions || [];
+  if (!sessions.length) { html += `<p style="color:var(--text-dim);text-align:center;padding:20px;">No sessions in this week yet. Ask your coach to add sessions.</p>`; html += `<div style="text-align:center;margin-top:14px;"><button onclick="startEmptyWorkout()" style="background:none;border:1px dashed var(--slate-border);border-radius:10px;padding:12px 20px;color:var(--text-muted);font-size:12px;cursor:pointer;width:100%;">+ Log an unscheduled workout</button></div>`; body.innerHTML = html; return; }
   const cid = loggedInUser ? loggedInUser.clientId : null;
   // Check entire current week (Mon-Sun) for logged sessions
   const _wkNow = new Date();
@@ -4109,7 +4111,7 @@ function renderWLSessionPicker(showResume) {
 function startWorkoutSession(weekKey, sessionIdx) {
   const progWeeks = getClientProgrammeWeeks();
   const week = progWeeks[weekKey];
-  if (!week) return;
+  if (!week || !week.sessions || !week.sessions[sessionIdx]) { alert('Session data not found. Try refreshing the app.'); return; }
   wlCurrentSession = JSON.parse(JSON.stringify(week.sessions[sessionIdx]));
   wlCurrentSession._weekKey = weekKey;
   wlCurrentSession._sessionIdx = sessionIdx;
