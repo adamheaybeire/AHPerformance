@@ -2694,7 +2694,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (currentRole === 'client') {
             initClientApp(); renderClientMessages(); renderClientNotifs(); renderWellbeingHistory(); updateSidebarBadges();
           } else {
-            renderPTNotifications(); renderPTMessages(); updateSidebarBadges();
+            renderPTNotifications(); renderPTMessages(); updateSidebarBadges(); if (typeof renderPTDashboard === 'function') renderPTDashboard();
           }
         }
       }
@@ -2790,14 +2790,31 @@ function _applyState(state, _source) {
     // Merge notifications: preserve local read/dismissed state, add new ones only
     const localReadIds = new Set(PT_NOTIFICATIONS.filter(n => n.read).map(n => n.id));
     const localIds = new Set(PT_NOTIFICATIONS.map(n => n.id));
+    // Detect genuinely new notifications arriving from another device
+    const newPTNotifs = state.ptNotifications.filter(sn => !localIds.has(sn.id) && !sn.read);
     // Update existing notifications from server but keep local read state
     state.ptNotifications.forEach(sn => {
       if (localReadIds.has(sn.id)) sn.read = true; // preserve local "read"
     });
     PT_NOTIFICATIONS.length = 0;
     state.ptNotifications.forEach(n => PT_NOTIFICATIONS.push(n));
+    // Fire browser push notifications for new items (e.g. client submitted check-in)
+    if (_source === 'auto-sync' && currentRole === 'pt') {
+      newPTNotifs.forEach(n => _showBrowserNotification(n.client || 'AH Performance', n.message || ''));
+    }
   }
-  if (state.clientNotifications) { Object.keys(CLIENT_NOTIFICATIONS).forEach(k => delete CLIENT_NOTIFICATIONS[k]); Object.assign(CLIENT_NOTIFICATIONS, state.clientNotifications); }
+  if (state.clientNotifications) {
+    // Detect new client notifications arriving from another device (e.g. coach reviewed check-in)
+    const cid = loggedInUser && loggedInUser.clientId ? loggedInUser.clientId : 1;
+    const localClientIds = new Set((CLIENT_NOTIFICATIONS[cid] || []).map(n => n.id));
+    const incomingClientNotifs = (state.clientNotifications[cid] || []);
+    const newClientNotifs = incomingClientNotifs.filter(n => !localClientIds.has(n.id) && !n.read);
+    Object.keys(CLIENT_NOTIFICATIONS).forEach(k => delete CLIENT_NOTIFICATIONS[k]); Object.assign(CLIENT_NOTIFICATIONS, state.clientNotifications);
+    // Fire browser push notifications for new items
+    if (_source === 'auto-sync' && currentRole === 'client') {
+      newClientNotifs.forEach(n => _showBrowserNotification('AH Performance', n.message || ''));
+    }
+  }
   if (state.emailQueue && state.emailQueue.length) { EMAIL_QUEUE.length = 0; state.emailQueue.forEach(e => EMAIL_QUEUE.push(e)); }
   if (state.ptConversations && state.ptConversations.length) { PT_CONVERSATIONS.length = 0; state.ptConversations.forEach(c => PT_CONVERSATIONS.push(c)); }
   if (state.onboardingSubmissions && state.onboardingSubmissions.length) { ONBOARDING_SUBMISSIONS.length = 0; state.onboardingSubmissions.forEach(s => ONBOARDING_SUBMISSIONS.push(s)); }
@@ -3317,7 +3334,7 @@ function initClientApp() {
   if (!clientData && clientUser?.email) clientData = CLIENTS.find(c => c.email === clientUser.email);
   const workouts = cid ? (WORKOUT_LOG[cid] || []) : [];
   const progWeeks = getClientProgrammeWeeks();
-  const progKeys = Object.keys(progWeeks).map(Number).sort();
+  const progKeys = Object.keys(progWeeks).map(Number).filter(n => !isNaN(n)).sort((a,b) => a-b);
   const gender = clientData?.onboarding?.personal?.gender || '';
 
   // Set programme week to the latest (current) week
@@ -3623,7 +3640,7 @@ function getClientProgrammeWeeks() {
 
 function changeProgrammeWeek(dir) {
   const progWeeks = getClientProgrammeWeeks();
-  const weeks = Object.keys(progWeeks).map(Number).sort();
+  const weeks = Object.keys(progWeeks).map(Number).filter(n => !isNaN(n)).sort((a,b) => a-b);
   let idx = weeks.indexOf(currentProgrammeWeek) + dir;
   if (idx < 0) idx = 0; if (idx >= weeks.length) idx = weeks.length - 1;
   currentProgrammeWeek = weeks[idx];
@@ -3634,7 +3651,7 @@ function renderProgrammeSummary() {
   const el = document.getElementById('progSummaryCard');
   if (!el) return;
   const progWeeks = getClientProgrammeWeeks();
-  const weekKeys = Object.keys(progWeeks).map(Number).sort();
+  const weekKeys = Object.keys(progWeeks).map(Number).filter(n => !isNaN(n)).sort((a,b) => a-b);
   if (!weekKeys.length) {
     el.innerHTML = `<div class="card" style="text-align:center;padding:32px 20px;"><p style="color:var(--text-dim);font-size:13px;">No programme assigned yet. Your coach will set this up for you.</p></div>`;
     return;
@@ -4057,7 +4074,7 @@ function renderWLSessionPicker(showResume) {
     </div>`;
   }
   const progWeeks = getClientProgrammeWeeks();
-  const weekKeys = Object.keys(progWeeks).map(Number).sort();
+  const weekKeys = Object.keys(progWeeks).map(Number).filter(n => !isNaN(n)).sort((a,b) => a-b);
   if (!weekKeys.length) {
     html += `<div style="text-align:center;padding:40px 16px;"><div style="margin-bottom:12px;display:flex;justify-content:center;">${ic('programme','var(--text-dim)',40)}</div><h3 style="color:var(--text-bright);margin-bottom:6px;font-size:15px;">No Programme Assigned</h3><p style="color:var(--text-dim);font-size:12px;">Your coach hasn't assigned a programme yet.</p></div>`;
     body.innerHTML = html;
@@ -4356,7 +4373,7 @@ function _updateClientCompliance(clientId) {
   const pw = CLIENT_PROGRAMMES && CLIENT_PROGRAMMES[clientId] ? CLIENT_PROGRAMMES[clientId] : null;
   let totalProgrammeSessions = 0;
   if (pw && pw.weeks) {
-    const latestWeekKey = Object.keys(pw.weeks).map(Number).sort().pop();
+    const latestWeekKey = Object.keys(pw.weeks).map(Number).filter(n => !isNaN(n)).sort((a,b) => a-b).pop();
     if (latestWeekKey !== undefined && pw.weeks[latestWeekKey]) {
       totalProgrammeSessions = (pw.weeks[latestWeekKey].sessions || []).length;
     }
@@ -5267,7 +5284,7 @@ function openQuickLogRun() {
   const progWeeks = getClientProgrammeWeeks();
   let progRunSession = null;
   if (progWeeks) {
-    const weekKeys = Object.keys(progWeeks).map(Number).sort();
+    const weekKeys = Object.keys(progWeeks).map(Number).filter(n => !isNaN(n)).sort((a,b) => a-b);
     const latestKey = weekKeys[weekKeys.length - 1];
     const latestWeek = progWeeks[latestKey];
     if (latestWeek && latestWeek.sessions) {
@@ -5382,7 +5399,7 @@ function saveQuickRun() {
   // Save to WORKOUT_LOG
   // Get current programme name so LOGGED badge can match
   const _qrProgWeeks = getClientProgrammeWeeks();
-  const _qrWeekKeys = Object.keys(_qrProgWeeks).map(Number).sort();
+  const _qrWeekKeys = Object.keys(_qrProgWeeks).map(Number).filter(n => !isNaN(n)).sort((a,b) => a-b);
   const _qrProgName = _qrWeekKeys.length ? (_qrProgWeeks[_qrWeekKeys[_qrWeekKeys.length - 1]].label || '') : '';
   const entry = {
     date: date,
@@ -11410,7 +11427,7 @@ function renderDetailProgramme() {
   // Check for assigned programmes
   const assigned = PT_PROGRAMMES.filter(p => p.clientId === c.id);
   const clientWeeks = CLIENT_PROGRAMMES[c.id] || (c.id === 1 ? PROGRAMME_WEEKS : {});
-  const weekKeys = Object.keys(clientWeeks).map(Number).sort();
+  const weekKeys = Object.keys(clientWeeks).map(Number).filter(n => !isNaN(n)).sort((a,b) => a-b);
 
   let html = '';
 
