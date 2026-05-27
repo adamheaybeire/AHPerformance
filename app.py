@@ -19,6 +19,8 @@ import json
 import os
 import uuid
 import time
+import glob as globmod
+import shutil
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -36,6 +38,65 @@ if DISK_PATH and os.path.isdir(DISK_PATH):
 else:
     DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ah-sync-data.json')
     print(f'  Data persistence: Using local file at {DATA_FILE} (ephemeral — add a Render Disk for persistence)')
+
+# ─── Backup system ───
+# Rolling backups: every save creates a timestamped copy. Keep last 50.
+MAX_BACKUPS = 50
+if DISK_PATH and os.path.isdir(DISK_PATH):
+    BACKUP_DIR = os.path.join(DISK_PATH, 'backups')
+else:
+    BACKUP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups')
+os.makedirs(BACKUP_DIR, exist_ok=True)
+print(f'  Backup storage: {BACKUP_DIR}')
+
+def _create_backup(data, reason='save'):
+    """Create a timestamped backup before any state change."""
+    try:
+        ts = int(time.time() * 1000)
+        client_count = len(data.get('clients', [])) if isinstance(data, dict) else 0
+        filename = f'backup_{ts}_{reason}_c{client_count}.json'
+        filepath = os.path.join(BACKUP_DIR, filename)
+        with open(filepath, 'w') as f:
+            json.dump(data, f)
+        # Prune old backups — keep most recent MAX_BACKUPS
+        backups = sorted(globmod.glob(os.path.join(BACKUP_DIR, 'backup_*.json')))
+        while len(backups) > MAX_BACKUPS:
+            os.remove(backups.pop(0))
+        print(f'  BACKUP: {filename} ({client_count} clients)')
+    except Exception as e:
+        print(f'  Warning: Backup failed: {e}')
+
+def _list_backups():
+    """List available backups, newest first."""
+    try:
+        files = sorted(globmod.glob(os.path.join(BACKUP_DIR, 'backup_*.json')), reverse=True)
+        result = []
+        for f in files:
+            fname = os.path.basename(f)
+            size = os.path.getsize(f)
+            result.append({'filename': fname, 'size': size, 'path': f})
+        return result
+    except Exception:
+        return []
+
+def _restore_backup(filename):
+    """Restore state from a backup file."""
+    global _state_cache
+    filepath = os.path.join(BACKUP_DIR, secure_filename(filename))
+    if not os.path.exists(filepath):
+        return None, 'Backup file not found'
+    try:
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+        if not isinstance(data, dict) or not data.get('savedAt'):
+            return None, 'Invalid backup file'
+        # Backup current state before restoring
+        if _state_cache:
+            _create_backup(_state_cache, 'pre-restore')
+        _save_to_disk(data)
+        return data, None
+    except Exception as e:
+        return None, str(e)
 
 # ─── In-memory state cache ───
 # Keeps the last-known-good state in memory so we never lose data between
@@ -56,10 +117,13 @@ def _load_from_disk():
         print(f'  Warning: Failed to load state from disk: {e}')
     return None
 
-def _save_to_disk(data):
-    """Save state to disk file."""
+def _save_to_disk(data, backup_reason='save'):
+    """Save state to disk file with automatic backup."""
     global _state_cache
     try:
+        # ALWAYS backup the CURRENT state before overwriting
+        if _state_cache and isinstance(_state_cache, dict) and _state_cache.get('savedAt'):
+            _create_backup(_state_cache, backup_reason)
         os.makedirs(os.path.dirname(DATA_FILE) or '.', exist_ok=True)
         with open(DATA_FILE, 'w') as f:
             json.dump(data, f)
@@ -129,6 +193,7 @@ def save_state():
         data = request.get_json(force=True)
         incoming_clients = data.get('clients', []) if isinstance(data, dict) else []
         current_clients = _state_cache.get('clients', []) if _state_cache and isinstance(_state_cache, dict) else []
+        current_count = len(current_clients)
 
         # Respect intentional deletions — don't merge back deleted clients
         deleted_ids = set(data.get('_deletedClientIds', []))
@@ -154,7 +219,33 @@ def save_state():
             data['clients'] = incoming_clients
 
         final_count = len(data.get('clients', []))
-        _save_to_disk(data)
+
+        # SAFETY GUARD: reject saves that drop more than 1 client without explicit deletion
+        # This prevents accidental data wipes from bad syncs
+        if current_count > 0 and final_count < current_count:
+            dropped = current_count - final_count
+            if dropped > len(deleted_ids):
+                print(f'  BLOCKED SAVE: would drop {dropped} clients but only {len(deleted_ids)} explicitly deleted. Current: {current_count}, Incoming: {final_count}')
+                # Still create a backup of what was attempted, for debugging
+                _create_backup(data, 'blocked-save')
+                return jsonify({
+                    'ok': False,
+                    'error': f'Save blocked: would lose {dropped} client(s) without explicit deletion',
+                    'clients': current_count
+                }), 409
+
+        # Also merge onboarding submissions — NEVER lose an onboarding
+        incoming_submissions = data.get('onboardingSubmissions', []) if isinstance(data, dict) else []
+        current_submissions = _state_cache.get('onboardingSubmissions', []) if _state_cache and isinstance(_state_cache, dict) else []
+        if current_submissions:
+            incoming_sub_ids = {s.get('id') for s in incoming_submissions if isinstance(s, dict)}
+            for cs in current_submissions:
+                if isinstance(cs, dict) and cs.get('id') not in incoming_sub_ids:
+                    incoming_submissions.append(cs)
+                    print(f'  MERGE: preserved onboarding submission (id={cs.get("id")}) from server')
+            data['onboardingSubmissions'] = incoming_submissions
+
+        _save_to_disk(data, 'save')
         return jsonify({'ok': True, 'clients': final_count})
     except Exception as e:
         return jsonify({'error': str(e)}), 400
@@ -170,6 +261,69 @@ def state_info():
         'diskPath': DATA_FILE,
         'persistent': bool(DISK_PATH and os.path.isdir(DISK_PATH))
     })
+
+# ─── API: Backup management ───
+
+@app.route('/api/backups', methods=['GET'])
+def list_backups_api():
+    """List all available backups with client counts."""
+    backups = _list_backups()
+    result = []
+    for b in backups:
+        # Parse filename: backup_{timestamp}_{reason}_c{count}.json
+        fname = b['filename']
+        parts = fname.replace('.json', '').split('_')
+        ts = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+        reason = parts[2] if len(parts) > 2 else '?'
+        count_str = parts[-1] if parts[-1].startswith('c') else 'c0'
+        client_count = int(count_str[1:]) if count_str[1:].isdigit() else 0
+        result.append({
+            'filename': fname,
+            'timestamp': ts,
+            'reason': reason,
+            'clients': client_count,
+            'size': b['size'],
+            'date': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(ts / 1000)) if ts else '?'
+        })
+    return jsonify({'ok': True, 'backups': result, 'total': len(result)})
+
+@app.route('/api/backups/restore', methods=['POST'])
+def restore_backup_api():
+    """Restore state from a specific backup file."""
+    data = request.get_json(force=True)
+    filename = data.get('filename', '')
+    if not filename:
+        return jsonify({'error': 'Missing filename'}), 400
+    restored, error = _restore_backup(filename)
+    if error:
+        return jsonify({'error': error}), 400
+    client_count = len(restored.get('clients', []))
+    print(f'  RESTORED from {filename} ({client_count} clients)')
+    return jsonify({'ok': True, 'clients': client_count, 'restored_from': filename})
+
+@app.route('/api/backups/<filename>', methods=['GET'])
+def preview_backup(filename):
+    """Preview a backup — shows clients and users without restoring."""
+    safe = secure_filename(filename)
+    filepath = os.path.join(BACKUP_DIR, safe)
+    if not os.path.exists(filepath):
+        return jsonify({'error': 'Backup not found'}), 404
+    try:
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+        clients = [{'id': c.get('id'), 'name': c.get('name'), 'email': c.get('email')} for c in data.get('clients', []) if isinstance(c, dict)]
+        users = [{'email': u.get('email'), 'role': u.get('role'), 'name': u.get('name')} for u in data.get('users', []) if isinstance(u, dict)]
+        submissions = [{'id': s.get('id'), 'name': s.get('personal', {}).get('firstName', '') + ' ' + s.get('personal', {}).get('lastName', ''), 'date': s.get('date')} for s in data.get('onboardingSubmissions', []) if isinstance(s, dict)]
+        return jsonify({
+            'ok': True,
+            'filename': safe,
+            'clients': clients,
+            'users': users,
+            'onboardingSubmissions': submissions,
+            'savedAt': data.get('savedAt')
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ─── API: Send email ───
 

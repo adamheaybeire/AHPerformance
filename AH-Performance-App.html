@@ -12070,8 +12070,12 @@ function submitOnboardingForm() {
 
   // Notify PT (in-app + email)
   addPTNotification('programme', newId, name, 'New client onboarded via form — review their details');
-  queueEmail('adam@ahperformance.ie', 'Adam', 'New Client Onboarded: ' + name, 'coach-notify',
-    'Hi Adam,\n\n' + name + ' has just completed their onboarding form on AH Performance.\n\nEmail: ' + (p.email || 'Not provided') + '\nGoals: ' + (submission.goals.mainGoals.join(', ') || 'Not specified') + '\n\nLog in to review their details and assign a programme.\n\nahperformance.ie\n\nAH Performance');
+  // Send coach notification email directly (not via queue — avoids showing in web client messages)
+  fetch('/api/send-email', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+    to: 'adam@ahperformance.ie', toName: 'Adam Heayberd',
+    subject: 'New Client Onboarded: ' + name,
+    body: 'Hi Adam,\n\n' + name + ' has just completed their onboarding form on AH Performance.\n\nEmail: ' + (p.email || 'Not provided') + '\nGoals: ' + (submission.goals.mainGoals.join(', ') || 'Not specified') + '\n\nLog in to review their details and assign a programme.\n\nahperformance.ie\n\nAH Performance'
+  })}).catch(function(){});
 
   // Store pending account info (user account created after password is set)
   window._pendingNewClient = { email: p.email.toLowerCase(), name: name, clientId: newId };
