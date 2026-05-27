@@ -123,24 +123,37 @@ def get_state():
 
 @app.route('/api/state', methods=['POST'])
 def save_state():
-    """Save state, but NEVER allow fewer clients to overwrite more clients."""
+    """Save state, merging clients so no device can accidentally remove another device's clients."""
     global _state_cache
     try:
         data = request.get_json(force=True)
-        incoming_clients = _count_clients(data)
-        current_clients = _count_clients(_state_cache) if _state_cache else 0
+        incoming_clients = data.get('clients', []) if isinstance(data, dict) else []
+        current_clients = _state_cache.get('clients', []) if _state_cache and isinstance(_state_cache, dict) else []
 
-        # SAFETY: Never allow a save that would REDUCE the number of clients
-        if current_clients > 0 and incoming_clients < current_clients:
-            print(f'  BLOCKED save: incoming has {incoming_clients} clients, current has {current_clients}. Refusing to lose data.')
-            return jsonify({
-                'ok': False,
-                'error': f'Blocked: would reduce clients from {current_clients} to {incoming_clients}',
-                'currentClients': current_clients
-            }), 409  # Conflict
+        # MERGE: combine clients from both sides so no one gets lost
+        if current_clients and incoming_clients is not None:
+            incoming_ids = {c.get('id') for c in incoming_clients if isinstance(c, dict)}
+            current_ids = {c.get('id') for c in current_clients if isinstance(c, dict)}
+            # Add any server-side clients missing from incoming data
+            for cc in current_clients:
+                if isinstance(cc, dict) and cc.get('id') not in incoming_ids:
+                    incoming_clients.append(cc)
+                    print(f'  MERGE: preserved client {cc.get("name", "?")} (id={cc.get("id")}) from server')
+            # Also merge users so new accounts aren't lost
+            incoming_users = data.get('users', []) if isinstance(data, dict) else []
+            current_users = _state_cache.get('users', []) if _state_cache and isinstance(_state_cache, dict) else []
+            if current_users and incoming_users is not None:
+                incoming_emails = {u.get('email') for u in incoming_users if isinstance(u, dict)}
+                for cu in current_users:
+                    if isinstance(cu, dict) and cu.get('email') not in incoming_emails:
+                        incoming_users.append(cu)
+                        print(f'  MERGE: preserved user {cu.get("email", "?")} from server')
+                data['users'] = incoming_users
+            data['clients'] = incoming_clients
 
+        final_count = len(data.get('clients', []))
         _save_to_disk(data)
-        return jsonify({'ok': True, 'clients': incoming_clients})
+        return jsonify({'ok': True, 'clients': final_count})
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
