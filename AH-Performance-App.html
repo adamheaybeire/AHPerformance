@@ -2530,24 +2530,7 @@ function ic(name, colour, size) { return ICONS[name] ? ICONS[name](colour, size)
 // ═══════════════════════════════════════
 //  DEMO DATA
 // ═══════════════════════════════════════
-const CLIENTS = [
-  {
-    id: 1, name: 'Demo Client', initials: 'DC', bg: 'var(--ocean-soft)', colour: 'var(--ocean)',
-    email: 'demo@ahperformance.ie',
-    programme: 'No programme', week: 0, goal: 'General fitness',
-    status: 'active', compliance: 0, lastActivity: 'Just now', neuroTracker: true,
-    nextCheckin: 'Monday', checkinDay: 'Monday',
-    joined: 'Apr 2026',
-    squat: [], bench: [], deadlift: [],
-    weight: [83], height: '178',
-    startWeight: 83,
-    runs: [], goals: [],
-    onboarding: {
-      personal: { firstName: 'Demo', lastName: 'Client', email: 'demo@ahperformance.ie', phone: '07700000000', dob: '1990-01-15', gender: 'Male', weight: '83', height: '178' },
-      goals: { mainGoals: ['Build strength', 'Improve fitness'], targetWeight: '', timeline: '3 months' }
-    }
-  }
-];
+const CLIENTS = [];
 
 const WELLBEING_DATA = [];
 
@@ -2765,8 +2748,7 @@ function _applyState(state, _source) {
     // Start from saved users, then add any hardcoded defaults that aren't in saved state.
     const savedUsers = state.users.slice();
     const hardcoded = [
-      { email: 'adam@ahperformance.ie', password: 'coach2026', role: 'pt', name: 'Adam Heayberd' },
-      { email: 'demo@ahperformance.ie', password: 'demo2026', role: 'client', name: 'Demo Client', clientId: 1 }
+      { email: 'adam@ahperformance.ie', password: 'coach2026', role: 'pt', name: 'Adam Heayberd' }
     ];
     // Add hardcoded defaults only if not already in saved state
     hardcoded.forEach(hc => {
@@ -3007,7 +2989,7 @@ async function loadAppState() {
   // 5. If we only have the hardcoded demo client, the server data may have been
   // wiped by a deploy. Retry server fetch a few times — the phone app may push
   // its data back within seconds.
-  if (CLIENTS.length <= 1 && USERS.length <= 2) {
+  if (CLIENTS.length === 0 && USERS.length <= 1) {
     console.log('AH Performance: Only default data found — will retry server fetch in case another device syncs');
     let retries = 0;
     const retryInterval = setInterval(async () => {
@@ -3094,8 +3076,7 @@ function buildSidebars() {
 //  AUTHENTICATION SYSTEM
 // ═══════════════════════════════════════
 const USERS = [
-  { email: 'adam@ahperformance.ie', password: 'coach2026', role: 'pt', name: 'Adam Heayberd' },
-  { email: 'demo@ahperformance.ie', password: 'demo2026', role: 'client', name: 'Demo Client', clientId: 1 }
+  { email: 'adam@ahperformance.ie', password: 'coach2026', role: 'pt', name: 'Adam Heayberd' }
 ];
 let loggedInUser = null;
 
