@@ -131,8 +131,7 @@ def save_state():
         current_clients = _count_clients(_state_cache) if _state_cache else 0
 
         # SAFETY: Never allow a save that would REDUCE the number of clients
-        # unless the current state has 0 or 1 clients (initial/demo state)
-        if current_clients > 1 and incoming_clients < current_clients:
+        if current_clients > 0 and incoming_clients < current_clients:
             print(f'  BLOCKED save: incoming has {incoming_clients} clients, current has {current_clients}. Refusing to lose data.')
             return jsonify({
                 'ok': False,

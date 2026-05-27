@@ -2668,12 +2668,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (res.ok) {
         const state = await res.json();
         if (state && state.savedAt && state.savedAt > (_lastAppliedSavedAt || 0)) {
-          // Safety: NEVER apply if server has fewer clients than we currently have
-          const serverClientCount = (state.clients || []).length;
-          if (CLIENTS.length > 0 && serverClientCount < CLIENTS.length) {
-            console.warn('AH Performance: Auto-sync blocked — server has ' + serverClientCount + ' clients, we have ' + CLIENTS.length + '. Re-pushing our data.');
-            saveAppState(); // Push our richer data back to server
-            return;
+          // Merge: if server has clients we don't have locally, add them before applying
+          const serverClients = state.clients || [];
+          const localIds = new Set(CLIENTS.map(c => c.id));
+          const newFromServer = serverClients.filter(sc => !localIds.has(sc.id));
+          if (newFromServer.length > 0) {
+            console.log('AH Performance: Auto-sync found ' + newFromServer.length + ' new client(s) from server — merging');
+            // Merge: keep all local clients + add new ones from server
+            const mergedClients = CLIENTS.map(c => {
+              const serverVersion = serverClients.find(sc => sc.id === c.id);
+              return serverVersion || c; // prefer server version for existing clients
+            });
+            newFromServer.forEach(nc => mergedClients.push(nc));
+            state.clients = mergedClients;
+            // Also merge users
+            if (state.users) {
+              const localUserEmails = new Set(USERS.map(u => u.email));
+              state.users.forEach(su => {
+                if (!localUserEmails.has(su.email)) USERS.push(su);
+              });
+            }
           }
           _applyState(state, 'auto-sync');
           _lastAppliedSavedAt = state.savedAt;
