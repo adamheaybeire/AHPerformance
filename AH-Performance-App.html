@@ -6543,6 +6543,19 @@ function submitWellbeing() {
   scheduleSave();
 }
 
+function reviewWellbeingAlert(clientId, timestamp) {
+  // Mark the wellbeing entry as coach-reviewed so it clears from the attention list
+  const entry = WELLBEING_DATA.find(w => w.clientId === clientId && w.timestamp === timestamp);
+  if (entry) entry.coachReviewed = true;
+  // Also mark any other high-stress entries for this client from the same day
+  const entryDate = entry ? entry.date : null;
+  if (entryDate) {
+    WELLBEING_DATA.filter(w => w.clientId === clientId && w.date === entryDate && (w.stress === 'Very High' || w.stress === 'High')).forEach(w => w.coachReviewed = true);
+  }
+  scheduleSave();
+  renderPTDashboard();
+}
+
 function renderWellbeingHistory() {
   const cid = loggedInUser ? loggedInUser.clientId : 1;
   const moodLabels = {1:'Struggling',2:'Low',3:'Neutral',4:'Good',5:'Great'};
@@ -6788,10 +6801,10 @@ function initPTApp() {
 
   // Dynamic "Needs Your Attention" — check for high stress wellbeing, unread check-ins, clients without programmes
   const alerts = [];
-  // Clients with high stress wellbeing in last 7 days
-  WELLBEING_DATA.filter(w => (w.stress === 'Very High' || w.stress === 'High')).slice(0, 2).forEach(w => {
+  // Clients with high stress wellbeing in last 7 days (not yet reviewed by coach)
+  WELLBEING_DATA.filter(w => (w.stress === 'Very High' || w.stress === 'High') && !w.coachReviewed).slice(0, 2).forEach((w, idx) => {
     const c = CLIENTS.find(cl => cl.id === w.clientId);
-    if (c) alerts.push({msg: `${c.name} — wellbeing flagged ${w.stress.toLowerCase()} stress`, sub: w.date, colour: 'var(--danger)', btn: 'Review', page: 'ptWellbeing'});
+    if (c) alerts.push({msg: `${c.name} — wellbeing flagged ${w.stress.toLowerCase()} stress`, sub: w.date, colour: 'var(--danger)', btn: 'Reviewed', action: `reviewWellbeingAlert(${c.id},'${w.timestamp}')`});
   });
   // Clients without a programme assigned
   CLIENTS.filter(c => c.status !== 'inactive' && !c.programme).forEach(c => {
@@ -6802,7 +6815,7 @@ function initPTApp() {
     alerts.push({msg: `${n.client} — ${n.message}`, sub: n.time, colour: 'var(--warning)', btn: 'View', page: 'ptClients'});
   });
   document.getElementById('ptAlerts').innerHTML = alerts.length ? alerts.map((a, i) =>
-    `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;${i < alerts.length-1 ? 'border-bottom:1px solid var(--slate-border);':''}"><div style="width:8px;height:8px;border-radius:50%;background:${a.colour};flex-shrink:0;"></div><div style="flex:1;"><div style="font-size:13px;">${a.msg}</div><div style="font-size:11px;color:var(--text-dim);">${a.sub}</div></div><button class="btn btn-sm btn-secondary" onclick="showPTPage('${a.page}')">${a.btn}</button></div>`
+    `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;${i < alerts.length-1 ? 'border-bottom:1px solid var(--slate-border);':''}"><div style="width:8px;height:8px;border-radius:50%;background:${a.colour};flex-shrink:0;"></div><div style="flex:1;"><div style="font-size:13px;">${a.msg}</div><div style="font-size:11px;color:var(--text-dim);">${a.sub}</div></div><button class="btn btn-sm btn-secondary" onclick="${a.action || "showPTPage('" + a.page + "')"}">${a.btn}</button></div>`
   ).join('') : '<p style="color:var(--text-dim);font-size:13px;padding:12px 0;">All clear — no urgent items right now.</p>';
 
   // Dynamic "Recent Activity" — from PT_NOTIFICATIONS (most recent 5)
