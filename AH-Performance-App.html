@@ -2628,6 +2628,7 @@ function _applyUpdate() {
 document.addEventListener('DOMContentLoaded', async () => {
   // Register PWA Service Worker with update detection
   if ('serviceWorker' in navigator) {
+    const hadController = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.register('/sw.js').then(reg => {
       // Check for updates every 60 seconds
       setInterval(() => reg.update(), 60000);
@@ -2635,11 +2636,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const newWorker = reg.installing;
         if (!newWorker) return;
         newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+          // Show banner when new SW is installed/activated and we already had one running
+          if ((newWorker.state === 'installed' || newWorker.state === 'activated') && hadController) {
+            console.log('AH Performance: New version detected (SW state: ' + newWorker.state + ')');
             _showUpdateBanner();
           }
         });
       });
+      // Also check: if a waiting worker exists already (e.g. from a previous visit)
+      if (reg.waiting && hadController) {
+        console.log('AH Performance: Update was waiting from previous visit');
+        _showUpdateBanner();
+      }
     }).catch(() => {});
     // Also detect controller change (when new SW takes over)
     navigator.serviceWorker.addEventListener('controllerchange', () => {
