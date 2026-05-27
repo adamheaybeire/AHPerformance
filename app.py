@@ -130,13 +130,15 @@ def save_state():
         incoming_clients = data.get('clients', []) if isinstance(data, dict) else []
         current_clients = _state_cache.get('clients', []) if _state_cache and isinstance(_state_cache, dict) else []
 
+        # Respect intentional deletions — don't merge back deleted clients
+        deleted_ids = set(data.get('_deletedClientIds', []))
+
         # MERGE: combine clients from both sides so no one gets lost
         if current_clients and incoming_clients is not None:
             incoming_ids = {c.get('id') for c in incoming_clients if isinstance(c, dict)}
-            current_ids = {c.get('id') for c in current_clients if isinstance(c, dict)}
-            # Add any server-side clients missing from incoming data
+            # Add any server-side clients missing from incoming data (unless intentionally deleted)
             for cc in current_clients:
-                if isinstance(cc, dict) and cc.get('id') not in incoming_ids:
+                if isinstance(cc, dict) and cc.get('id') not in incoming_ids and cc.get('id') not in deleted_ids:
                     incoming_clients.append(cc)
                     print(f'  MERGE: preserved client {cc.get("name", "?")} (id={cc.get("id")}) from server')
             # Also merge users so new accounts aren't lost

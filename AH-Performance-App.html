@@ -2531,6 +2531,7 @@ function ic(name, colour, size) { return ICONS[name] ? ICONS[name](colour, size)
 //  DEMO DATA
 // ═══════════════════════════════════════
 const CLIENTS = [];
+const DELETED_CLIENT_IDS = []; // Track intentionally deleted clients so server merge doesn't resurrect them
 
 const WELLBEING_DATA = [];
 
@@ -2671,7 +2672,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           // Merge: if server has clients we don't have locally, add them before applying
           const serverClients = state.clients || [];
           const localIds = new Set(CLIENTS.map(c => c.id));
-          const newFromServer = serverClients.filter(sc => !localIds.has(sc.id));
+          const newFromServer = serverClients.filter(sc => !localIds.has(sc.id) && !DELETED_CLIENT_IDS.includes(sc.id));
           if (newFromServer.length > 0) {
             console.log('AH Performance: Auto-sync found ' + newFromServer.length + ' new client(s) from server — merging');
             // Merge: keep all local clients + add new ones from server
@@ -2688,6 +2689,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!localUserEmails.has(su.email)) USERS.push(su);
               });
             }
+          }
+          // Filter out any intentionally deleted clients before applying
+          if (DELETED_CLIENT_IDS.length > 0 && state.clients) {
+            state.clients = state.clients.filter(c => !DELETED_CLIENT_IDS.includes(c.id));
           }
           _applyState(state, 'auto-sync');
           _lastAppliedSavedAt = state.savedAt;
@@ -2730,6 +2735,7 @@ function _buildState() {
     foodLog: FOOD_LOG,
     neuroData: NEURO_DATA,
     neuroEpisodes: NEURO_EPISODES,
+    _deletedClientIds: DELETED_CLIENT_IDS,
     savedAt: Date.now()
   };
 }
@@ -2770,6 +2776,12 @@ function _applyState(state, _source) {
     });
     USERS.length = 0;
     savedUsers.forEach(u => USERS.push(u));
+  }
+  // Restore deleted client IDs tracking
+  if (state._deletedClientIds && Array.isArray(state._deletedClientIds)) {
+    state._deletedClientIds.forEach(id => {
+      if (!DELETED_CLIENT_IDS.includes(id)) DELETED_CLIENT_IDS.push(id);
+    });
   }
   // FULL REPLACE for dict-shaped stores (prevents deleted client data from resurrecting via Object.assign merge)
   if (state.workoutLog) { Object.keys(WORKOUT_LOG).forEach(k => delete WORKOUT_LOG[k]); Object.assign(WORKOUT_LOG, state.workoutLog); }
@@ -7300,6 +7312,8 @@ function removeClient() {
   if (!confirm(`Are you sure you want to permanently remove ${name} from the system?\n\nThis will delete all their data including workouts, progress, check-ins, and messages. This cannot be undone.`)) return;
   if (!confirm(`Final confirmation: Remove ${name} and all associated data?`)) return;
   const cid = currentDetailClient.id;
+  // Track deletion so server merge won't resurrect this client
+  if (!DELETED_CLIENT_IDS.includes(cid)) DELETED_CLIENT_IDS.push(cid);
   // Remove from CLIENTS
   const idx = CLIENTS.findIndex(c => c.id === cid);
   if (idx >= 0) CLIENTS.splice(idx, 1);
