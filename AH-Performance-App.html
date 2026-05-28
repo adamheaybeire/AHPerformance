@@ -12034,6 +12034,52 @@ function submitOnboardingForm() {
   // Create the client record on the PT side
   const p = submission.personal;
   const name = p.firstName + ' ' + p.lastName;
+
+  // ── Duplicate email guard ──
+  // If a client with this email already exists, update their onboarding instead of creating a duplicate
+  const emailLower = (p.email || '').toLowerCase();
+  if (emailLower) {
+    const existingClient = CLIENTS.find(c => c && c.email && c.email.toLowerCase() === emailLower);
+    if (existingClient) {
+      // Update existing record with fresh onboarding data
+      existingClient.onboarding = submission;
+      existingClient.status = 'new';
+      existingClient.lastActivity = 'Just now';
+      if (p.weight) { existingClient.weight = [parseFloat(p.weight)]; existingClient.startWeight = parseFloat(p.weight); }
+      if (p.height) existingClient.height = p.height;
+      existingClient.goal = submission.goals.mainGoals.join(', ') || existingClient.goal;
+      scheduleSave();
+
+      // Notify PT
+      addPTNotification('programme', existingClient.id, name, 'Client re-submitted onboarding form — review their details');
+
+      // Skip to account step (they may already have an account)
+      const existingUser = USERS.find(u => u && u.email && u.email.toLowerCase() === emailLower && u.role === 'client');
+      if (existingUser) {
+        // Already has account — go straight to confirmation
+        document.querySelectorAll('.ob-section').forEach(s => s.classList.remove('active'));
+        const conf = document.getElementById('obSecConfirm');
+        if (conf) conf.classList.add('active');
+        const prog = document.getElementById('obProgress');
+        const lbl = document.getElementById('obLabels');
+        if (prog) prog.style.display = 'none';
+        if (lbl) lbl.style.display = 'none';
+      } else {
+        window._pendingNewClient = { email: emailLower, name: name, clientId: existingClient.id };
+        document.querySelectorAll('.ob-section').forEach(s => s.classList.remove('active'));
+        const accStep = document.getElementById('obSecAccount');
+        if (accStep) accStep.classList.add('active');
+        const prog = document.getElementById('obProgress');
+        const lbl = document.getElementById('obLabels');
+        if (prog) prog.style.display = 'none';
+        if (lbl) lbl.style.display = 'none';
+        const accEmail = document.getElementById('obAccEmail');
+        if (accEmail) accEmail.value = p.email;
+      }
+      return; // Don't create a new client
+    }
+  }
+
   const initials = (p.firstName[0] || '') + (p.lastName[0] || '');
   const colours = [{bg:'var(--ember-soft)',c:'var(--ember)'},{bg:'var(--ocean-soft)',c:'var(--ocean)'},{bg:'var(--sage-soft)',c:'var(--sage-text)'},{bg:'rgba(155,142,196,0.1)',c:'#9B8EC4'}];
   const col = colours[CLIENTS.length % colours.length];
@@ -12110,6 +12156,19 @@ function createClientAccount() {
 
   const pending = window._pendingNewClient;
   if (!pending) return;
+
+  // Check if user account already exists for this email — update password if so
+  const existingUser = USERS.find(u => u && u.email && u.email.toLowerCase() === pending.email.toLowerCase() && u.role === 'client');
+  if (existingUser) {
+    existingUser.password = pass;
+    existingUser.clientId = pending.clientId;
+    scheduleSave();
+    document.querySelectorAll('.ob-section').forEach(s => s.classList.remove('active'));
+    const conf = document.getElementById('obSecConfirm');
+    if (conf) conf.classList.add('active');
+    window._pendingNewClient = null;
+    return;
+  }
 
   // Create the user account with the chosen password
   const newUserAccount = {
