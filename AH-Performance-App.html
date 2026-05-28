@@ -2797,6 +2797,48 @@ function _applyState(state, _source) {
       if (!DELETED_CLIENT_IDS.includes(id)) DELETED_CLIENT_IDS.push(id);
     });
   }
+  // ── Self-healing: deduplicate clients by email (keep highest ID = most recent) ──
+  const _seenEmails = {};
+  for (let i = CLIENTS.length - 1; i >= 0; i--) {
+    const em = (CLIENTS[i].email || '').toLowerCase();
+    if (!em) continue;
+    if (_seenEmails[em]) {
+      // This is a duplicate — remove the one with the LOWER id (older entry)
+      const keepId = Math.max(CLIENTS[i].id, _seenEmails[em].id);
+      const removeId = Math.min(CLIENTS[i].id, _seenEmails[em].id);
+      const removeIdx = CLIENTS.findIndex(c => c.id === removeId);
+      if (removeIdx !== -1) {
+        CLIENTS.splice(removeIdx, 1);
+        if (!DELETED_CLIENT_IDS.includes(removeId)) DELETED_CLIENT_IDS.push(removeId);
+        // Clean up data stores for removed duplicate
+        delete WORKOUT_LOG[removeId]; delete CHECKIN_LOG[removeId];
+        delete PROGRESS_DATA[removeId]; delete CLIENT_NOTIFICATIONS[removeId];
+        if (typeof PROGRAMME_WEEKS !== 'undefined') delete PROGRAMME_WEEKS[removeId];
+        if (typeof CLIENT_PROGRAMMES !== 'undefined') delete CLIENT_PROGRAMMES[removeId];
+        const uIdx = USERS.findIndex(u => u.clientId === removeId);
+        if (uIdx !== -1) USERS.splice(uIdx, 1);
+        console.log('AH Performance: auto-removed duplicate client ID ' + removeId + ' (email: ' + em + ', keeping ID ' + keepId + ')');
+      }
+      // Update seen entry to the kept one
+      _seenEmails[em] = CLIENTS.find(c => c.id === keepId);
+    } else {
+      _seenEmails[em] = CLIENTS[i];
+    }
+  }
+  // ── Self-healing: deduplicate onboarding submissions by email (keep latest) ──
+  if (typeof ONBOARDING_SUBMISSIONS !== 'undefined') {
+    const _seenSubEmails = {};
+    for (let i = ONBOARDING_SUBMISSIONS.length - 1; i >= 0; i--) {
+      const s = ONBOARDING_SUBMISSIONS[i];
+      const em = (s && s.personal && s.personal.email || '').toLowerCase();
+      if (!em) continue;
+      if (_seenSubEmails[em]) {
+        ONBOARDING_SUBMISSIONS.splice(i, 1);
+      } else {
+        _seenSubEmails[em] = true;
+      }
+    }
+  }
   // FULL REPLACE for dict-shaped stores (prevents deleted client data from resurrecting via Object.assign merge)
   if (state.workoutLog) { Object.keys(WORKOUT_LOG).forEach(k => delete WORKOUT_LOG[k]); Object.assign(WORKOUT_LOG, state.workoutLog); }
   if (state.checkinLog) { Object.keys(CHECKIN_LOG).forEach(k => delete CHECKIN_LOG[k]); Object.assign(CHECKIN_LOG, state.checkinLog); }
