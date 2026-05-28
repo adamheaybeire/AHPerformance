@@ -6986,6 +6986,29 @@ function openClientDetail(id) {
   if (!c.bg) c.bg = 'var(--ember-soft)';
   if (!c.colour) c.colour = 'var(--ember)';
   currentDetailClient = c;
+
+  // ── Reset all detail view DOM to prevent stale data from previous client bleeding through ──
+  _clearDTWeeklySummary();
+  // Clear strength chart/history
+  const dsc = document.getElementById('detailStrChart'); if (dsc) dsc.innerHTML = '';
+  document.getElementById('dtStrEx').innerHTML = '';
+  const dsh = document.getElementById('dtStrHistory'); if (dsh) dsh.innerHTML = '';
+  const dshf = document.getElementById('dtStrHistoryFilter'); if (dshf) dshf.innerHTML = '<option value="">All Exercises</option>';
+  // Clear cardio chart/history
+  const dcc = document.getElementById('detailCardChart'); if (dcc) dcc.innerHTML = '';
+  document.getElementById('dtCardActivity').innerHTML = '';
+  const dch = document.getElementById('dtCardHistory'); if (dch) dch.innerHTML = '';
+  // Clear measurements
+  const dmc = document.getElementById('detailMeasChart'); if (dmc) dmc.innerHTML = '';
+  document.getElementById('detailMeasTable').innerHTML = '';
+  // Clear progression overview
+  const dpl = document.getElementById('dtProgressionList'); if (dpl) dpl.innerHTML = '';
+  // Clear wearable
+  const dwc = document.getElementById('detailWearChart'); if (dwc) dwc.innerHTML = '';
+  const dwh = document.getElementById('dtWearHistory'); if (dwh) dwh.innerHTML = '';
+  // Clear workout history
+  const dwkh = document.getElementById('dtWorkoutHistory'); if (dwkh) dwkh.innerHTML = '';
+
   document.getElementById('detailAvatar').style.background = c.bg;
   document.getElementById('detailAvatar').style.color = c.colour;
   document.getElementById('detailAvatar').textContent = c.initials;
@@ -7283,10 +7306,22 @@ function _buildWeekFromWorkoutLogForClient(clientId) {
   return allWeeks && allWeeks.length ? allWeeks[0] : null;
 }
 
+function _clearDTWeeklySummary() {
+  document.getElementById('dtWeekLabel').textContent = '—';
+  document.getElementById('dtWkHours').textContent = '—';
+  document.getElementById('dtWkHoursDetail').textContent = '—';
+  document.getElementById('dtWkRunKm').textContent = '—';
+  document.getElementById('dtWkRunDetail').textContent = '';
+  document.getElementById('dtWkDailyHours').innerHTML = '';
+  const cb = document.getElementById('dtWkCardioBreakdown'); if (cb) cb.style.display = 'none';
+  const cl = document.getElementById('dtWkCardioList'); if (cl) cl.innerHTML = '';
+  const rc = document.getElementById('dtWkRunChart'); if (rc) rc.innerHTML = '';
+}
+
 function renderDTWeeklySummary() {
   if (!currentDetailClient) return;
   const allWeeks = _buildAllWeeksFromWorkoutLog(currentDetailClient.id);
-  if (!allWeeks || !allWeeks.length) return;
+  if (!allWeeks || !allWeeks.length) { _clearDTWeeklySummary(); return; }
   if (dtWeekIdx >= allWeeks.length) dtWeekIdx = 0;
   const week = allWeeks[dtWeekIdx];
   if (!week) return;
