@@ -2677,14 +2677,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (res.ok) {
         const state = await res.json();
         if (state && state.savedAt && state.savedAt > (_lastAppliedSavedAt || 0)) {
+          // Load server's deleted IDs BEFORE merging so we don't resurrect deleted clients
+          if (state._deletedClientIds && Array.isArray(state._deletedClientIds)) {
+            state._deletedClientIds.forEach(id => {
+              if (!DELETED_CLIENT_IDS.includes(id)) DELETED_CLIENT_IDS.push(id);
+            });
+          }
           // Merge: if server has clients we don't have locally, add them before applying
           const serverClients = state.clients || [];
           const localIds = new Set(CLIENTS.map(c => c.id));
           const newFromServer = serverClients.filter(sc => !localIds.has(sc.id) && !DELETED_CLIENT_IDS.includes(sc.id));
           if (newFromServer.length > 0) {
             console.log('AH Performance: Auto-sync found ' + newFromServer.length + ' new client(s) from server — merging');
-            // Merge: keep all local clients + add new ones from server
-            const mergedClients = CLIENTS.map(c => {
+            // Merge: keep all local clients (unless deleted) + add new ones from server
+            const mergedClients = CLIENTS.filter(c => !DELETED_CLIENT_IDS.includes(c.id)).map(c => {
               const serverVersion = serverClients.find(sc => sc.id === c.id);
               return serverVersion || c; // prefer server version for existing clients
             });
@@ -2724,7 +2730,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function _buildState() {
   return {
-    clients: CLIENTS,
+    clients: DELETED_CLIENT_IDS.length > 0 ? CLIENTS.filter(c => !DELETED_CLIENT_IDS.includes(c.id)) : CLIENTS,
     users: USERS,
     workoutLog: WORKOUT_LOG,
     checkinLog: CHECKIN_LOG,
@@ -12029,15 +12035,25 @@ function submitOnboardingForm() {
     }
   };
 
-  ONBOARDING_SUBMISSIONS.push(submission);
-
   // Create the client record on the PT side
   const p = submission.personal;
   const name = p.firstName + ' ' + p.lastName;
+  const emailLower = (p.email || '').toLowerCase();
+
+  // ── Deduplicate onboarding submissions by email ──
+  // Remove any previous submission with the same email so only the latest one exists
+  if (emailLower) {
+    for (let i = ONBOARDING_SUBMISSIONS.length - 1; i >= 0; i--) {
+      const s = ONBOARDING_SUBMISSIONS[i];
+      if (s && s.personal && s.personal.email && s.personal.email.toLowerCase() === emailLower) {
+        ONBOARDING_SUBMISSIONS.splice(i, 1);
+      }
+    }
+  }
+  ONBOARDING_SUBMISSIONS.push(submission);
 
   // ── Duplicate email guard ──
   // If a client with this email already exists, update their onboarding instead of creating a duplicate
-  const emailLower = (p.email || '').toLowerCase();
   if (emailLower) {
     const existingClient = CLIENTS.find(c => c && c.email && c.email.toLowerCase() === emailLower);
     if (existingClient) {
