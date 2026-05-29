@@ -176,6 +176,7 @@ body { font-family: var(--font-body); background: var(--base); color: var(--text
     <button class="btn btn-primary" onclick="exportProgramme()">Export Programme</button>
     <button class="btn btn-secondary" id="copyPrevBtn" onclick="copyPreviousWeek()" style="display:none;">Copy Previous Week</button>
     <button class="btn btn-primary" id="assignBtn" onclick="assignToClient()" style="background:#8BB07E;border-color:#8BB07E;display:none;">Assign to Client</button>
+    <button class="btn btn-primary" id="updateBtn" onclick="assignToClient()" style="background:#E07A3A;border-color:#E07A3A;display:none;">Update Programme</button>
   </div>
 </div>
 
@@ -1061,7 +1062,8 @@ function assignToClient() {
     programme: resolved
   }, '*');
 
-  showToast('Programme assigned to ' + client.name);
+  const isUpdate = document.getElementById('updateBtn') && document.getElementById('updateBtn').style.display !== 'none';
+  showToast(isUpdate ? 'Programme updated for ' + client.name : 'Programme assigned to ' + client.name);
 }
 
 function saveProgrammeToApp() {
@@ -1101,12 +1103,22 @@ window.addEventListener('message', function(e) {
     const sel = document.getElementById('clientSelect');
     sel.innerHTML = '<option value="">Select client...</option>' +
       embeddedClients.map(c => `<option value="${c.id}">${c.name} — ${c.programme || 'No programme'}</option>`).join('');
+    // Reset buttons when client list refreshes
+    const assignBtn = document.getElementById('assignBtn');
+    const updateBtn = document.getElementById('updateBtn');
+    if (assignBtn) assignBtn.style.display = '';
+    if (updateBtn) updateBtn.style.display = 'none';
   }
   if (e.data && e.data.type === 'ah-select-client') {
     const sel = document.getElementById('clientSelect');
     if (sel) sel.value = e.data.clientId;
-    // Load the client's existing programme into the builder if provided
+    // Show Update button if client already has a programme, Assign if not
+    const assignBtn = document.getElementById('assignBtn');
+    const updateBtn = document.getElementById('updateBtn');
     if (e.data.programme && e.data.programme.days) {
+      // Existing programme — show Update, hide Assign
+      if (assignBtn) assignBtn.style.display = 'none';
+      if (updateBtn) updateBtn.style.display = '';
       programme = JSON.parse(JSON.stringify(e.data.programme));
       activeDay = 0;
       activeSessionIdx = 0;
@@ -1116,6 +1128,10 @@ window.addEventListener('message', function(e) {
       if (weekEl && e.data.weekNumber) weekEl.value = e.data.weekNumber;
       renderDayTabs();
       switchDay(0);
+    } else {
+      // No existing programme — show Assign, hide Update
+      if (assignBtn) assignBtn.style.display = '';
+      if (updateBtn) updateBtn.style.display = 'none';
     }
   }
   // Receive previous week's programme data
