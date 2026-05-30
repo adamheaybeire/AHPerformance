@@ -371,6 +371,21 @@ function sortDays() {
   renderDay();
 }
 
+function setSessionType(type) {
+  const sess = currentSession();
+  if (!sess) return;
+  const classLabels = {hyrox:'HYROX Class',hiit:'HIIT Class',spin:'Spin Class',boxing:'Boxing Class'};
+  if (type) {
+    sess.classType = type;
+    if (!sess.focus) sess.focus = classLabels[type] || type;
+  } else {
+    delete sess.classType;
+    delete sess.classDuration;
+  }
+  renderDay();
+  saveProgrammeToApp();
+}
+
 function addSession() {
   const day = programme.days[activeDay];
   day.sessions.push({ focus: '', exercises: [], supersets: [] });
@@ -475,38 +490,63 @@ function renderDay() {
   html += `<button class="add-session-btn" onclick="addSession()" title="Add session to this day">+ Session</button>`;
   html += `</div>`;
 
-  // Session focus input
-  html += `<div class="day-header">
-    <input class="day-title-input" value="${sess.focus}" onchange="currentSession().focus=this.value;renderDay()" placeholder="Session focus (e.g. Upper Body Push + Core, Long Run, Stretching...)" style="font-size:14px" />
+  // Session type selector + focus input
+  const sessType = sess.classType || '';
+  const isClass = !!sessType;
+  html += `<div class="day-header" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <select style="padding:6px 10px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-primary);font-size:13px;font-family:Inter,sans-serif;min-width:140px;" onchange="setSessionType(this.value)">
+      <option value="" ${!isClass?'selected':''}>Exercises</option>
+      <option value="hyrox" ${sessType==='hyrox'?'selected':''}>HYROX Class</option>
+      <option value="hiit" ${sessType==='hiit'?'selected':''}>HIIT Class</option>
+      <option value="spin" ${sessType==='spin'?'selected':''}>Spin Class</option>
+      <option value="boxing" ${sessType==='boxing'?'selected':''}>Boxing Class</option>
+    </select>
+    <input class="day-title-input" value="${sess.focus}" onchange="currentSession().focus=this.value;renderDay()" placeholder="${isClass ? 'Class notes (optional)...' : 'Session focus (e.g. Upper Body Push + Core, Long Run, Stretching...)'}" style="font-size:14px;flex:1;" />
   </div>`;
 
-  html += `<div class="exercise-list" id="exerciseList">`;
+  if (isClass) {
+    // Class mode — just show duration and optional notes
+    const classLabels = {hyrox:'HYROX Class',hiit:'HIIT Class',spin:'Spin Class',boxing:'Boxing Class'};
+    const classDur = sess.classDuration || '';
+    html += `<div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:20px;margin:12px 0;text-align:center;">
+      <div style="font-size:22px;margin-bottom:4px;">${sessType==='hyrox'?'🏋️':sessType==='hiit'?'⚡':sessType==='spin'?'🚴':sessType==='boxing'?'🥊':'📋'}</div>
+      <div style="font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:2px;">${classLabels[sessType]||sessType}</div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;">Scheduled as cardio · counts towards weekly hours</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+        <label style="font-size:13px;color:var(--text-secondary);">Duration</label>
+        <input type="text" value="${classDur}" onchange="currentSession().classDuration=this.value;saveProgrammeToApp()" placeholder="e.g. 60 min" style="width:100px;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-size:14px;text-align:center;font-family:Inter,sans-serif;" />
+      </div>
+    </div>`;
+  } else {
+    // Normal exercise mode
+    html += `<div class="exercise-list" id="exerciseList">`;
 
-  // Group exercises by superset membership
-  let i = 0;
-  while (i < sess.exercises.length) {
-    const ex = sess.exercises[i];
-    const ssGroup = sess.supersets.find(ss => ss.exerciseIndices.includes(i));
+    // Group exercises by superset membership
+    let i = 0;
+    while (i < sess.exercises.length) {
+      const ex = sess.exercises[i];
+      const ssGroup = sess.supersets.find(ss => ss.exerciseIndices.includes(i));
 
-    if (ssGroup && ssGroup.exerciseIndices[0] === i) {
-      html += renderSupersetGroup(sess, ssGroup);
-      i = Math.max(...ssGroup.exerciseIndices) + 1;
-    } else if (!ssGroup) {
-      html += renderExerciseSlot(sess, i);
-      i++;
-    } else {
-      i++;
+      if (ssGroup && ssGroup.exerciseIndices[0] === i) {
+        html += renderSupersetGroup(sess, ssGroup);
+        i = Math.max(...ssGroup.exerciseIndices) + 1;
+      } else if (!ssGroup) {
+        html += renderExerciseSlot(sess, i);
+        i++;
+      } else {
+        i++;
+      }
     }
+
+    html += `</div>`;
+    html += `<div class="drop-zone" id="dropZone" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropExercise(event)">
+      Drag an exercise here or double-click in the library to add</div>`;
+
+    html += `<div class="day-actions">
+      <button class="btn btn-secondary btn-small" onclick="startSuperset()">Group as Superset</button>
+      <button class="btn btn-secondary btn-small" onclick="addWarmupBlock()">+ Warm-up Block</button>
+    </div>`;
   }
-
-  html += `</div>`;
-  html += `<div class="drop-zone" id="dropZone" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropExercise(event)">
-    Drag an exercise here or double-click in the library to add</div>`;
-
-  html += `<div class="day-actions">
-    <button class="btn btn-secondary btn-small" onclick="startSuperset()">Group as Superset</button>
-    <button class="btn btn-secondary btn-small" onclick="addWarmupBlock()">+ Warm-up Block</button>
-  </div>`;
 
   // Replace content after tabs
   const contents = document.getElementById('dayContents');
