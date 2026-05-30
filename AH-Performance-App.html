@@ -2636,17 +2636,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         const newWorker = reg.installing;
         if (!newWorker) return;
         newWorker.addEventListener('statechange', () => {
-          // Show banner when new SW is installed/activated and we already had one running
-          if ((newWorker.state === 'installed' || newWorker.state === 'activated') && hadController) {
-            console.log('AH Performance: New version detected (SW state: ' + newWorker.state + ')');
+          // Show banner when new SW is installed and we already had one running
+          if (newWorker.state === 'installed' && hadController) {
+            console.log('AH Performance: New version detected (SW state: installed)');
+            _showUpdateBanner();
+          }
+          // Also show if SW activated and there was a previous controller
+          if (newWorker.state === 'activated' && hadController) {
+            console.log('AH Performance: New version activated');
             _showUpdateBanner();
           }
         });
       });
-      // Also check: if a waiting worker exists already (e.g. from a previous visit)
-      if (reg.waiting && hadController) {
+      // If a waiting worker exists already (e.g. from a previous visit), show banner
+      if (reg.waiting) {
         console.log('AH Performance: Update was waiting from previous visit');
         _showUpdateBanner();
+      }
+      // Also: if the active SW version doesn't match the expected version, prompt update
+      if (reg.active) {
+        // Force check for update on load
+        reg.update();
       }
     }).catch(() => {});
     // Also detect controller change (when new SW takes over)
@@ -3823,13 +3833,13 @@ function renderProgrammeWeek() {
       });
       content = `<table><thead><tr><th>Exercise</th><th>Sets × Reps</th><th>Weight</th><th>RPE</th></tr></thead><tbody>${rows}</tbody></table>`;
     } else if (s.classType) {
-      // Class session (HYROX, HIIT, Spin, Boxing)
-      const classIcons = {hyrox:'🏋️',hiit:'⚡',spin:'🚴',boxing:'🥊'};
-      const classLabels = {hyrox:'HYROX Class',hiit:'HIIT Class',spin:'Spin Class',boxing:'Boxing Class'};
+      // Class session (HYROX, HIIT, Spin, Boxing) or Rest Day
+      const classIcons = {hyrox:'🏋️',hiit:'⚡',spin:'🚴',boxing:'🥊',rest:'😴'};
+      const classLabels = {hyrox:'HYROX Class',hiit:'HIIT Class',spin:'Spin Class',boxing:'Boxing Class',rest:'Rest Day'};
       content = `<div style="text-align:center;padding:12px 0;">
         <div style="font-size:28px;margin-bottom:6px;">${classIcons[s.classType]||'📋'}</div>
         <div style="font-size:14px;font-weight:600;color:var(--text-bright);">${classLabels[s.classType]||s.classType}</div>
-        ${s.classDuration ? '<div style="font-size:13px;color:var(--text-muted);margin-top:4px;">' + s.classDuration + '</div>' : ''}
+        ${s.classDuration ? '<div style="font-size:13px;color:var(--text-muted);margin-top:4px;' + (s.classType==='rest' ? 'font-style:italic;' : '') + '">' + s.classDuration + '</div>' : ''}
         ${s.desc && s.desc !== s.classDuration ? '<div style="font-size:12px;color:var(--text-dim);margin-top:6px;font-style:italic;">' + s.desc + '</div>' : ''}
       </div>`;
     } else {
@@ -11323,8 +11333,9 @@ function convertBuilderToClientFormat(builderProgramme, weekNumber, programmeNam
       const sessionName = sess.focus || (day.sessions.length > 1 ? day.name + ' Session ' + (si+1) : day.name);
       // Class sessions (HYROX, HIIT, Spin, Boxing) — schedule as cardio with duration
       if (sess.classType) {
-        const classLabels = {hyrox:'HYROX Class',hiit:'HIIT Class',spin:'Spin Class',boxing:'Boxing Class'};
-        sessions.push({ day: abbr, type: 'cardio', name: sessionName || classLabels[sess.classType] || sess.classType, desc: sess.classDuration ? sess.classDuration : '', classType: sess.classType, classDuration: sess.classDuration || '' });
+        const classLabels = {hyrox:'HYROX Class',hiit:'HIIT Class',spin:'Spin Class',boxing:'Boxing Class',rest:'Rest Day'};
+        const isRest = sess.classType === 'rest';
+        sessions.push({ day: abbr, type: isRest ? 'rest' : 'cardio', name: sessionName || classLabels[sess.classType] || sess.classType, desc: sess.classDuration ? sess.classDuration : '', classType: sess.classType, classDuration: sess.classDuration || '' });
         return; // skip normal exercise processing
       }
       // Check if it looks like cardio (no exercises, or all exercises are cardio-pattern)

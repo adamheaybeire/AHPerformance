@@ -207,6 +207,19 @@ body { font-family: var(--font-body); background: var(--base); color: var(--text
           <option>Lunge</option><option>Carry</option><option>Rotation</option><option>Cardio</option>
           <option>Flexibility</option><option>Warm-up</option><option>Core</option>
         </select>
+        <select id="libBodyRegion" onchange="filterLibrary()">
+          <option value="">All Body Regions</option>
+          <option value="chest">Chest</option>
+          <option value="shoulders">Shoulders</option>
+          <option value="arms">Arms</option>
+          <option value="upper-back">Upper Back</option>
+          <option value="lower-back">Lower Back</option>
+          <option value="core">Core</option>
+          <option value="upper-legs">Upper Legs</option>
+          <option value="lower-legs">Lower Legs</option>
+          <option value="glutes">Glutes</option>
+          <option value="full-body">Full Body</option>
+        </select>
         <select id="libDifficulty" onchange="filterLibrary()">
           <option value="">All Levels</option>
           <option>Beginner</option><option>Intermediate</option><option>Advanced</option>
@@ -299,13 +312,34 @@ function currentSession() {
 // ── Library ──
 function getBadgeClass(p) { return 'lib-badge-' + p.toLowerCase().replace(/[\s\/]/g, '-'); }
 
+const BODY_REGION_MAP = {
+  'chest': /chest|pec/i,
+  'shoulders': /delt|shoulder|rotator|trap/i,
+  'arms': /bicep|tricep|brachialis|brachioradialis|forearm/i,
+  'upper-back': /lat|rhomboid|mid.?trap|upper.?trap|rear.?delt|teres/i,
+  'lower-back': /erector|spinae|lower.?back/i,
+  'core': /core|abdomin|rectus|oblique|transverse|anti-/i,
+  'upper-legs': /quad|hamstring|adduct|abduct|hip.?flex|inner.?thigh/i,
+  'lower-legs': /calf|calves|gastrocnemius|soleus|tibialis|ankle/i,
+  'glutes': /glute|piriformis/i,
+  'full-body': /full.?body/i
+};
+function matchesBodyRegion(ex, region) {
+  const rx = BODY_REGION_MAP[region];
+  if (!rx) return false;
+  const muscles = ((ex.primaryMuscles||'') + ',' + (ex.secondaryMuscles||'')).toLowerCase();
+  return rx.test(muscles);
+}
+
 function filterLibrary() {
   const search = document.getElementById('libSearch').value.toLowerCase();
   const pattern = document.getElementById('libPattern').value;
+  const bodyRegion = document.getElementById('libBodyRegion').value;
   const diff = document.getElementById('libDifficulty').value;
   const filtered = exercises.filter(ex => {
     if (search && !ex.name.toLowerCase().includes(search) && !ex.primaryMuscles.toLowerCase().includes(search) && !ex.equipment.toLowerCase().includes(search)) return false;
     if (pattern && ex.movementPattern !== pattern) return false;
+    if (bodyRegion && !matchesBodyRegion(ex, bodyRegion)) return false;
     if (diff && ex.difficulty !== diff) return false;
     return true;
   });
@@ -374,7 +408,7 @@ function sortDays() {
 function setSessionType(type) {
   const sess = currentSession();
   if (!sess) return;
-  const classLabels = {hyrox:'HYROX Class',hiit:'HIIT Class',spin:'Spin Class',boxing:'Boxing Class'};
+  const classLabels = {hyrox:'HYROX Class',hiit:'HIIT Class',spin:'Spin Class',boxing:'Boxing Class',rest:'Rest Day'};
   if (type) {
     sess.classType = type;
     if (!sess.focus) sess.focus = classLabels[type] || type;
@@ -500,22 +534,27 @@ function renderDay() {
       <option value="hiit" ${sessType==='hiit'?'selected':''}>HIIT Class</option>
       <option value="spin" ${sessType==='spin'?'selected':''}>Spin Class</option>
       <option value="boxing" ${sessType==='boxing'?'selected':''}>Boxing Class</option>
+      <option value="rest" ${sessType==='rest'?'selected':''}>Rest Day</option>
     </select>
     <input class="day-title-input" value="${sess.focus}" onchange="currentSession().focus=this.value;renderDay()" placeholder="${isClass ? 'Class notes (optional)...' : 'Session focus (e.g. Upper Body Push + Core, Long Run, Stretching...)'}" style="font-size:14px;flex:1;" />
   </div>`;
 
   if (isClass) {
-    // Class mode — just show duration and optional notes
-    const classLabels = {hyrox:'HYROX Class',hiit:'HIIT Class',spin:'Spin Class',boxing:'Boxing Class'};
+    // Class or Rest Day mode
+    const classLabels = {hyrox:'HYROX Class',hiit:'HIIT Class',spin:'Spin Class',boxing:'Boxing Class',rest:'Rest Day'};
+    const classIcons = {hyrox:'🏋️',hiit:'⚡',spin:'🚴',boxing:'🥊',rest:'😴'};
     const classDur = sess.classDuration || '';
+    const isRest = sessType === 'rest';
     html += `<div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:20px;margin:12px 0;text-align:center;">
-      <div style="font-size:22px;margin-bottom:4px;">${sessType==='hyrox'?'🏋️':sessType==='hiit'?'⚡':sessType==='spin'?'🚴':sessType==='boxing'?'🥊':'📋'}</div>
+      <div style="font-size:22px;margin-bottom:4px;">${classIcons[sessType]||'📋'}</div>
       <div style="font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:2px;">${classLabels[sessType]||sessType}</div>
-      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;">Scheduled as cardio · counts towards weekly hours</div>
-      <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;">${isRest ? 'Recovery day · not counted in sessions' : 'Scheduled as cardio · counts towards weekly hours'}</div>
+      ${isRest ? `<div style="margin-top:10px;">
+        <textarea onchange="currentSession().classDuration=this.value;saveProgrammeToApp()" placeholder="Recovery notes (e.g. Active recovery — light walk, stretching, foam rolling...)" style="width:90%;max-width:400px;padding:10px 14px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-size:13px;font-family:Inter,sans-serif;resize:vertical;min-height:60px;">${classDur}</textarea>
+      </div>` : `<div style="display:flex;align-items:center;justify-content:center;gap:10px;">
         <label style="font-size:13px;color:var(--text-secondary);">Duration</label>
         <input type="text" value="${classDur}" onchange="currentSession().classDuration=this.value;saveProgrammeToApp()" placeholder="e.g. 60 min" style="width:100px;padding:8px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-size:14px;text-align:center;font-family:Inter,sans-serif;" />
-      </div>
+      </div>`}
     </div>`;
   } else {
     // Normal exercise mode
