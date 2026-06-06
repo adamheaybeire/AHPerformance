@@ -575,6 +575,13 @@
   .checkin-due-banner{background:linear-gradient(135deg,var(--ember-soft),rgba(224,122,58,0.04));border:1px solid rgba(224,122,58,0.25);border-radius:14px;padding:16px 20px;margin-bottom:20px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all 0.15s;}
   .checkin-due-banner:hover{border-color:var(--ember);background:linear-gradient(135deg,var(--ember-glow),var(--ember-soft));}
 
+  /* In-app toast notification */
+  .ah-toast{position:fixed;top:20px;right:20px;z-index:10000;background:var(--slate-card);border:1px solid var(--slate-border);border-left:4px solid var(--ember);border-radius:12px;padding:14px 18px;box-shadow:0 8px 32px rgba(0,0,0,0.3);max-width:340px;transform:translateX(120%);opacity:0;transition:transform 0.35s cubic-bezier(.4,0,.2,1), opacity 0.35s;pointer-events:auto;cursor:pointer;}
+  .ah-toast.show{transform:translateX(0);opacity:1;}
+  .ah-toast .toast-title{font-size:13px;font-weight:700;color:var(--text-bright);font-family:'Space Grotesk',sans-serif;}
+  .ah-toast .toast-body{font-size:12px;color:var(--text-muted);margin-top:4px;font-family:'Space Grotesk',sans-serif;}
+  @media(max-width:600px){.ah-toast{top:auto;bottom:80px;right:12px;left:12px;max-width:none;}}
+
   /* Notification bell */
   .notification-bell{position:absolute;top:0;right:0;cursor:pointer;padding:8px;border-radius:10px;transition:background 0.15s;}
   .notification-bell:hover{background:var(--slate-raised);}
@@ -5026,6 +5033,15 @@ function wlAddFreeExercise() {
 
 function finishWorkout() {
   if (!wlActive) return;
+  // Check if any sets were completed — warn if none
+  const _hasExercises = wlCurrentSession?.exercises?.length > 0;
+  if (_hasExercises) {
+    let _anyDone = false;
+    Object.values(wlSetData).forEach(sets => { if (sets.some(s => s.done)) _anyDone = true; });
+    if (!_anyDone) {
+      if (!confirm('You haven\'t ticked any sets as complete.\n\nTap the ✓ button next to each set as you finish it — only completed sets get saved.\n\nFinish anyway with no exercise data?')) return;
+    }
+  }
   // Count completed sets — only include weight-based exercises in volume
   let totalDone = 0, totalVolume = 0;
   const exercises = wlCurrentSession?.exercises || [];
@@ -5279,10 +5295,13 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
   // Keep progress data sorted descending by date (charts .reverse() to ascending)
   PROGRESS_DATA[cid].strength.sort((a,b) => b.date.localeCompare(a.date));
   PROGRESS_DATA[cid].cardio.sort((a,b) => b.date.localeCompare(a.date));
-  // Send notification to PT
-  const exNames = exerciseLogs.map(e => e.name).slice(0, 3).join(', ');
+  // Send notification to PT — skip if 0 sets on a session with exercises (avoids ghost "0 sets" entries)
   const clientName = loggedInUser ? loggedInUser.name : 'Client';
-  triggerWorkoutLogged(cid, clientName, exNames + ' (' + totalSets + ' sets)');
+  if (totalSets > 0 || !wlCurrentSession.exercises || !wlCurrentSession.exercises.length) {
+    const exNames = exerciseLogs.map(e => e.name).slice(0, 3).join(', ');
+    const notifMsg = totalSets > 0 ? exNames + ' (' + totalSets + ' sets)' : (wlCurrentSession.name || 'Workout');
+    triggerWorkoutLogged(cid, clientName, notifMsg);
+  }
   // Update client compliance based on workouts this week vs programme sessions
   _updateClientCompliance(cid);
   scheduleSave();
@@ -12706,8 +12725,11 @@ function addClientNotification(clientId, type, message) {
 }
 
 function _showBrowserNotification(title, body) {
+  // Always show in-app toast (works even when tab is focused)
+  _showInAppToast(title, body);
+  // Browser notification only when tab is NOT focused
   if (!('Notification' in window)) return;
-  if (document.hasFocus && document.hasFocus()) return; // only when tab is in background
+  if (document.hasFocus && document.hasFocus()) return;
   if (Notification.permission === 'granted') {
     try { new Notification(title, { body, icon: '/icon-192.png', badge: '/icon-192.png' }); } catch(e) {}
   } else if (Notification.permission !== 'denied') {
@@ -12717,6 +12739,24 @@ function _showBrowserNotification(title, body) {
       }
     });
   }
+}
+
+let _toastQueue = [], _toastActive = false;
+function _showInAppToast(title, body) {
+  _toastQueue.push({ title, body });
+  if (!_toastActive) _processToastQueue();
+}
+function _processToastQueue() {
+  if (!_toastQueue.length) { _toastActive = false; return; }
+  _toastActive = true;
+  const { title, body } = _toastQueue.shift();
+  const toast = document.createElement('div');
+  toast.className = 'ah-toast';
+  toast.innerHTML = `<div class="toast-title">${title || 'AH Performance'}</div><div class="toast-body">${body || ''}</div>`;
+  toast.onclick = () => { toast.classList.remove('show'); setTimeout(() => { toast.remove(); _processToastQueue(); }, 350); };
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => { requestAnimationFrame(() => { toast.classList.add('show'); }); });
+  setTimeout(() => { if (toast.parentNode) { toast.classList.remove('show'); setTimeout(() => { toast.remove(); _processToastQueue(); }, 350); } }, 5000);
 }
 
 function _requestNotificationPermission() {
