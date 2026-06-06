@@ -19,6 +19,8 @@ import json
 import os
 import uuid
 import time
+import secrets
+import hashlib
 import glob as globmod
 import shutil
 import smtplib
@@ -374,6 +376,138 @@ def send_email():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# ─── Password Reset (secure token-based) ───
+
+# In-memory token store: { token_hash: { email, expires } }
+_reset_tokens = {}
+
+@app.route('/api/request-password-reset', methods=['POST'])
+def request_password_reset():
+    """Generate a secure reset token, email a link to the user."""
+    if not SMTP_HOST or not SMTP_USER:
+        return jsonify({'error': 'Email not configured on server.'}), 503
+
+    data = request.get_json(force=True)
+    email = (data.get('email') or '').strip().lower()
+    if not email:
+        return jsonify({'error': 'Email is required.'}), 400
+
+    # Check user exists in state
+    state = _state_cache or {}
+    users = state.get('users', [])
+    user = next((u for u in users if (u.get('email') or '').lower() == email), None)
+    # Always return success (don't reveal whether email exists)
+    if not user:
+        return jsonify({'ok': True, 'message': 'If that email is registered, a reset link has been sent.'})
+
+    # Generate secure token (32 bytes = 64 hex chars)
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+    # Store with 30-minute expiry
+    _reset_tokens[token_hash] = {
+        'email': email,
+        'expires': time.time() + 1800  # 30 minutes
+    }
+
+    # Clean up expired tokens
+    now = time.time()
+    expired = [k for k, v in _reset_tokens.items() if v['expires'] < now]
+    for k in expired:
+        del _reset_tokens[k]
+
+    # Build reset URL — use the request host so it works on any domain
+    base_url = request.host_url.rstrip('/')
+    reset_url = f"{base_url}/AH-Performance-App.html?reset_token={token}"
+
+    # Send email
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['From'] = f'{SMTP_FROM_NAME} <{SMTP_FROM}>'
+        msg['To'] = email
+        msg['Subject'] = 'Reset Your Password — AH Performance'
+        msg['Reply-To'] = SMTP_FROM
+
+        plain_body = f"Hi,\n\nYou requested a password reset for your AH Performance account.\n\nClick this link to reset your password:\n{reset_url}\n\nThis link expires in 30 minutes.\n\nIf you didn't request this, you can safely ignore this email.\n\n— AH Performance"
+        msg.attach(MIMEText(plain_body, 'plain'))
+
+        html_body = f"""
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; color: #333;">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <span style="display: inline-block; width: 40px; height: 40px; border: 2px solid #E8612D; border-radius: 10px; line-height: 40px; font-weight: 700; color: #E8612D; font-size: 16px;">AH</span>
+            </div>
+            <h2 style="font-size: 18px; text-align: center; margin-bottom: 16px;">Reset Your Password</h2>
+            <p style="font-size: 14px; line-height: 1.6;">You requested a password reset for your AH Performance account. Click the button below to set a new password:</p>
+            <div style="text-align: center; margin: 28px 0;">
+                <a href="{reset_url}" style="display: inline-block; background: #E8612D; color: white; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;">Reset Password</a>
+            </div>
+            <p style="font-size: 12px; color: #888; text-align: center;">This link expires in 30 minutes. If you didn't request this, you can safely ignore this email.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
+            <div style="font-size: 12px; color: #999; text-align: center;">AH Performance · Personal Training</div>
+        </div>
+        """
+        msg.attach(MIMEText(html_body, 'html'))
+
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASS)
+            server.send_message(msg)
+
+    except Exception as e:
+        print(f'Password reset email failed: {e}')
+        return jsonify({'error': 'Failed to send email. Try again later.'}), 500
+
+    return jsonify({'ok': True, 'message': 'If that email is registered, a reset link has been sent.'})
+
+
+@app.route('/api/reset-password', methods=['POST'])
+def reset_password():
+    """Validate token and update password."""
+    data = request.get_json(force=True)
+    token = (data.get('token') or '').strip()
+    new_password = data.get('password', '')
+
+    if not token or not new_password:
+        return jsonify({'error': 'Token and password are required.'}), 400
+    if len(new_password) < 6:
+        return jsonify({'error': 'Password must be at least 6 characters.'}), 400
+
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    record = _reset_tokens.get(token_hash)
+
+    if not record:
+        return jsonify({'error': 'Invalid or expired reset link. Please request a new one.'}), 400
+    if time.time() > record['expires']:
+        del _reset_tokens[token_hash]
+        return jsonify({'error': 'This reset link has expired. Please request a new one.'}), 400
+
+    email = record['email']
+
+    # Update user password in state
+    global _state_cache
+    state = _state_cache or {}
+    users = state.get('users', [])
+    user = next((u for u in users if (u.get('email') or '').lower() == email), None)
+
+    if not user:
+        return jsonify({'error': 'Account not found.'}), 404
+
+    user['password'] = new_password
+    _state_cache = state
+
+    # Persist to disk
+    try:
+        with open(DATA_FILE, 'w') as f:
+            json.dump(state, f)
+    except Exception as e:
+        print(f'Failed to persist password change: {e}')
+
+    # Remove used token (one-time use)
+    del _reset_tokens[token_hash]
+
+    return jsonify({'ok': True, 'message': 'Password updated successfully.'})
+
 
 # ─── Photo uploads ───
 # Store photos on Render persistent disk if available, else local directory.

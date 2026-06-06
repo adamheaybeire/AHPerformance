@@ -826,30 +826,46 @@
   </div>
 </div>
 
-<!-- Forgot Password Overlay -->
+<!-- Forgot Password Overlay — Step 1: Request Reset Link -->
 <div class="login-screen" id="forgotPasswordScreen" style="display:none;">
   <div class="login-box fade-in" style="max-width:380px;">
     <div class="login-logo">
       <div class="mark">AH</div>
       <div><div class="wordmark">AH Performance</div><div class="tag">Reset Password</div></div>
     </div>
-    <p class="login-subtitle">Enter your email and new password below.</p>
+    <p class="login-subtitle">Enter your email and we'll send you a secure reset link.</p>
     <div class="login-form">
-      <div class="login-error" id="forgotError" style="display:none;">No account found with that email.</div>
+      <div class="login-error" id="forgotError" style="display:none;"></div>
+      <div class="login-success" id="forgotSuccess" style="display:none;background:var(--sage-soft);color:var(--sage-text);padding:10px 14px;border-radius:10px;font-size:12px;margin-bottom:12px;"></div>
       <div class="login-field">
         <label>Email</label>
-        <input type="email" id="forgotEmail" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('forgotNewPw').focus()">
+        <input type="email" id="forgotEmail" placeholder="your@email.com" onkeydown="if(event.key==='Enter')requestPasswordReset()">
       </div>
+      <button class="login-btn" id="forgotSendBtn" onclick="requestPasswordReset()">Send Reset Link</button>
+      <a style="display:block;text-align:center;margin-top:12px;font-size:12px;color:var(--ocean);cursor:pointer;" onclick="hideForgotPassword()">Back to login</a>
+    </div>
+  </div>
+</div>
+
+<!-- Forgot Password Overlay — Step 2: Enter New Password (arrived via email link) -->
+<div class="login-screen" id="resetPasswordScreen" style="display:none;">
+  <div class="login-box fade-in" style="max-width:380px;">
+    <div class="login-logo">
+      <div class="mark">AH</div>
+      <div><div class="wordmark">AH Performance</div><div class="tag">Set New Password</div></div>
+    </div>
+    <p class="login-subtitle">Enter your new password below.</p>
+    <div class="login-form">
+      <div class="login-error" id="resetError" style="display:none;"></div>
       <div class="login-field">
         <label>New Password</label>
-        <input type="password" id="forgotNewPw" placeholder="Enter new password" onkeydown="if(event.key==='Enter')resetClientPassword()">
+        <input type="password" id="resetNewPw" placeholder="Enter new password" onkeydown="if(event.key==='Enter')document.getElementById('resetConfirmPw').focus()">
       </div>
       <div class="login-field">
         <label>Confirm Password</label>
-        <input type="password" id="forgotConfirmPw" placeholder="Confirm new password" onkeydown="if(event.key==='Enter')resetClientPassword()">
+        <input type="password" id="resetConfirmPw" placeholder="Confirm new password" onkeydown="if(event.key==='Enter')submitPasswordReset()">
       </div>
-      <button class="login-btn" onclick="resetClientPassword()">Reset Password</button>
-      <a style="display:block;text-align:center;margin-top:12px;font-size:12px;color:var(--ocean);cursor:pointer;" onclick="hideForgotPassword()">Back to login</a>
+      <button class="login-btn" id="resetSubmitBtn" onclick="submitPasswordReset()">Reset Password</button>
     </div>
   </div>
 </div>
@@ -2234,11 +2250,7 @@
           </div>
           <div class="card">
             <h3>Progress Photos</h3>
-            <div id="detailPhotos" class="photo-grid">
-              <div class="photo-slot">Front<br><span style="font-size:10px;margin-top:4px;">Week 8</span></div>
-              <div class="photo-slot">Side<br><span style="font-size:10px;margin-top:4px;">Week 8</span></div>
-              <div class="photo-slot">Back<br><span style="font-size:10px;margin-top:4px;">Week 8</span></div>
-            </div>
+            <div id="detailPhotos"></div>
           </div>
         </div>
 
@@ -2686,6 +2698,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   } catch(e) {}
+
+  // Check for password reset token in URL (from email link)
+  const _urlParams = new URLSearchParams(window.location.search);
+  const _resetToken = _urlParams.get('reset_token');
+  if (_resetToken) {
+    showResetPasswordForm(_resetToken);
+  }
 
   // Auto-sync from server every 30 seconds to pick up changes from other devices
   setInterval(async () => {
@@ -3200,9 +3219,10 @@ function showForgotPassword() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('forgotPasswordScreen').style.display = 'flex';
   document.getElementById('forgotError').style.display = 'none';
+  document.getElementById('forgotSuccess').style.display = 'none';
   document.getElementById('forgotEmail').value = '';
-  document.getElementById('forgotNewPw').value = '';
-  document.getElementById('forgotConfirmPw').value = '';
+  document.getElementById('forgotSendBtn').disabled = false;
+  document.getElementById('forgotSendBtn').textContent = 'Send Reset Link';
 }
 
 function hideForgotPassword() {
@@ -3210,24 +3230,102 @@ function hideForgotPassword() {
   document.getElementById('loginScreen').style.display = 'flex';
 }
 
-function resetClientPassword() {
+function requestPasswordReset() {
   const email = document.getElementById('forgotEmail').value.trim().toLowerCase();
-  const newPw = document.getElementById('forgotNewPw').value;
-  const confirmPw = document.getElementById('forgotConfirmPw').value;
   const errEl = document.getElementById('forgotError');
+  const successEl = document.getElementById('forgotSuccess');
+  const btn = document.getElementById('forgotSendBtn');
 
-  if (!email || !newPw) { errEl.textContent = 'Please fill in all fields.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  successEl.style.display = 'none';
+
+  if (!email) { errEl.textContent = 'Please enter your email address.'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  fetch('/api/request-password-reset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      errEl.textContent = data.error;
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Send Reset Link';
+    } else {
+      successEl.textContent = 'Check your email! We\'ve sent a secure reset link. It expires in 30 minutes.';
+      successEl.style.display = 'block';
+      btn.textContent = 'Link Sent ✓';
+    }
+  })
+  .catch(() => {
+    errEl.textContent = 'Network error. Please try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Send Reset Link';
+  });
+}
+
+// Step 2: User arrived via reset link — submit new password with token
+let _resetToken = null;
+
+function showResetPasswordForm(token) {
+  _resetToken = token;
+  // Hide all other screens
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('forgotPasswordScreen').style.display = 'none';
+  document.getElementById('resetPasswordScreen').style.display = 'flex';
+  document.getElementById('resetError').style.display = 'none';
+  document.getElementById('resetNewPw').value = '';
+  document.getElementById('resetConfirmPw').value = '';
+}
+
+function submitPasswordReset() {
+  const newPw = document.getElementById('resetNewPw').value;
+  const confirmPw = document.getElementById('resetConfirmPw').value;
+  const errEl = document.getElementById('resetError');
+  const btn = document.getElementById('resetSubmitBtn');
+
+  errEl.style.display = 'none';
+
+  if (!newPw) { errEl.textContent = 'Please enter a new password.'; errEl.style.display = 'block'; return; }
   if (newPw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
   if (newPw !== confirmPw) { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
 
-  const user = USERS.find(u => u.email === email);
-  if (!user) { errEl.textContent = 'No account found with that email.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Resetting...';
 
-  user.password = newPw;
-  scheduleSave();
-  errEl.style.display = 'none';
-  alert('Password reset successfully. You can now log in with your new password.');
-  hideForgotPassword();
+  fetch('/api/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: _resetToken, password: newPw })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      errEl.textContent = data.error;
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Reset Password';
+    } else {
+      alert('Password reset successfully! You can now log in with your new password.');
+      // Remove token from URL
+      window.history.replaceState({}, '', window.location.pathname);
+      _resetToken = null;
+      document.getElementById('resetPasswordScreen').style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'flex';
+    }
+  })
+  .catch(() => {
+    errEl.textContent = 'Network error. Please try again.';
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Reset Password';
+  });
 }
 
 function login(role) {
@@ -5963,15 +6061,46 @@ function renderCPMeasHistory() {
 }
 
 function renderCPPhotos() {
-  document.getElementById('cpPhotoTimeline').innerHTML = `
-    <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-      ${['Week 1','Week 4','Week 8'].map(w => `<button class="btn btn-sm btn-secondary" onclick="this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('btn-ocean'));this.classList.add('btn-ocean');">${w}</button>`).join('')}
-    </div>
-    <div class="photo-grid">
-      <div class="photo-slot">Front<br><span style="font-size:10px;margin-top:8px;">Photo would display here</span></div>
-      <div class="photo-slot">Side<br><span style="font-size:10px;margin-top:8px;">Photo would display here</span></div>
-      <div class="photo-slot">Back<br><span style="font-size:10px;margin-top:8px;">Photo would display here</span></div>
-    </div>`;
+  const el = document.getElementById('cpPhotoTimeline');
+  const cid = loggedInUser ? loggedInUser.clientId : 1;
+  const logs = (CHECKIN_LOG[cid] || []).filter(ci => ci.photos && (ci.photos.front || ci.photos.side || ci.photos.back));
+  if (!logs.length) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No progress photos yet. Photos will appear here after you upload them during check-ins.</p>';
+    return;
+  }
+  // Sort by date/week ascending so newest is last
+  const sorted = logs.slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  // Week filter buttons
+  let html = '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">';
+  sorted.forEach((ci, i) => {
+    html += `<button class="btn btn-sm btn-secondary ${i === sorted.length-1 ? 'btn-ocean' : ''}" onclick="showCPPhotoWeek(${i})" id="cpPhotoBtn${i}">Week ${ci.week}</button>`;
+  });
+  html += '</div>';
+  // Photo grid for each week (show latest by default)
+  sorted.forEach((ci, i) => {
+    const visible = i === sorted.length - 1;
+    html += `<div class="cp-photo-week" id="cpPhotoWeek${i}" style="${visible ? '' : 'display:none;'}">`;
+    html += `<div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">${ci.date || 'Week ' + ci.week}</div>`;
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">';
+    ['front','side','back'].forEach(pose => {
+      if (ci.photos[pose]) {
+        html += `<div style="cursor:pointer;border-radius:12px;overflow:hidden;aspect-ratio:3/4;background:var(--slate-raised);" onclick="openPhotoModal('${pose.charAt(0).toUpperCase()+pose.slice(1)} — Week ${ci.week}','${ci.photos[pose]}')"><img src="${ci.photos[pose]}" alt="${pose}" style="width:100%;height:100%;object-fit:cover;"><div style="text-align:center;font-size:10px;color:var(--text-dim);padding:4px 0;background:var(--slate-card);">${pose.charAt(0).toUpperCase()+pose.slice(1)}</div></div>`;
+      } else {
+        html += `<div style="border-radius:12px;aspect-ratio:3/4;background:var(--slate-raised);display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--text-dim);font-size:11px;"><span>${pose.charAt(0).toUpperCase()+pose.slice(1)}</span><span style="font-size:9px;margin-top:4px;">Not uploaded</span></div>`;
+      }
+    });
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function showCPPhotoWeek(idx) {
+  document.querySelectorAll('.cp-photo-week').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('[id^="cpPhotoBtn"]').forEach(btn => btn.classList.remove('btn-ocean'));
+  const weekEl = document.getElementById('cpPhotoWeek' + idx);
+  const btn = document.getElementById('cpPhotoBtn' + idx);
+  if (weekEl) weekEl.style.display = '';
+  if (btn) btn.classList.add('btn-ocean');
 }
 
 // ── WEARABLE ──
@@ -7237,6 +7366,7 @@ function initDetailProgress(clientId) {
   renderDetailCardHistory(clientId);
   renderDetailMeasChart();
   renderDetailMeasTable(clientId);
+  renderDetailPhotos(clientId);
   dtWeekIdx = 0;
   renderDTWeeklySummary();
 }
@@ -7346,6 +7476,47 @@ function renderDetailMeasTable(clientId) {
   document.getElementById('detailMeasTable').innerHTML = pd.measurements.map(m =>
     `<tr><td class="val">${cpFormatDate(m.date)}</td><td class="val">${m.weight||'—'}kg</td><td>${m.chest||'—'}</td><td>${m.waist||'—'}</td><td>${m.stomach||'—'}</td><td>${m.hips||'—'}</td><td>${m.glutes||'—'}</td><td>${m.arm||'—'}</td><td>${m.thigh||'—'}</td><td>${m.calf||'—'}</td></tr>`
   ).join('');
+}
+
+function renderDetailPhotos(clientId) {
+  const cid = clientId || currentDetailClient?.id;
+  const el = document.getElementById('detailPhotos');
+  if (!el) return;
+  const logs = (CHECKIN_LOG[cid] || []).filter(ci => ci.photos && (ci.photos.front || ci.photos.side || ci.photos.back));
+  if (!logs.length) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">No progress photos uploaded yet.</p>';
+    return;
+  }
+  const sorted = logs.slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  let html = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">';
+  sorted.forEach((ci, i) => {
+    html += `<button class="btn btn-sm btn-secondary ${i === sorted.length-1 ? 'btn-ocean' : ''}" onclick="showDTPhotoWeek(${i})" id="dtPhotoBtn${i}">Wk ${ci.week}</button>`;
+  });
+  html += '</div>';
+  sorted.forEach((ci, i) => {
+    const visible = i === sorted.length - 1;
+    html += `<div class="dt-photo-week" id="dtPhotoWeek${i}" style="${visible ? '' : 'display:none;'}">`;
+    html += `<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">${ci.date || 'Week ' + ci.week}</div>`;
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
+    ['front','side','back'].forEach(pose => {
+      if (ci.photos[pose]) {
+        html += `<div style="cursor:pointer;border-radius:10px;overflow:hidden;aspect-ratio:3/4;background:var(--slate-raised);" onclick="openPhotoModal('${pose.charAt(0).toUpperCase()+pose.slice(1)} — Week ${ci.week}','${ci.photos[pose]}')"><img src="${ci.photos[pose]}" alt="${pose}" style="width:100%;height:100%;object-fit:cover;"><div style="text-align:center;font-size:10px;color:var(--text-dim);padding:3px 0;background:var(--slate-card);">${pose.charAt(0).toUpperCase()+pose.slice(1)}</div></div>`;
+      } else {
+        html += `<div style="border-radius:10px;aspect-ratio:3/4;background:var(--slate-raised);display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--text-dim);font-size:10px;"><span>${pose.charAt(0).toUpperCase()+pose.slice(1)}</span></div>`;
+      }
+    });
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function showDTPhotoWeek(idx) {
+  document.querySelectorAll('.dt-photo-week').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('[id^="dtPhotoBtn"]').forEach(btn => btn.classList.remove('btn-ocean'));
+  const weekEl = document.getElementById('dtPhotoWeek' + idx);
+  const btn = document.getElementById('dtPhotoBtn' + idx);
+  if (weekEl) weekEl.style.display = '';
+  if (btn) btn.classList.add('btn-ocean');
 }
 
 function setDTWearTab(tab, btn) {
