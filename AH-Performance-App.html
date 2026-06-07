@@ -2920,7 +2920,21 @@ function _applyState(state, _source) {
     }
   }
   if (state.emailQueue && state.emailQueue.length) { EMAIL_QUEUE.length = 0; state.emailQueue.forEach(e => EMAIL_QUEUE.push(e)); }
-  if (state.ptConversations && state.ptConversations.length) { PT_CONVERSATIONS.length = 0; state.ptConversations.forEach(c => PT_CONVERSATIONS.push(c)); }
+  if (state.ptConversations && state.ptConversations.length) {
+    // Merge conversations: keep any local messages not yet on server
+    state.ptConversations.forEach(serverCv => {
+      const localCv = PT_CONVERSATIONS.find(lc => lc.clientId === serverCv.clientId || lc.name === serverCv.name);
+      if (localCv && localCv.messages && localCv.messages.length > 0) {
+        // Find local messages that aren't on the server yet (unsaved)
+        const serverMsgTexts = new Set((serverCv.messages || []).map(m => m.from + '|' + m.text));
+        const unsavedLocal = localCv.messages.filter(m => !serverMsgTexts.has(m.from + '|' + m.text));
+        if (unsavedLocal.length > 0) {
+          serverCv.messages = [...(serverCv.messages || []), ...unsavedLocal];
+        }
+      }
+    });
+    PT_CONVERSATIONS.length = 0; state.ptConversations.forEach(c => PT_CONVERSATIONS.push(c));
+  }
   if (state.onboardingSubmissions && state.onboardingSubmissions.length) { ONBOARDING_SUBMISSIONS.length = 0; state.onboardingSubmissions.forEach(s => ONBOARDING_SUBMISSIONS.push(s)); }
   // Programme data protection: never overwrite rich programme data with empty data
   if (state.clientProgrammes && typeof CLIENT_PROGRAMMES !== 'undefined') {
