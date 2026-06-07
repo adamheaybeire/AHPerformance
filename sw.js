@@ -1,7 +1,7 @@
 // AH Performance — Service Worker
 // Enables offline access and "Add to Home Screen" as a real app
 
-const CACHE_NAME = 'ah-performance-v112';
+const CACHE_NAME = 'ah-performance-v113';
 const ASSETS_TO_CACHE = [
   '/AH-Performance-App.html',
   '/AH-Programme-Builder.html',
@@ -92,6 +92,48 @@ self.addEventListener('fetch', event => {
       }).catch(() => cached);
 
       return cached || networkFetch;
+    })
+  );
+});
+
+// ─── Push Notifications ───
+// Fires when server sends a push message (even if app is closed)
+self.addEventListener('push', event => {
+  let data = { title: 'AH Performance', body: 'You have a new update', icon: '/icon-192.png', badge: '/icon-192.png', url: '/AH-Performance-App.html' };
+  try {
+    if (event.data) data = Object.assign(data, event.data.json());
+  } catch(e) {}
+
+  const options = {
+    body: data.body,
+    icon: data.icon || '/icon-192.png',
+    badge: data.badge || '/icon-192.png',
+    tag: data.tag || 'ah-notification',
+    renotify: true,
+    vibrate: [200, 100, 200],
+    data: { url: data.url || '/AH-Performance-App.html' }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// When user taps the notification, open/focus the app
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/AH-Performance-App.html';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      // If app is already open, focus it
+      for (const client of windowClients) {
+        if (client.url.includes('AH-Performance-App') && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise open a new window
+      return clients.openWindow(url);
     })
   );
 });

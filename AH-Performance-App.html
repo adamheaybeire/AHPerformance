@@ -11507,6 +11507,8 @@ function saveClientNutrition(cid) {
   const client = CLIENTS.find(c => c.id === cid);
   if (client) {
     addPTNotification('nutrition', cid, client.name, 'Nutrition plan updated for ' + client.name);
+    addClientNotification(cid, 'nutrition', 'Coach Adam updated your nutrition plan');
+    _sendPushToClient(cid, 'Nutrition Updated', 'Coach Adam updated your nutrition plan', 'nutrition');
   }
 
   scheduleSave();
@@ -12932,8 +12934,64 @@ function _processToastQueue() {
 
 function _requestNotificationPermission() {
   if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
+    Notification.requestPermission().then(perm => {
+      if (perm === 'granted') _subscribeToPush();
+    });
+  } else if ('Notification' in window && Notification.permission === 'granted') {
+    _subscribeToPush();
   }
+}
+
+// ─── Web Push subscription ───
+async function _subscribeToPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (!loggedInUser || !loggedInUser.clientId) return; // only subscribe clients
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    // Check if already subscribed
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      // Get VAPID public key from server
+      const keyRes = await fetch('/api/push/vapid-public-key');
+      if (!keyRes.ok) return;
+      const { publicKey } = await keyRes.json();
+      if (!publicKey) return;
+
+      // Convert base64url to Uint8Array
+      const padding = '='.repeat((4 - publicKey.length % 4) % 4);
+      const raw = atob(publicKey.replace(/-/g, '+').replace(/_/g, '/') + padding);
+      const uint8 = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) uint8[i] = raw.charCodeAt(i);
+
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: uint8
+      });
+    }
+
+    // Send subscription to server
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId: loggedInUser.clientId,
+        subscription: sub.toJSON()
+      })
+    });
+    console.log('AH Performance: Push subscription active');
+  } catch(e) {
+    console.warn('AH Performance: Push subscription failed:', e);
+  }
+}
+
+// ─── Send push to client (called from coach actions) ───
+function _sendPushToClient(clientId, title, body, tag) {
+  fetch('/api/push/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clientId: String(clientId), title, body, tag: tag || 'ah-notification' })
+  }).catch(() => {}); // Fire and forget
 }
 
 // Trigger: client submits check-in → notify PT + queue email
@@ -12946,6 +13004,7 @@ function triggerCheckinSubmitted(clientId, clientName, clientEmail, week) {
 // Trigger: PT reviews check-in → notify client + queue email
 function triggerCheckinReviewed(clientId, clientName, clientEmail, week) {
   addClientNotification(clientId, 'checkin-reviewed', `Coach Adam reviewed your Week ${week} check-in`);
+  _sendPushToClient(clientId, 'Check-In Reviewed', `Coach Adam reviewed your Week ${week} check-in`, 'checkin');
   queueEmail(clientEmail, clientName, `Coach Adam reviewed your check-in`,
     'checkin-reviewed',
     `Hi ${clientName},\n\nCoach Adam has reviewed your Week ${week} check-in and left feedback. Log in to your AH Performance app to view his notes.\n\nKeep up the great work!\n\nAH Performance`);
@@ -12954,6 +13013,7 @@ function triggerCheckinReviewed(clientId, clientName, clientEmail, week) {
 // Trigger: PT assigns/updates programme → notify client + queue email
 function triggerProgrammeUpdated(clientId, clientName, clientEmail, programmeName) {
   addClientNotification(clientId, 'programme', `Coach Adam updated your programme — ${programmeName}`);
+  _sendPushToClient(clientId, 'New Programme', `Coach Adam updated your programme — ${programmeName}`, 'programme');
   queueEmail(clientEmail, clientName, `New programme assigned — ${programmeName}`,
     'programme-assigned',
     `Hi ${clientName},\n\nCoach Adam has assigned a new programme: ${programmeName}. Log in to your AH Performance app to view your updated sessions.\n\nLet's go!\n\nAH Performance`);
@@ -12968,7 +13028,7 @@ function triggerWorkoutLogged(clientId, clientName, workoutName) {
 function triggerNewMessage(clientId, clientName, clientEmail, fromPT) {
   if (fromPT) {
     addClientNotification(clientId, 'message', 'New message from Coach Adam');
-    // No email for messages — they're in-app only
+    _sendPushToClient(clientId, 'New Message', 'Coach Adam sent you a message', 'message');
   } else {
     addPTNotification('message', clientId, clientName, 'Sent you a message');
   }

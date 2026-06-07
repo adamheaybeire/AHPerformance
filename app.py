@@ -157,6 +157,32 @@ SMTP_PASS = os.environ.get('SMTP_PASS', '')        # e.g. your Brevo SMTP key
 SMTP_FROM = os.environ.get('SMTP_FROM', 'adam@ahperformance.co.uk')
 SMTP_FROM_NAME = os.environ.get('SMTP_FROM_NAME', 'AH Performance')
 
+# ─── Web Push (VAPID) config ───
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', 'w7vZORuqzehSgl4wpoKFI3pQK09kVRTdSuE7-NTHS6k')
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', 'BDcRi3IVNQjo7TXKtJB6nKfvpX0wwk8MHDlty_Sj2SEo7HKg2W8EOGQ6vCn5bAxmI7EtJJUC9fL0mOAn2ZwWXi4')
+VAPID_CLAIMS_EMAIL = os.environ.get('VAPID_CLAIMS_EMAIL', 'mailto:adam@ahperformance.co.uk')
+
+# Push subscriptions stored on disk alongside state
+PUSH_SUBS_FILE = os.path.join(DISK_PATH, 'push_subscriptions.json') if DISK_PATH and os.path.isdir(DISK_PATH) else os.path.join(os.path.dirname(os.path.abspath(__file__)), 'push_subscriptions.json')
+
+def _load_push_subs():
+    try:
+        if os.path.exists(PUSH_SUBS_FILE):
+            with open(PUSH_SUBS_FILE, 'r') as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}  # { clientId: [ {endpoint, keys: {p256dh, auth}} ] }
+
+def _save_push_subs(subs):
+    try:
+        with open(PUSH_SUBS_FILE, 'w') as f:
+            json.dump(subs, f)
+    except Exception as e:
+        print(f'Failed to save push subscriptions: {e}')
+
+_push_subs = _load_push_subs()
+
 # ─── API: Shared data sync ───
 
 @app.route('/api/state', methods=['GET'])
@@ -507,6 +533,114 @@ def reset_password():
     del _reset_tokens[token_hash]
 
     return jsonify({'ok': True, 'message': 'Password updated successfully.'})
+
+
+# ─── Web Push Notifications ───
+
+@app.route('/api/push/vapid-public-key', methods=['GET'])
+def get_vapid_public_key():
+    """Return the public VAPID key so clients can subscribe."""
+    return jsonify({'publicKey': VAPID_PUBLIC_KEY})
+
+
+@app.route('/api/push/subscribe', methods=['POST'])
+def push_subscribe():
+    """Register a push subscription for a client."""
+    global _push_subs
+    data = request.get_json(force=True)
+    client_id = str(data.get('clientId', ''))
+    subscription = data.get('subscription')
+
+    if not client_id or not subscription or not subscription.get('endpoint'):
+        return jsonify({'error': 'clientId and subscription required'}), 400
+
+    if client_id not in _push_subs:
+        _push_subs[client_id] = []
+
+    # Avoid duplicates (same endpoint)
+    existing_endpoints = [s['endpoint'] for s in _push_subs[client_id]]
+    if subscription['endpoint'] not in existing_endpoints:
+        _push_subs[client_id].append(subscription)
+        _save_push_subs(_push_subs)
+
+    return jsonify({'ok': True})
+
+
+@app.route('/api/push/unsubscribe', methods=['POST'])
+def push_unsubscribe():
+    """Remove a push subscription."""
+    global _push_subs
+    data = request.get_json(force=True)
+    client_id = str(data.get('clientId', ''))
+    endpoint = data.get('endpoint', '')
+
+    if client_id in _push_subs:
+        _push_subs[client_id] = [s for s in _push_subs[client_id] if s['endpoint'] != endpoint]
+        _save_push_subs(_push_subs)
+
+    return jsonify({'ok': True})
+
+
+@app.route('/api/push/send', methods=['POST'])
+def push_send():
+    """Send a push notification to a specific client. Called by coach actions."""
+    data = request.get_json(force=True)
+    client_id = str(data.get('clientId', ''))
+    title = data.get('title', 'AH Performance')
+    body = data.get('body', '')
+    url = data.get('url', '/AH-Performance-App.html')
+    tag = data.get('tag', 'ah-notification')
+
+    if not client_id:
+        return jsonify({'error': 'clientId required'}), 400
+
+    subs = _push_subs.get(client_id, [])
+    if not subs:
+        return jsonify({'ok': True, 'sent': 0, 'reason': 'No subscriptions for this client'})
+
+    payload = json.dumps({
+        'title': title,
+        'body': body,
+        'icon': '/icon-192.png',
+        'badge': '/icon-192.png',
+        'url': url,
+        'tag': tag
+    })
+
+    sent = 0
+    failed_endpoints = []
+
+    try:
+        from pywebpush import webpush, WebPushException
+    except ImportError:
+        # Fallback: if pywebpush not installed, skip silently
+        return jsonify({'ok': True, 'sent': 0, 'reason': 'pywebpush not installed on server'})
+
+    for sub in subs:
+        try:
+            webpush(
+                subscription_info=sub,
+                data=payload,
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={'sub': VAPID_CLAIMS_EMAIL}
+            )
+            sent += 1
+        except WebPushException as e:
+            # 410 Gone or 404 = subscription expired, remove it
+            if hasattr(e, 'response') and e.response and e.response.status_code in (404, 410):
+                failed_endpoints.append(sub['endpoint'])
+            else:
+                print(f'Push failed for client {client_id}: {e}')
+                failed_endpoints.append(sub['endpoint'])
+        except Exception as e:
+            print(f'Push error: {e}')
+
+    # Clean up expired subscriptions
+    if failed_endpoints:
+        _push_subs[client_id] = [s for s in _push_subs[client_id] if s['endpoint'] not in failed_endpoints]
+        _save_push_subs(_push_subs)
+
+    return jsonify({'ok': True, 'sent': sent})
 
 
 # ─── Photo uploads ───
