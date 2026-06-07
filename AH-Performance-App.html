@@ -11623,67 +11623,83 @@ window.addEventListener('message', function(e) {
 
   if (e.data.type === 'ah-assign-programme') {
     const { clientId, clientName, programmeName, weekNumber, programme } = e.data;
+    const action = e.data.action || 'new-programme'; // 'update-week', 'add-week', 'new-programme'
     const client = CLIENTS.find(c => c.id === clientId);
     if (!client) return;
 
-    // Check if there's already an active programme for this client + same week number
-    // If so, UPDATE it in place instead of creating a duplicate
-    let existing = PT_PROGRAMMES.find(p => p.clientId === clientId && p.weekNumber === weekNumber && p.status === 'active');
-    let isUpdate = false;
+    if (action === 'update-week') {
+      // UPDATE THIS WEEK: modify sessions for the current week only, keep everything else
+      let existing = PT_PROGRAMMES.find(p => p.clientId === clientId && p.weekNumber === weekNumber && p.status === 'active');
+      if (existing) {
+        existing.name = programmeName;
+        existing.builderData = programme;
+        existing.startDate = e.data.startDate || existing.startDate;
+        existing.assignedDate = new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+      } else {
+        // No existing week with this number — add it as active (keep others active too)
+        PT_PROGRAMMES.push({
+          id: Date.now(), name: programmeName, clientId, clientName, weekNumber,
+          startDate: e.data.startDate || '', status: 'active', builderData: programme,
+          assignedDate: new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})
+        });
+      }
+      // Update client-viewable programme — merge, don't replace
+      const converted = convertBuilderToClientFormat(programme, weekNumber, programmeName);
+      if (!CLIENT_PROGRAMMES) window.CLIENT_PROGRAMMES = {};
+      if (!CLIENT_PROGRAMMES[clientId]) CLIENT_PROGRAMMES[clientId] = {};
+      Object.assign(CLIENT_PROGRAMMES[clientId], converted);
 
-    // Deactivate ALL other active programmes for this client (prevents accumulation)
-    PT_PROGRAMMES.filter(p => p.clientId === clientId && p.status === 'active' && p !== existing).forEach(p => { p.status = 'inactive'; });
-
-    if (existing) {
-      // Update in place
-      existing.name = programmeName;
-      existing.builderData = programme;
-      existing.startDate = e.data.startDate || existing.startDate;
-      existing.assignedDate = new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
-      isUpdate = true;
-    } else {
-      // New programme assignment
-      const progRecord = {
-        id: Date.now(),
-        name: programmeName,
-        clientId: clientId,
-        clientName: clientName,
-        weekNumber: weekNumber,
-        startDate: e.data.startDate || '',
-        status: 'active',
-        builderData: programme,
+    } else if (action === 'add-week') {
+      // ADD NEW WEEK: append a new week, keep all previous weeks and their data
+      // Deactivate the previous "latest" programme record but keep its data accessible
+      PT_PROGRAMMES.filter(p => p.clientId === clientId && p.status === 'active').forEach(p => { p.status = 'inactive'; });
+      PT_PROGRAMMES.push({
+        id: Date.now(), name: programmeName, clientId, clientName, weekNumber,
+        startDate: e.data.startDate || '', status: 'active', builderData: programme,
         assignedDate: new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})
-      };
-      PT_PROGRAMMES.push(progRecord);
+      });
+      // Merge new week into client programmes — DO NOT wipe previous weeks
+      const converted = convertBuilderToClientFormat(programme, weekNumber, programmeName);
+      if (!CLIENT_PROGRAMMES) window.CLIENT_PROGRAMMES = {};
+      if (!CLIENT_PROGRAMMES[clientId]) CLIENT_PROGRAMMES[clientId] = {};
+      Object.assign(CLIENT_PROGRAMMES[clientId], converted);
+
+    } else {
+      // NEW PROGRAMME: clean slate — wipe previous weeks, start fresh
+      PT_PROGRAMMES.filter(p => p.clientId === clientId && p.status === 'active').forEach(p => { p.status = 'inactive'; });
+      PT_PROGRAMMES.push({
+        id: Date.now(), name: programmeName, clientId, clientName, weekNumber,
+        startDate: e.data.startDate || '', status: 'active', builderData: programme,
+        assignedDate: new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})
+      });
+      // Fresh programme — clear all previous weeks
+      if (!CLIENT_PROGRAMMES) window.CLIENT_PROGRAMMES = {};
+      CLIENT_PROGRAMMES[clientId] = {};
+      const converted = convertBuilderToClientFormat(programme, weekNumber, programmeName);
+      Object.assign(CLIENT_PROGRAMMES[clientId], converted);
+      CLIENT_PROGRAMMES[clientId]._assignedAt = Date.now();
     }
 
     // Update client record
     client.programme = programmeName;
-    client.week = weekNumber + '/' + weekNumber;
-
-    // Convert and store as client-viewable programme weeks
-    const converted = convertBuilderToClientFormat(programme, weekNumber, programmeName);
-    if (!CLIENT_PROGRAMMES) window.CLIENT_PROGRAMMES = {};
-    if (!CLIENT_PROGRAMMES[clientId]) CLIENT_PROGRAMMES[clientId] = {};
-    // If this is a new programme (not update), clear old weeks to avoid confusion
-    if (!isUpdate) {
-      CLIENT_PROGRAMMES[clientId] = {};
-    }
-    Object.assign(CLIENT_PROGRAMMES[clientId], converted);
-    // Store assignment timestamp so LOGGED badge only counts workouts logged under this programme
-    CLIENT_PROGRAMMES[clientId]._assignedAt = Date.now();
+    // Calculate total weeks for display
+    const totalWeeks = CLIENT_PROGRAMMES[clientId] ? Object.keys(CLIENT_PROGRAMMES[clientId]).filter(k => !k.startsWith('_')).length : weekNumber;
+    client.week = weekNumber + '/' + totalWeeks;
 
     // If this is James Wilson (demo), also update global PROGRAMME_WEEKS
     if (clientId === 1) {
+      const converted = convertBuilderToClientFormat(programme, weekNumber, programmeName);
       Object.assign(PROGRAMME_WEEKS, converted);
     }
 
     // Notify PT
-    addPTNotification('programme', clientId, clientName, (isUpdate ? 'Programme updated: ' : 'Programme assigned: ') + programmeName);
-    // Notify client + queue email (triggerProgrammeUpdated handles both)
+    const actionLabels = { 'update-week': 'Week updated: ', 'add-week': 'New week added: ', 'new-programme': 'Programme assigned: ' };
+    addPTNotification('programme', clientId, clientName, (actionLabels[action] || 'Programme assigned: ') + programmeName);
+    // Notify client + queue email
     triggerProgrammeUpdated(clientId, clientName, client.email || '', programmeName);
 
-    alert('Programme "' + programmeName + '" ' + (isUpdate ? 'updated' : 'assigned') + ' for ' + clientName + ' successfully.');
+    const alertLabels = { 'update-week': 'updated', 'add-week': 'new week added', 'new-programme': 'assigned' };
+    alert('Programme "' + programmeName + '" ' + (alertLabels[action] || 'assigned') + ' for ' + clientName + ' successfully.');
     scheduleSave();
   }
 

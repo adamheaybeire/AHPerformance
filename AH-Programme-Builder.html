@@ -175,8 +175,10 @@ body { font-family: var(--font-body); background: var(--base); color: var(--text
     <button class="btn btn-secondary" onclick="saveAsTemplate()">Save as Template</button>
     <button class="btn btn-primary" onclick="exportProgramme()">Export Programme</button>
     <button class="btn btn-secondary" id="copyPrevBtn" onclick="copyPreviousWeek()" style="display:none;">Copy Previous Week</button>
-    <button class="btn btn-primary" id="assignBtn" onclick="assignToClient()" style="background:#8BB07E;border-color:#8BB07E;display:none;">Assign to Client</button>
-    <button class="btn btn-primary" id="updateBtn" onclick="assignToClient()" style="background:#E07A3A;border-color:#E07A3A;display:none;">Update Programme</button>
+    <button class="btn btn-primary" id="assignBtn" onclick="assignToClient('new-programme')" style="background:#8BB07E;border-color:#8BB07E;display:none;">Assign to Client</button>
+    <button class="btn btn-primary" id="addWeekBtn" onclick="assignToClient('add-week')" style="background:#8BB07E;border-color:#8BB07E;display:none;">Add New Week</button>
+    <button class="btn btn-primary" id="updateBtn" onclick="assignToClient('update-week')" style="background:#E07A3A;border-color:#E07A3A;display:none;">Update This Week</button>
+    <button class="btn btn-secondary" id="newProgBtn" onclick="assignToClient('new-programme')" style="display:none;">Start New Programme</button>
   </div>
 </div>
 
@@ -1098,12 +1100,17 @@ function showToast(msg) {
 let embeddedClients = [];
 const isEmbedded = window.parent !== window;
 
-function assignToClient() {
+function assignToClient(action) {
   const sel = document.getElementById('clientSelect');
   const clientId = parseInt(sel.value);
   if (!clientId) { showToast('Please select a client first'); return; }
   const client = embeddedClients.find(c => c.id === clientId);
   if (!client) return;
+
+  // Confirm destructive action for new programme
+  if (action === 'new-programme' && client.programme) {
+    if (!confirm('Start a brand new programme for ' + client.name + '?\n\nThis will clear all previous weeks. Their logged workout data is kept but they won\'t be able to navigate previous programme weeks.')) return;
+  }
 
   const progName = document.getElementById('programmeName').value || 'Untitled Programme';
   const weekNum = parseInt(document.getElementById('weekNumber').value) || 1;
@@ -1133,6 +1140,7 @@ function assignToClient() {
 
   window.parent.postMessage({
     type: 'ah-assign-programme',
+    action: action,  // 'update-week', 'add-week', or 'new-programme'
     clientId: clientId,
     clientName: client.name,
     programmeName: progName,
@@ -1141,8 +1149,8 @@ function assignToClient() {
     programme: resolved
   }, '*');
 
-  const isUpdate = document.getElementById('updateBtn') && document.getElementById('updateBtn').style.display !== 'none';
-  showToast(isUpdate ? 'Programme updated for ' + client.name : 'Programme assigned to ' + client.name);
+  const labels = { 'update-week': 'Week updated', 'add-week': 'New week added', 'new-programme': 'Programme assigned' };
+  showToast((labels[action] || 'Programme assigned') + ' for ' + client.name);
 }
 
 function saveProgrammeToApp() {
@@ -1185,19 +1193,27 @@ window.addEventListener('message', function(e) {
     // Reset buttons when client list refreshes
     const assignBtn = document.getElementById('assignBtn');
     const updateBtn = document.getElementById('updateBtn');
+    const addWeekBtn = document.getElementById('addWeekBtn');
+    const newProgBtn = document.getElementById('newProgBtn');
     if (assignBtn) assignBtn.style.display = '';
     if (updateBtn) updateBtn.style.display = 'none';
+    if (addWeekBtn) addWeekBtn.style.display = 'none';
+    if (newProgBtn) newProgBtn.style.display = 'none';
   }
   if (e.data && e.data.type === 'ah-select-client') {
     const sel = document.getElementById('clientSelect');
     if (sel) sel.value = e.data.clientId;
-    // Show Update button if client already has a programme, Assign if not
+    // Show appropriate buttons based on whether client has a programme
     const assignBtn = document.getElementById('assignBtn');
     const updateBtn = document.getElementById('updateBtn');
+    const addWeekBtn = document.getElementById('addWeekBtn');
+    const newProgBtn = document.getElementById('newProgBtn');
     if (e.data.programme && e.data.programme.days) {
-      // Existing programme — show Update, hide Assign
+      // Existing programme — show Update This Week, Add New Week, Start New Programme
       if (assignBtn) assignBtn.style.display = 'none';
       if (updateBtn) updateBtn.style.display = '';
+      if (addWeekBtn) addWeekBtn.style.display = '';
+      if (newProgBtn) newProgBtn.style.display = '';
       programme = JSON.parse(JSON.stringify(e.data.programme));
       activeDay = 0;
       activeSessionIdx = 0;
@@ -1208,9 +1224,11 @@ window.addEventListener('message', function(e) {
       renderDayTabs();
       switchDay(0);
     } else {
-      // No existing programme — show Assign, hide Update
+      // No existing programme — show only Assign
       if (assignBtn) assignBtn.style.display = '';
       if (updateBtn) updateBtn.style.display = 'none';
+      if (addWeekBtn) addWeekBtn.style.display = 'none';
+      if (newProgBtn) newProgBtn.style.display = 'none';
     }
   }
   // Receive previous week's programme data
