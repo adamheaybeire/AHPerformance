@@ -12954,7 +12954,26 @@ async function _subscribeToPush() {
   _pd('Starting subscription for clientId=' + loggedInUser.clientId);
 
   try {
-    const reg = await navigator.serviceWorker.ready;
+    // Check SW registration state first
+    const regs = await navigator.serviceWorker.getRegistrations();
+    _pd('SW registrations: ' + regs.length + ', states: ' + regs.map(r => (r.active ? 'active' : r.installing ? 'installing' : r.waiting ? 'waiting' : 'none')).join(','));
+
+    // If no active SW, try re-registering
+    if (!regs.length || !regs.some(r => r.active)) {
+      _pd('No active SW, re-registering...');
+      try {
+        const newReg = await navigator.serviceWorker.register('/sw.js');
+        _pd('Re-registered SW, state=' + (newReg.active ? 'active' : newReg.installing ? 'installing' : 'waiting'));
+      } catch(regErr) {
+        _pd('SW register failed: ' + regErr.message);
+      }
+    }
+
+    // Use timeout so we don't hang forever
+    const reg = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('SW ready timeout after 10s')), 10000))
+    ]);
     _pd('SW ready, scope=' + reg.scope);
 
     // Check if already subscribed
