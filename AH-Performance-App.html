@@ -12900,6 +12900,8 @@ function addClientNotification(clientId, type, message) {
 function _showBrowserNotification(title, body) {
   // Always show in-app toast (works even when tab is focused)
   _showInAppToast(title, body);
+  // Skip browser Notification API if push is active (push already shows the OS notification)
+  if (window._ahPushActive) return;
   // Browser notification only when tab is NOT focused
   if (!('Notification' in window)) return;
   if (document.hasFocus && document.hasFocus()) return;
@@ -13012,6 +13014,7 @@ async function _subscribeToPush() {
     });
     const subData = await subRes.json();
     _pd('Server subscribe response: ' + JSON.stringify(subData));
+    window._ahPushActive = true;
     console.log('AH Performance: Push subscription active for client ' + loggedInUser.clientId);
   } catch(e) {
     _pd('FAILED: ' + e.message + ' | ' + e.name);
