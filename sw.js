@@ -1,7 +1,7 @@
 // AH Performance — Service Worker
 // Enables offline access and "Add to Home Screen" as a real app
 
-const CACHE_NAME = 'ah-performance-v115';
+const CACHE_NAME = 'ah-performance-v116';
 const ASSETS_TO_CACHE = [
   '/AH-Performance-App.html',
   '/AH-Programme-Builder.html',
@@ -13,11 +13,15 @@ const ASSETS_TO_CACHE = [
   '/favicon.ico'
 ];
 
-// Install: cache core app files
+// Install: cache core app files (resilient — one 404 won't break the whole SW)
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return Promise.all(
+        ASSETS_TO_CACHE.map(url =>
+          cache.add(url).catch(err => console.warn('SW cache skip:', url, err.message))
+        )
+      );
     })
   );
   self.skipWaiting();

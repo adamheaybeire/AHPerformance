@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HEVO x HYROX — Class Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root {
+  --bg: #000000;
+  --card: #111111;
+  --card-raised: #1a1a1a;
+  --border: #2a2a2a;
+  --hevo: #00e64d;
+  --hevo-glow: rgba(0,230,77,0.12);
+  --accent: #00e64d;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --text-bright: #ffffff;
+  --text-body: #d4d4d4;
+  --text-muted: #737373;
+  --text-dim: #525252;
+  --radius: 12px;
+}
+body.light-mode {
+  --bg: #f5f5f5;
+  --card: #ffffff;
+  --card-raised: #eeeeee;
+  --border: #d4d4d4;
+  --text-bright: #0a0a0a;
+  --text-body: #404040;
+  --text-muted: #737373;
+  --text-dim: #a3a3a3;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--text-body);
+  min-height: 100vh;
+  padding: 16px;
+}
+h1, h2, h3, h4 { color: var(--text-bright); }
+
+.theme-toggle {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 100;
+}
+.theme-toggle button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* Header with logo */
+.header {
+  text-align: center;
+  padding: 16px 0 20px;
+}
+.header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-bright);
+  letter-spacing: 2px;
+}
+.header h1 .hevo-text { color: var(--hevo); }
+.header p { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+
+/* Config */
+.config-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.config-group label {
+  display: block;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.config-group select, .config-group input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--card-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-bright);
+  font-family: inherit;
+  font-size: 13px;
+}
+.config-group select:focus, .config-group input:focus {
+  outline: none;
+  border-color: var(--hevo);
+}
+.config-group select option { background: #1a1a1a; color: #fff; }
+
+/* Station cards */
+.station-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.station-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.station-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.station-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--hevo);
+  color: #000;
+  font-weight: 700;
+  font-size: 12px;
+  margin-right: 8px;
+}
+.station-capacity {
+  font-size: 10px;
+  color: var(--text-dim);
+  padding: 4px 8px;
+  background: var(--card-raised);
+  border-radius: 4px;
+}
+
+.exercise-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 80px 30px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.exercise-row select, .exercise-row input {
+  padding: 8px 10px;
+  background: var(--card-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-bright);
+  font-family: inherit;
+  font-size: 12px;
+}
+.exercise-row select option { background: #1a1a1a; }
+.exercise-row select:focus, .exercise-row input:focus {
+  outline: none;
+  border-color: var(--hevo);
+}
+.exercise-row .target-unit {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.btn-icon {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.15s;
+}
+.btn-icon:hover { border-color: var(--danger); color: var(--danger); }
+
+.add-exercise-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: all 0.15s;
+}
+.add-exercise-btn:hover { border-color: var(--hevo); color: var(--hevo); }
+
+/* Summary panel */
+.summary-panel {
+  background: var(--card);
+  border: 1px solid var(--hevo);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin: 20px 0;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+}
+.summary-stat { text-align: center; }
+.summary-stat .value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+.summary-stat .label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.summary-stat .value.hevo { color: var(--hevo); }
+
+/* Buttons */
+.btn-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-hevo { background: var(--hevo); color: #000; }
+.btn-hevo:hover { filter: brightness(1.1); }
+.btn-white { background: #fff; color: #000; }
+.btn-white:hover { background: #e5e5e5; }
+.btn-ghost { background: none; border: 1px solid var(--border); color: var(--text-muted); }
+.btn-ghost:hover { border-color: var(--text-muted); color: var(--text-bright); }
+
+/* Export card (hidden, rendered for screenshot) */
+#exportCard {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  width: 600px;
+  padding: 32px;
+  background: #000000;
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
+}
+#exportCard .export-logo-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+#exportCard .export-title {
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  color: #ffffff;
+  letter-spacing: 2px;
+}
+#exportCard .export-title .hevo-text { color: #00e64d; }
+#exportCard .export-subtitle {
+  text-align: center;
+  font-size: 12px;
+  color: #737373;
+  margin-bottom: 20px;
+}
+#exportCard .export-meta {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 20px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+#exportCard .export-meta span { color: #d4d4d4; }
+#exportCard .export-meta strong { color: #00e64d; }
+#exportCard .export-station {
+  background: #111111;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+#exportCard .export-station-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #00e64d;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+#exportCard .export-exercise {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 13px;
+  color: #d4d4d4;
+  border-bottom: 1px solid #1a1a1a;
+}
+#exportCard .export-exercise:last-child { border: none; }
+#exportCard .export-exercise .target {
+  color: #00e64d;
+  font-weight: 600;
+}
+#exportCard .export-footer {
+  text-align: center;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #2a2a2a;
+  font-size: 11px;
+  color: #525252;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--hevo);
+  color: #000;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+@media (max-width: 500px) {
+  .exercise-row { grid-template-columns: 1fr 80px 60px 28px; gap: 6px; }
+  .exercise-row select, .exercise-row input { padding: 7px 6px; font-size: 11px; }
+  .summary-stat .value { font-size: 20px; }
+  .config-row { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+}
+</style>
+</head>
+<body>
+
+<div class="theme-toggle" style="display:flex;gap:8px;">
+  <button onclick="toggleTheme()" id="themeBtn">&#9728;&#65039;</button>
+  <button onclick="toggleBrand()" id="brandBtn" style="font-size:11px;padding:4px 10px;letter-spacing:0.5px;">AH</button>
+</div>
+
+<div class="header">
+  <h1 id="brandTitle"><span class="hevo-text">HEVO</span> x HYROX</h1>
+  <p>Group Session Class Builder</p>
+</div>
+
+<!-- Class config -->
+<div class="config-row">
+  <div class="config-group">
+    <label>Stations</label>
+    <select id="cfgStations" onchange="updateStations()">
+      <option value="3">3 Stations</option>
+      <option value="4" selected>4 Stations</option>
+      <option value="5">5 Stations</option>
+    </select>
+  </div>
+  <div class="config-group">
+    <label>Station Time</label>
+    <select id="cfgRoundTime" onchange="recalc()">
+      <option value="300">5:00</option>
+      <option value="360">6:00</option>
+      <option value="420">7:00</option>
+      <option value="480">8:00</option>
+      <option value="540">9:00</option>
+      <option value="600" selected>10:00</option>
+      <option value="720">12:00</option>
+      <option value="900">15:00</option>
+    </select>
+  </div>
+  <div class="config-group">
+    <label>Times Through</label>
+    <select id="cfgTimesThrough" onchange="recalc()">
+      <option value="1">Once</option>
+      <option value="2" selected>Twice</option>
+      <option value="3">Three times</option>
+      <option value="4">Four times</option>
+    </select>
+  </div>
+  <div class="config-group">
+    <label>Rest Between</label>
+    <select id="cfgRest" onchange="recalc()">
+      <option value="30">0:30</option>
+      <option value="60">1:00</option>
+      <option value="90">1:30</option>
+      <option value="120" selected>2:00</option>
+      <option value="150">2:30</option>
+      <option value="180">3:00</option>
+    </select>
+  </div>
+  <div class="config-group">
+    <label>Group Size</label>
+    <select id="cfgGroupSize" onchange="recalc()">
+      <option value="1">Individual</option>
+      <option value="2" selected>Pairs</option>
+      <option value="3">Trios</option>
+      <option value="4">Groups of 4</option>
+    </select>
+  </div>
+  <div class="config-group">
+    <label>Max Per Station</label>
+    <select id="cfgMaxPerStation" onchange="recalc()">
+      <option value="4">4 people</option>
+      <option value="6">6 people</option>
+      <option value="8" selected>8 people</option>
+    </select>
+  </div>
+  <div class="config-group">
+    <label>People Attending</label>
+    <input type="number" id="cfgAttending" min="1" max="50" value="24" oninput="recalc()" style="text-align:center;">
+  </div>
+</div>
+
+<!-- Stations container -->
+<div id="stationsContainer"></div>
+
+<!-- Summary -->
+<div class="summary-panel">
+  <div class="summary-grid">
+    <div class="summary-stat">
+      <div class="value hevo" id="sumDuration">--</div>
+      <div class="label">Total Duration</div>
+    </div>
+    <div class="summary-stat">
+      <div class="value hevo" id="sumRounds">--</div>
+      <div class="label">Stations × Time</div>
+    </div>
+    <div class="summary-stat">
+      <div class="value hevo" id="sumTimesThrough">--</div>
+      <div class="label">Times Through</div>
+    </div>
+    <div class="summary-stat">
+      <div class="value hevo" id="sumCapacity">--</div>
+      <div class="label">Max Capacity</div>
+    </div>
+    <div class="summary-stat">
+      <div class="value hevo" id="sumAttending">--</div>
+      <div class="label">Attending</div>
+    </div>
+    <div class="summary-stat">
+      <div class="value hevo" id="sumPerStation">--</div>
+      <div class="label">Per Station</div>
+    </div>
+    <div class="summary-stat">
+      <div class="value hevo" id="sumStations">--</div>
+      <div class="label">Stations</div>
+    </div>
+  </div>
+</div>
+
+<!-- Action buttons -->
+<div class="btn-row">
+  <button class="btn btn-hevo" onclick="exportAsImage()">Export as Image</button>
+  <button class="btn btn-white" onclick="copyAsText()">Copy as Text</button>
+  <button class="btn btn-white" onclick="exportCanvaCSV()">Export for Canva</button>
+  <button class="btn btn-ghost" onclick="resetAll()">Reset</button>
+</div>
+
+<!-- Hidden export card -->
+<div id="exportCard"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast">Copied to clipboard!</div>
+
+<script>
+// ===== EXERCISE DATABASE =====
+const EXERCISES = [
+  { id: 'ski', name: 'Ski Erg', category: 'machine', targets: ['distance', 'time'], defaultValue: '500m' },
+  { id: 'row', name: 'Rowing', category: 'machine', targets: ['distance', 'time'], defaultValue: '500m' },
+  { id: 'wattbike', name: 'Watt Bike', category: 'machine', targets: ['distance', 'time'], defaultValue: '1000m' },
+  { id: 'assaultbike', name: 'Assault Bike', category: 'machine', targets: ['distance', 'time', 'cals'], defaultValue: '20 cal' },
+  { id: 'running', name: 'Running', category: 'cardio', targets: ['laps'], defaultValue: '2 laps' },
+  { id: 'wallballs', name: 'Wall Balls', category: 'weighted', targets: ['reps', 'time', 'max'], defaultValue: 'Max reps' },
+  { id: 'farmerscarry', name: 'Farmers Carry', category: 'weighted', targets: ['lengths'], defaultValue: '4 lengths' },
+  { id: 'lunge', name: 'Lunge', category: 'weighted', targets: ['lengths', 'reps'], defaultValue: '2 lengths' },
+  { id: 'sledpush', name: 'Sled Push', category: 'weighted', targets: ['lengths'], defaultValue: '4 lengths' },
+  { id: 'sledpull', name: 'Sled Pull', category: 'weighted', targets: ['lengths'], defaultValue: '4 lengths' },
+  { id: 'burpeebj', name: 'Burpee Broad Jumps', category: 'bodyweight', targets: ['lengths', 'reps', 'time'], defaultValue: '2 lengths' },
+  { id: 'devilspress', name: 'Devils Press', category: 'weighted', targets: ['reps', 'time'], defaultValue: '10 reps' },
+  { id: 'pushpress', name: 'Push Press', category: 'weighted', targets: ['reps', 'time'], defaultValue: '12 reps' },
+  { id: 'burpeeplate', name: 'Burpee to Plate', category: 'bodyweight', targets: ['reps', 'time'], defaultValue: '10 reps' },
+  { id: 'gobletsquat', name: 'Goblet Squat', category: 'weighted', targets: ['reps', 'time'], defaultValue: '15 reps' },
+  { id: 'dbcleanpress', name: 'Dumbbell Clean & Press', category: 'weighted', targets: ['reps', 'time'], defaultValue: '10 reps' },
+  { id: 'dbsnatch', name: 'Dumbbell Snatch', category: 'weighted', targets: ['reps', 'time'], defaultValue: '10 reps' },
+  { id: 'burpeeboxjump', name: 'Burpee Box Jumps', category: 'bodyweight', targets: ['reps', 'time'], defaultValue: '10 reps' },
+];
+
+// ===== STATE =====
+let classData = { stations: [] };
+
+function getConfig() {
+  const numStations = parseInt(document.getElementById('cfgStations').value);
+  return {
+    numStations: numStations,
+    rounds: numStations, // rounds = stations (one round per station)
+    roundTimeSec: parseInt(document.getElementById('cfgRoundTime').value),
+    timesThrough: parseInt(document.getElementById('cfgTimesThrough').value),
+    restSec: parseInt(document.getElementById('cfgRest').value),
+    groupSize: parseInt(document.getElementById('cfgGroupSize').value),
+    maxPerStation: parseInt(document.getElementById('cfgMaxPerStation').value),
+    attending: parseInt(document.getElementById('cfgAttending').value) || 0
+  };
+}
+
+function initStations(count) {
+  classData.stations = [];
+  for (let i = 0; i < count; i++) {
+    classData.stations.push({ exercises: [{ id: '', target: '' }, { id: '', target: '' }] });
+  }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ===== RENDER =====
+function render() {
+  const container = document.getElementById('stationsContainer');
+  const cfg = getConfig();
+  let html = '';
+
+  classData.stations.forEach((station, si) => {
+    html += `<div class="station-card">
+      <div class="station-header">
+        <div style="display:flex;align-items:center;">
+          <span class="station-number">${si + 1}</span>
+          <h3>Station ${si + 1}</h3>
+        </div>
+        <span class="station-capacity">Max ${cfg.maxPerStation} per station</span>
+      </div>`;
+
+    station.exercises.forEach((ex, ei) => {
+      const exerciseObj = EXERCISES.find(e => e.id === ex.id);
+      html += `<div class="exercise-row">
+        <select onchange="updateExercise(${si},${ei},this.value)">
+          <option value="">-- Select --</option>
+          <optgroup label="Machine / Cardio">
+            ${EXERCISES.filter(e => e.category === 'machine' || e.category === 'cardio').map(e =>
+              `<option value="${e.id}" ${ex.id === e.id ? 'selected' : ''}>${e.name}</option>`
+            ).join('')}
+          </optgroup>
+          <optgroup label="Weighted / Bodyweight">
+            ${EXERCISES.filter(e => e.category === 'weighted' || e.category === 'bodyweight').map(e =>
+              `<option value="${e.id}" ${ex.id === e.id ? 'selected' : ''}>${e.name}</option>`
+            ).join('')}
+          </optgroup>
+        </select>
+        <input type="text" value="${escHtml(ex.target)}" placeholder="${exerciseObj ? exerciseObj.defaultValue : 'Target'}" oninput="updateTarget(${si},${ei},this.value)">
+        <span class="target-unit">${exerciseObj ? exerciseObj.targets.join(' / ') : ''}</span>
+        <button class="btn-icon" onclick="removeExercise(${si},${ei})" ${station.exercises.length <= 1 ? 'disabled style="opacity:0.3;cursor:default;"' : ''}>&#215;</button>
+      </div>`;
+    });
+
+    if (station.exercises.length < 4) {
+      html += `<button class="add-exercise-btn" onclick="addExercise(${si})">+ Add exercise</button>`;
+    }
+    html += `</div>`;
+  });
+
+  container.innerHTML = html;
+  recalc();
+}
+
+function updateExercise(si, ei, value) {
+  classData.stations[si].exercises[ei].id = value;
+  const exerciseObj = EXERCISES.find(e => e.id === value);
+  if (exerciseObj && !classData.stations[si].exercises[ei].target) {
+    classData.stations[si].exercises[ei].target = exerciseObj.defaultValue;
+  }
+  render();
+}
+
+function updateTarget(si, ei, value) {
+  classData.stations[si].exercises[ei].target = value;
+}
+
+function addExercise(si) {
+  if (classData.stations[si].exercises.length >= 4) return;
+  classData.stations[si].exercises.push({ id: '', target: '' });
+  render();
+}
+
+function removeExercise(si, ei) {
+  if (classData.stations[si].exercises.length <= 1) return;
+  classData.stations[si].exercises.splice(ei, 1);
+  render();
+}
+
+function updateStations() {
+  const cfg = getConfig();
+  const current = classData.stations.length;
+  if (cfg.numStations > current) {
+    for (let i = current; i < cfg.numStations; i++) {
+      classData.stations.push({ exercises: [{ id: '', target: '' }, { id: '', target: '' }] });
+    }
+  } else if (cfg.numStations < current) {
+    classData.stations = classData.stations.slice(0, cfg.numStations);
+  }
+  render();
+}
+
+// ===== CALCULATIONS =====
+function fmtTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return m + ':' + String(s).padStart(2, '0');
+}
+
+function recalc() {
+  const cfg = getConfig();
+  const { rounds, roundTimeSec, timesThrough, restSec } = cfg;
+
+  // Total work = rounds × roundTime × timesThrough
+  // Rest between each full set of rounds = (timesThrough - 1) × rest
+  // Also rest between rounds within a set = (rounds - 1) × rest per set × timesThrough
+  // Simplest interpretation: total rounds = rounds × timesThrough, rest between each round
+  const totalRounds = rounds * timesThrough;
+  const totalWorkSec = totalRounds * roundTimeSec;
+  const totalRestSec = Math.max(0, totalRounds - 1) * restSec;
+  const totalSec = totalWorkSec + totalRestSec;
+
+  document.getElementById('sumDuration').textContent = fmtTime(totalSec);
+  document.getElementById('sumRounds').textContent = cfg.numStations + ' × ' + fmtTime(roundTimeSec);
+  document.getElementById('sumTimesThrough').textContent = timesThrough === 1 ? 'Once' : timesThrough === 2 ? 'Twice' : timesThrough + 'x';
+  document.getElementById('sumStations').textContent = cfg.numStations;
+
+  // Capacity = stations × maxPerStation
+  const capacity = cfg.numStations * cfg.maxPerStation;
+  document.getElementById('sumCapacity').textContent = capacity;
+
+  // Attending & per-station
+  const attending = cfg.attending;
+  const perStation = attending > 0 ? Math.ceil(attending / cfg.numStations) : 0;
+  document.getElementById('sumAttending').textContent = attending || '--';
+  const psEl = document.getElementById('sumPerStation');
+  psEl.textContent = perStation || '--';
+  // Warn if attending exceeds capacity
+  if (attending > capacity) {
+    psEl.style.color = 'var(--danger)';
+    psEl.textContent = perStation + ' !';
+  } else {
+    psEl.style.color = '';
+  }
+}
+
+// ===== FORMAT HELPERS =====
+function getGroupLabel(cfg) {
+  if (cfg.groupSize === 1) return 'Individual';
+  if (cfg.groupSize === 2) return 'Pairs';
+  if (cfg.groupSize === 3) return 'Trios';
+  return 'Groups of ' + cfg.groupSize;
+}
+
+function getTimesLabel(t) {
+  if (t === 1) return 'Once through';
+  if (t === 2) return 'Twice through';
+  return t + ' times through';
+}
+
+// ===== EXPORT AS IMAGE =====
+function exportAsImage() {
+  const cfg = getConfig();
+  const card = document.getElementById('exportCard');
+
+  const totalRounds = cfg.rounds * cfg.timesThrough;
+  const totalSec = (totalRounds * cfg.roundTimeSec) + (Math.max(0, totalRounds - 1) * cfg.restSec);
+  const capacity = cfg.numStations * cfg.maxPerStation;
+
+  const attending = cfg.attending;
+  const perStation = attending > 0 ? Math.ceil(attending / cfg.numStations) : 0;
+
+  const _isAH = currentBrand === 'ah';
+  const _brandColor = _isAH ? '#E07A3A' : '#00e64d';
+  const _brandTitle = _isAH ? '<span style="color:#E07A3A;font-weight:700;">AH</span> Performance x HYROX' : '<span class="hevo-text">HEVO</span> x HYROX';
+  let html = `<div class="export-logo-row">
+      <div class="export-title">${_brandTitle}</div>
+    </div>
+    <div class="export-subtitle">Group Session</div>
+    <div class="export-meta">
+      <span><strong>${cfg.numStations}</strong> Stations × <strong>${fmtTime(cfg.roundTimeSec)}</strong></span>
+      <span><strong>${getTimesLabel(cfg.timesThrough)}</strong></span>
+      <span>Rest: <strong>${fmtTime(cfg.restSec)}</strong></span>
+      <span><strong>${getGroupLabel(cfg)}</strong></span>
+      ${attending > 0 ? `<span>Attending: <strong>${attending}</strong> (${perStation}/station)</span>` : ''}
+    </div>`;
+
+  classData.stations.forEach((station, si) => {
+    html += `<div class="export-station">
+      <div class="export-station-title">STATION ${si + 1}</div>`;
+    station.exercises.forEach(ex => {
+      const exerciseObj = EXERCISES.find(e => e.id === ex.id);
+      const name = exerciseObj ? exerciseObj.name : (ex.id || 'TBD');
+      const target = ex.target || (exerciseObj ? exerciseObj.defaultValue : '');
+      html += `<div class="export-exercise">
+        <span>${escHtml(name)}</span>
+        <span class="target">${escHtml(target)}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
+  html += `<div class="export-footer">
+    Total: ${fmtTime(totalSec)} &bull; Max Capacity: ${capacity}${attending > 0 ? ' &bull; Attending: ' + attending + ' (' + perStation + '/station)' : ''}
+  </div>`;
+
+  card.innerHTML = html;
+  card.style.left = '0';
+  card.style.top = '0';
+  card.style.position = 'fixed';
+  card.style.zIndex = '99999';
+
+  // Apply brand accent to export card elements
+  card.querySelectorAll('.export-title .hevo-text').forEach(el => el.style.color = _brandColor);
+  card.querySelectorAll('.export-meta strong').forEach(el => el.style.color = _brandColor);
+  card.querySelectorAll('.export-station-title').forEach(el => el.style.color = _brandColor);
+  card.querySelectorAll('.export-exercise .target').forEach(el => el.style.color = _brandColor);
+  card.querySelectorAll('.export-footer').forEach(el => el.style.borderTopColor = _brandColor);
+
+  html2canvas(card, { backgroundColor: '#000000', scale: 2, useCORS: true }).then(canvas => {
+    card.style.left = '-9999px';
+    card.style.position = 'absolute';
+    card.style.zIndex = '';
+
+    canvas.toBlob(blob => {
+      if (navigator.share && navigator.canShare) {
+        try {
+          const _fname = _isAH ? 'ah-performance-hyrox-class.png' : 'hevo-hyrox-class.png';
+          const _shareTitle = _isAH ? 'AH Performance x HYROX Class' : 'HEVO x HYROX Class';
+          const file = new File([blob], _fname, { type: 'image/png' });
+          if (navigator.canShare({ files: [file] })) {
+            navigator.share({ files: [file], title: _shareTitle }).catch(() => downloadBlob(blob, _fname));
+            return;
+          }
+        } catch(e) {}
+      }
+      downloadBlob(blob, _fname);
+    }, 'image/png');
+  });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ===== COPY AS TEXT =====
+function copyAsText() {
+  const cfg = getConfig();
+  const totalRounds = cfg.rounds * cfg.timesThrough;
+  const totalSec = (totalRounds * cfg.roundTimeSec) + (Math.max(0, totalRounds - 1) * cfg.restSec);
+  const capacity = cfg.numStations * cfg.maxPerStation;
+
+  const _brandName = currentBrand === 'ah' ? 'AH PERFORMANCE x HYROX' : 'HEVO x HYROX';
+  let text = `${_brandName} GROUP SESSION\n`;
+  text += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  text += `${cfg.numStations} Stations × ${fmtTime(cfg.roundTimeSec)}`;
+  text += ` | ${getTimesLabel(cfg.timesThrough)}`;
+  text += ` | Rest: ${fmtTime(cfg.restSec)}`;
+  text += ` | ${getGroupLabel(cfg)}\n\n`;
+
+  classData.stations.forEach((station, si) => {
+    text += `STATION ${si + 1}:\n`;
+    station.exercises.forEach((ex, ei) => {
+      const exerciseObj = EXERCISES.find(e => e.id === ex.id);
+      const name = exerciseObj ? exerciseObj.name : (ex.id || 'TBD');
+      const target = ex.target || (exerciseObj ? exerciseObj.defaultValue : '');
+      text += `  ${name}: ${target}`;
+      if (ei < station.exercises.length - 1) text += ` /`;
+      text += `\n`;
+    });
+    text += `\n`;
+  });
+
+  const attending = cfg.attending;
+  const perStation = attending > 0 ? Math.ceil(attending / cfg.numStations) : 0;
+
+  text += `━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  text += `Total: ${fmtTime(totalSec)}`;
+  text += ` | Max Capacity: ${capacity}`;
+  if (attending > 0) text += ` | Attending: ${attending} (${perStation}/station)`;
+  text += `\n`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Copied to clipboard!');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Copied to clipboard!');
+  });
+}
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ===== EXPORT FOR CANVA (CSV) =====
+function exportCanvaCSV() {
+  const cfg = getConfig();
+  const totalRounds = cfg.rounds * cfg.timesThrough;
+  const totalSec = (totalRounds * cfg.roundTimeSec) + (Math.max(0, totalRounds - 1) * cfg.restSec);
+  const capacity = cfg.numStations * cfg.maxPerStation;
+  const attending = cfg.attending;
+  const perStation = attending > 0 ? Math.ceil(attending / cfg.numStations) : 0;
+
+  // Build header row — config cols + up to 3 exercises per station (up to 5 stations)
+  const headers = [
+    'Stations', 'Station_Time', 'Times_Through', 'Rest', 'Group_Size',
+    'Total_Duration', 'Max_Capacity', 'Attending', 'Per_Station'
+  ];
+
+  const maxEx = 3;
+  for (let s = 1; s <= cfg.numStations; s++) {
+    for (let e = 1; e <= maxEx; e++) {
+      headers.push(`S${s}_Ex${e}`);
+      headers.push(`S${s}_Target${e}`);
+    }
+  }
+
+  // Build data row
+  const row = [
+    cfg.numStations,
+    fmtTime(cfg.roundTimeSec),
+    cfg.timesThrough === 1 ? 'Once' : cfg.timesThrough === 2 ? 'Twice' : cfg.timesThrough + 'x',
+    fmtTime(cfg.restSec),
+    getGroupLabel(cfg),
+    fmtTime(totalSec),
+    capacity,
+    attending || '',
+    perStation || ''
+  ];
+
+  for (let s = 0; s < cfg.numStations; s++) {
+    const station = classData.stations[s];
+    for (let e = 0; e < maxEx; e++) {
+      if (station && station.exercises[e] && station.exercises[e].id) {
+        const ex = station.exercises[e];
+        const exerciseObj = EXERCISES.find(x => x.id === ex.id);
+        row.push(exerciseObj ? exerciseObj.name : ex.id);
+        row.push(ex.target || (exerciseObj ? exerciseObj.defaultValue : ''));
+      } else {
+        row.push('');
+        row.push('');
+      }
+    }
+  }
+
+  // CSV escape helper
+  function csvCell(val) {
+    const s = String(val);
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+
+  const csv = headers.map(csvCell).join(',') + '\n' + row.map(csvCell).join(',') + '\n';
+  const blob = new Blob([csv], { type: 'text/csv' });
+  downloadBlob(blob, currentBrand === 'ah' ? 'ah-performance-hyrox-canva.csv' : 'hevo-hyrox-canva.csv');
+  showToast('CSV downloaded — import into Canva Bulk Create');
+}
+
+// ===== THEME TOGGLE =====
+function toggleTheme() {
+  document.body.classList.toggle('light-mode');
+  const isLight = document.body.classList.contains('light-mode');
+  document.getElementById('themeBtn').innerHTML = isLight ? '&#127769;' : '&#9728;&#65039;';
+  try { localStorage.setItem('hevo-theme', isLight ? 'light' : 'dark'); } catch(e) {}
+}
+(function restoreTheme() {
+  try {
+    if (localStorage.getItem('hevo-theme') === 'light') {
+      document.body.classList.add('light-mode');
+      document.getElementById('themeBtn').innerHTML = '&#127769;';
+    }
+  } catch(e) {}
+})();
+
+// ===== BRAND TOGGLE =====
+let currentBrand = 'hevo'; // 'hevo' or 'ah'
+function toggleBrand() {
+  currentBrand = currentBrand === 'hevo' ? 'ah' : 'hevo';
+  applyBrand();
+  try { localStorage.setItem('hyrox-brand', currentBrand); } catch(e) {}
+}
+function applyBrand() {
+  const isAH = currentBrand === 'ah';
+  const root = document.documentElement;
+  const brandBtn = document.getElementById('brandBtn');
+  const title = document.getElementById('brandTitle');
+
+  if (isAH) {
+    root.style.setProperty('--hevo', '#E07A3A');
+    root.style.setProperty('--hevo-glow', 'rgba(224,122,58,0.12)');
+    root.style.setProperty('--accent', '#E07A3A');
+    title.innerHTML = '<span class="hevo-text">AH</span> Performance x HYROX';
+    brandBtn.textContent = 'HEVO';
+    brandBtn.style.background = '#00e64d';
+    brandBtn.style.color = '#000';
+  } else {
+    root.style.setProperty('--hevo', '#00e64d');
+    root.style.setProperty('--hevo-glow', 'rgba(0,230,77,0.12)');
+    root.style.setProperty('--accent', '#00e64d');
+    title.innerHTML = '<span class="hevo-text">HEVO</span> x HYROX';
+    brandBtn.textContent = 'AH';
+    brandBtn.style.background = '#E07A3A';
+    brandBtn.style.color = '#fff';
+  }
+}
+(function restoreBrand() {
+  try {
+    const saved = localStorage.getItem('hyrox-brand');
+    if (saved === 'ah') { currentBrand = 'ah'; applyBrand(); }
+  } catch(e) {}
+})();
+
+// ===== RESET =====
+function resetAll() {
+  if (!confirm('Reset all stations and exercises?')) return;
+  initStations(getConfig().numStations);
+  render();
+}
+
+// ===== INIT =====
+(function init() {
+  initStations(4);
+  render();
+})();
+</script>
+</body>
+</html>
