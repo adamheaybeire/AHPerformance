@@ -12944,19 +12944,30 @@ function _requestNotificationPermission() {
 
 // ─── Web Push subscription ───
 async function _subscribeToPush() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  if (!loggedInUser || !loggedInUser.clientId) return; // only subscribe clients
+  const _pd = (m) => { console.log('AH Push Debug: ' + m); fetch('/api/push/diag', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({msg:m, ua: navigator.userAgent}) }).catch(()=>{}); };
+
+  if (!('serviceWorker' in navigator)) { _pd('No serviceWorker'); return; }
+  if (!('PushManager' in window)) { _pd('No PushManager'); return; }
+  if (!loggedInUser) { _pd('No loggedInUser'); return; }
+  if (!loggedInUser.clientId) { _pd('No clientId on user: ' + JSON.stringify(Object.keys(loggedInUser))); return; }
+
+  _pd('Starting subscription for clientId=' + loggedInUser.clientId);
 
   try {
     const reg = await navigator.serviceWorker.ready;
+    _pd('SW ready, scope=' + reg.scope);
+
     // Check if already subscribed
     let sub = await reg.pushManager.getSubscription();
+    _pd('Existing subscription: ' + (sub ? 'yes' : 'no'));
+
     if (!sub) {
       // Get VAPID public key from server
       const keyRes = await fetch('/api/push/vapid-public-key');
-      if (!keyRes.ok) return;
+      if (!keyRes.ok) { _pd('VAPID key fetch failed: ' + keyRes.status); return; }
       const { publicKey } = await keyRes.json();
-      if (!publicKey) return;
+      if (!publicKey) { _pd('No publicKey in response'); return; }
+      _pd('Got VAPID key, subscribing...');
 
       // Convert base64url to Uint8Array
       const padding = '='.repeat((4 - publicKey.length % 4) % 4);
@@ -12968,10 +12979,11 @@ async function _subscribeToPush() {
         userVisibleOnly: true,
         applicationServerKey: uint8
       });
+      _pd('PushManager subscribed OK');
     }
 
     // Send subscription to server
-    await fetch('/api/push/subscribe', {
+    const subRes = await fetch('/api/push/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -12979,19 +12991,25 @@ async function _subscribeToPush() {
         subscription: sub.toJSON()
       })
     });
-    console.log('AH Performance: Push subscription active');
+    const subData = await subRes.json();
+    _pd('Server subscribe response: ' + JSON.stringify(subData));
+    console.log('AH Performance: Push subscription active for client ' + loggedInUser.clientId);
   } catch(e) {
+    _pd('FAILED: ' + e.message + ' | ' + e.name);
     console.warn('AH Performance: Push subscription failed:', e);
   }
 }
 
 // ─── Send push to client (called from coach actions) ───
 function _sendPushToClient(clientId, title, body, tag) {
+  console.log('AH Push: sending to client', clientId, title);
   fetch('/api/push/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ clientId: String(clientId), title, body, tag: tag || 'ah-notification' })
-  }).catch(() => {}); // Fire and forget
+  }).then(r => r.json()).then(res => {
+    console.log('AH Push: server response', res);
+  }).catch(err => { console.warn('AH Push: failed', err); });
 }
 
 // Trigger: client submits check-in → notify PT + queue email

@@ -543,6 +543,30 @@ def get_vapid_public_key():
     return jsonify({'publicKey': VAPID_PUBLIC_KEY})
 
 
+@app.route('/api/push/debug', methods=['GET'])
+def push_debug():
+    """Debug: show which client IDs have push subscriptions stored."""
+    summary = {}
+    for cid, subs in _push_subs.items():
+        summary[cid] = len(subs)
+    return jsonify({'subscriptions': summary, 'file': PUSH_SUBS_FILE, 'diag': _push_diag[-20:]})
+
+
+_push_diag = []
+
+@app.route('/api/push/diag', methods=['POST'])
+def push_diag():
+    """Receive diagnostic messages from client-side push subscription."""
+    data = request.get_json(force=True)
+    msg = data.get('msg', '')
+    ua = data.get('ua', '')[:100]
+    _push_diag.append({'msg': msg, 'ua': ua, 'time': __import__('datetime').datetime.now().isoformat()})
+    print(f'PUSH DIAG: {msg} | UA: {ua}')
+    if len(_push_diag) > 50:
+        _push_diag.pop(0)
+    return jsonify({'ok': True})
+
+
 @app.route('/api/push/subscribe', methods=['POST'])
 def push_subscribe():
     """Register a push subscription for a client."""
@@ -595,6 +619,7 @@ def push_send():
         return jsonify({'error': 'clientId required'}), 400
 
     subs = _push_subs.get(client_id, [])
+    print(f'Push send: clientId={client_id}, stored IDs={list(_push_subs.keys())}, subs_count={len(subs)}')
     if not subs:
         return jsonify({'ok': True, 'sent': 0, 'reason': 'No subscriptions for this client'})
 
