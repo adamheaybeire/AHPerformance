@@ -1473,9 +1473,10 @@
         <div class="card" style="padding:16px;margin-bottom:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
             <div style="font-size:12px;font-weight:600;color:var(--ocean);text-transform:uppercase;letter-spacing:0.5px;">Ingredients</div>
-            <button onclick="fdRecipeAddIngredient()" style="background:var(--ocean);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
-              + Add
-            </button>
+            <div style="display:flex;gap:6px;">
+              <button onclick="fdRecipeAddIngredient()" style="background:var(--slate-raised);color:var(--text-body);border:1px solid var(--slate-border);border-radius:8px;padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;">+ Manual</button>
+              <button onclick="fdRecipeSearchIngredient()" style="background:var(--ocean);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;">Search / Scan</button>
+            </div>
           </div>
           <div id="fdRecipeIngredients" style="display:flex;flex-direction:column;gap:8px;"></div>
         </div>
@@ -1582,6 +1583,101 @@
           <button onclick="fdOpenRecipeBuilder()" style="background:var(--ocean);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;">+ New</button>
         </div>
         <div id="fdRecipeListContent"></div>
+      </div>
+    </div>
+
+    <!-- Food Diary: Recipe Ingredient Search Overlay -->
+    <div id="fdRecipeSearchOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--slate-bg);z-index:10002;overflow-y:auto;">
+      <div style="max-width:500px;margin:0 auto;padding:16px;padding-top:calc(16px + env(safe-area-inset-top, 0px));">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <button onclick="fdCloseRecipeSearch()" style="background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;padding:8px;">&larr; Back</button>
+          <h3 style="margin:0;font-size:14px;">Add Ingredient</h3>
+          <div style="width:60px;"></div>
+        </div>
+
+        <!-- Search input -->
+        <div class="card" style="padding:12px;margin-bottom:12px;">
+          <input type="text" id="fdRecipeSearchInput" placeholder="Search food or ingredient..." oninput="fdRecipeSearchFood(this.value)"
+            style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;margin-bottom:8px;">
+          <div style="display:flex;gap:8px;">
+            <button onclick="fdRecipeStartBarcodeScan()" style="flex:1;padding:10px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text-body);display:flex;align-items:center;justify-content:center;gap:6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="8" x2="7" y2="16"/><line x1="11" y1="8" x2="11" y2="16"/><line x1="15" y1="8" x2="15" y2="16"/></svg>
+              Scan Barcode
+            </button>
+            <button onclick="fdRecipeStartLabelScan()" style="flex:1;padding:10px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text-body);display:flex;align-items:center;justify-content:center;gap:6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              Scan Label
+            </button>
+          </div>
+        </div>
+
+        <!-- Search results -->
+        <div id="fdRecipeSearchResults" style="display:none;"></div>
+
+        <!-- Manual entry fallback -->
+        <div class="card" style="padding:12px;margin-top:8px;">
+          <button onclick="fdRecipeAddManualIngredient()" style="width:100%;padding:10px;background:var(--slate-deep);border:1px solid var(--slate-border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text-muted);text-align:center;">
+            Can't find it? Add manually
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Food Diary: OCR Label Scanner Overlay -->
+    <div id="fdLabelScanOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#000;z-index:10003;">
+      <div style="position:relative;width:100%;height:100%;display:flex;flex-direction:column;">
+        <div style="position:absolute;top:0;left:0;right:0;z-index:2;padding:16px;padding-top:calc(16px + env(safe-area-inset-top, 0px));display:flex;justify-content:space-between;align-items:center;">
+          <button onclick="fdStopLabelScan()" style="background:rgba(0,0,0,0.6);border:none;color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;cursor:pointer;">&larr; Cancel</button>
+          <div id="fdLabelScanStatus" style="background:rgba(0,0,0,0.6);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;text-align:center;">Point at a nutrition label</div>
+        </div>
+        <video id="fdLabelVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;"></video>
+        <!-- Capture button -->
+        <div style="position:absolute;bottom:0;left:0;right:0;z-index:2;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom, 0px));display:flex;justify-content:center;">
+          <button onclick="fdCaptureLabelPhoto()" id="fdLabelCaptureBtn" style="width:64px;height:64px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,0.3);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></button>
+        </div>
+        <!-- Hidden canvas for capture -->
+        <canvas id="fdLabelCanvas" style="display:none;"></canvas>
+      </div>
+    </div>
+
+    <!-- Food Diary: OCR Results Overlay -->
+    <div id="fdLabelResultOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--slate-bg);z-index:10003;overflow-y:auto;">
+      <div style="max-width:500px;margin:0 auto;padding:16px;padding-top:calc(16px + env(safe-area-inset-top, 0px));">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <button onclick="fdCloseLabelResult()" style="background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;padding:8px;">&larr; Back</button>
+          <h3 style="margin:0;font-size:14px;">Scanned Nutrition</h3>
+          <div style="width:60px;"></div>
+        </div>
+        <div class="card" style="padding:16px;margin-bottom:12px;">
+          <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;text-align:center;">Review & correct the values below (per 100g/ml)</div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:2px;">Product Name</label>
+            <input type="text" id="fdLabelName" placeholder="e.g. Chicken Breast" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <label style="font-size:11px;color:var(--ember);display:block;margin-bottom:2px;">Calories (kcal)</label>
+              <input type="number" id="fdLabelCal" min="0" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;text-align:center;">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--ocean);display:block;margin-bottom:2px;">Protein (g)</label>
+              <input type="number" id="fdLabelPro" min="0" step="0.1" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;text-align:center;">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:2px;">Carbs (g)</label>
+              <input type="number" id="fdLabelCarb" min="0" step="0.1" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;text-align:center;">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:2px;">Fat (g)</label>
+              <input type="number" id="fdLabelFat" min="0" step="0.1" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;text-align:center;">
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:12px;margin-bottom:12px;">
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px;">Amount used in recipe (grams)</label>
+          <input type="number" id="fdLabelGrams" value="100" min="1" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;text-align:center;">
+        </div>
+        <button onclick="fdConfirmLabelIngredient()" style="width:100%;padding:14px;background:var(--ocean);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">Add to Recipe</button>
       </div>
     </div>
 
@@ -8653,7 +8749,7 @@ function _fdHideOverlay(id) {
   const el = document.getElementById(id);
   if (el) el.style.display = 'none';
   // Only restore app content if ALL food diary overlays are hidden
-  const anyOpen = ['fdLogOverlay','fdProductOverlay','fdManualOverlay','fdScanOverlay','fdRecipeOverlay','fdRecipePortionOverlay','fdRecipeListOverlay'].some(
+  const anyOpen = ['fdLogOverlay','fdProductOverlay','fdManualOverlay','fdScanOverlay','fdRecipeOverlay','fdRecipePortionOverlay','fdRecipeListOverlay','fdRecipeSearchOverlay','fdLabelScanOverlay','fdLabelResultOverlay'].some(
     oid => { const o = document.getElementById(oid); return o && o.style.display !== 'none'; }
   );
   if (!anyOpen) {
@@ -9231,7 +9327,7 @@ function fdRenderRecipeIngredients() {
   const el = document.getElementById('fdRecipeIngredients');
   if (!el) return;
   if (_fdRecipeIngredients.length === 0) {
-    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-dim);font-size:12px;">No ingredients yet. Tap <b>+ Add</b> to start building your recipe.</div>';
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-dim);font-size:12px;">No ingredients yet. Tap <b>Search / Scan</b> to find foods or <b>+ Manual</b> to type values.</div>';
     fdUpdateRecipeTotals();
     return;
   }
@@ -9441,6 +9537,357 @@ function fdLogRecipePortion() {
   fdCloseRecipeList();
   fdCloseLog();
   renderFoodDiary();
+}
+
+// ═══════════════════════════════════════
+//  RECIPE INGREDIENT SEARCH / SCAN / OCR
+// ═══════════════════════════════════════
+let _fdRecipeSearchTimeout = null;
+let _fdLabelStream = null;
+
+function fdRecipeSearchIngredient() {
+  _fdShowOverlay('fdRecipeSearchOverlay');
+  const inp = document.getElementById('fdRecipeSearchInput');
+  if (inp) { inp.value = ''; inp.focus(); }
+  document.getElementById('fdRecipeSearchResults').style.display = 'none';
+}
+function fdCloseRecipeSearch() { _fdHideOverlay('fdRecipeSearchOverlay'); }
+
+function fdRecipeSearchFood(query) {
+  if (_fdRecipeSearchTimeout) clearTimeout(_fdRecipeSearchTimeout);
+  const resultsEl = document.getElementById('fdRecipeSearchResults');
+  if (!query || query.length < 3) { resultsEl.style.display = 'none'; return; }
+  _fdRecipeSearchTimeout = setTimeout(() => {
+    resultsEl.style.display = '';
+    resultsEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">Searching...</div>';
+    fetch('https://world.openfoodfacts.org/cgi/search.pl?action=process&search_terms=' + encodeURIComponent(query) + '&json=1&page_size=15&fields=product_name,brands,nutriments,code')
+      .then(r => r.json())
+      .then(data => {
+        const products = (data.products || []).filter(p => p.product_name && p.nutriments);
+        if (products.length === 0) {
+          resultsEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">No results found. Try a different search or add manually.</div>';
+          return;
+        }
+        resultsEl.innerHTML = products.map(p => {
+          const n = p.nutriments;
+          const cal = Math.round(n['energy-kcal_100g'] || n['energy-kcal'] || (n.energy_100g || 0) / 4.184 || 0);
+          const pro = Math.round((n.proteins_100g || 0) * 10) / 10;
+          const prod = { name: p.product_name, brand: p.brands || '', cal100: cal, pro100: pro, carb100: Math.round((n.carbohydrates_100g||0)*10)/10, fat100: Math.round((n.fat_100g||0)*10)/10 };
+          return '<button onclick=\'fdRecipeSelectProduct(' + JSON.stringify(prod).replace(/'/g,"&#39;") + ')\' style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:10px;cursor:pointer;text-align:left;margin-bottom:6px;">' +
+            '<div style="flex:1;"><div style="font-size:13px;font-weight:500;color:var(--text-body);">' + p.product_name + '</div><div style="font-size:11px;color:var(--text-dim);">' + (p.brands || 'Generic') + ' · per 100g</div></div>' +
+            '<div style="text-align:right;"><div style="font-size:13px;font-weight:600;color:var(--ember);font-family:\'Space Grotesk\';">' + cal + ' kcal</div><div style="font-size:10px;color:var(--text-dim);">P:' + pro + 'g</div></div></button>';
+        }).join('');
+      })
+      .catch(() => {
+        resultsEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">Search unavailable. Try adding the item manually.</div>';
+      });
+  }, 400);
+}
+
+function fdRecipeSelectProduct(product) {
+  _fdRecipeIngredients.push({
+    name: (product.name || '') + (product.brand ? ' (' + product.brand + ')' : ''),
+    cal100: product.cal100 || 0,
+    pro100: product.pro100 || 0,
+    carb100: product.carb100 || 0,
+    fat100: product.fat100 || 0,
+    grams: 100
+  });
+  fdCloseRecipeSearch();
+  fdRenderRecipeIngredients();
+}
+
+function fdRecipeAddManualIngredient() {
+  fdCloseRecipeSearch();
+  fdRecipeAddIngredient();
+}
+
+// ─── Recipe Barcode Scan ───
+async function fdRecipeStartBarcodeScan() {
+  _fdShowOverlay('fdScanOverlay');
+  const video = document.getElementById('fdScanVideo');
+  const status = document.getElementById('fdScanStatus');
+
+  if (!('BarcodeDetector' in window)) {
+    status.textContent = 'Loading barcode scanner...';
+    try {
+      await import('https://fastly.jsdelivr.net/npm/barcode-detector@3/dist/es/polyfill.min.js');
+    } catch (e) {
+      try { await import('https://unpkg.com/barcode-detector@3/dist/es/polyfill.min.js'); } catch (e2) {
+        status.textContent = 'Could not load barcode scanner.';
+        setTimeout(() => fdStopScan(), 3000);
+        return;
+      }
+    }
+  }
+
+  status.textContent = 'Starting camera...';
+  try {
+    let stream = _fdScanStream;
+    if (!stream || !stream.active) {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } });
+      _fdScanStream = stream;
+    }
+    video.srcObject = stream;
+    video.play();
+    status.textContent = 'Point at a barcode...';
+    _fdBarcodeDetector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e'] });
+    _fdRecipeScanLoop();
+  } catch (err) {
+    status.textContent = 'Camera access denied.';
+    setTimeout(() => fdStopScan(), 3000);
+  }
+}
+
+function _fdRecipeScanLoop() {
+  if (!_fdScanStream || !_fdBarcodeDetector) return;
+  const video = document.getElementById('fdScanVideo');
+  if (!video || video.readyState < 2) { requestAnimationFrame(_fdRecipeScanLoop); return; }
+  _fdBarcodeDetector.detect(video).then(barcodes => {
+    if (barcodes.length > 0) {
+      const code = barcodes[0].rawValue;
+      document.getElementById('fdScanStatus').textContent = 'Found: ' + code;
+      fdStopScan();
+      fdRecipeLookupBarcode(code);
+    } else {
+      requestAnimationFrame(_fdRecipeScanLoop);
+    }
+  }).catch(() => requestAnimationFrame(_fdRecipeScanLoop));
+}
+
+function fdRecipeLookupBarcode(code) {
+  const resultsEl = document.getElementById('fdRecipeSearchResults');
+  resultsEl.style.display = '';
+  resultsEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">Looking up barcode ' + code + '...</div>';
+
+  fetch('https://world.openfoodfacts.org/api/v2/product/' + code + '.json')
+    .then(r => r.json())
+    .then(data => {
+      if (data.status !== 1 || !data.product) {
+        resultsEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">Product not found. Try searching by name or add manually.</div>';
+        return;
+      }
+      const p = data.product;
+      const n = p.nutriments || {};
+      const product = {
+        name: p.product_name || 'Unknown Product',
+        brand: p.brands || '',
+        cal100: Math.round(n['energy-kcal_100g'] || (n.energy_100g || 0) / 4.184 || 0),
+        pro100: Math.round((n.proteins_100g||0)*10)/10,
+        carb100: Math.round((n.carbohydrates_100g||0)*10)/10,
+        fat100: Math.round((n.fat_100g||0)*10)/10
+      };
+      // Auto-add the ingredient
+      fdRecipeSelectProduct(product);
+    })
+    .catch(() => {
+      resultsEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">Lookup failed — check your connection.</div>';
+    });
+}
+
+// ─── OCR Nutrition Label Scanner ───
+let _fdTesseractLoaded = false;
+
+async function fdRecipeStartLabelScan() {
+  _fdShowOverlay('fdLabelScanOverlay');
+  const video = document.getElementById('fdLabelVideo');
+  const status = document.getElementById('fdLabelScanStatus');
+
+  status.textContent = 'Starting camera...';
+  try {
+    let stream = _fdLabelStream;
+    if (!stream || !stream.active) {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } });
+      _fdLabelStream = stream;
+    }
+    video.srcObject = stream;
+    video.play();
+    status.textContent = 'Point at a nutrition label and tap the capture button';
+  } catch (err) {
+    status.textContent = 'Camera access denied.';
+    console.warn('Label scan camera error:', err);
+    setTimeout(() => fdStopLabelScan(), 3000);
+  }
+
+  // Preload Tesseract.js if not already loaded
+  if (!_fdTesseractLoaded && !window.Tesseract) {
+    try {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      document.head.appendChild(s);
+      s.onload = () => { _fdTesseractLoaded = true; console.log('AH Performance: Tesseract.js loaded'); };
+    } catch(e) { console.warn('Tesseract preload failed:', e); }
+  }
+}
+
+function fdStopLabelScan() {
+  const video = document.getElementById('fdLabelVideo');
+  if (video) video.pause();
+  // Keep stream alive like barcode scanner
+  _fdHideOverlay('fdLabelScanOverlay');
+}
+
+function fdKillLabelCamera() {
+  if (_fdLabelStream) {
+    _fdLabelStream.getTracks().forEach(t => t.stop());
+    _fdLabelStream = null;
+  }
+}
+
+async function fdCaptureLabelPhoto() {
+  const video = document.getElementById('fdLabelVideo');
+  const canvas = document.getElementById('fdLabelCanvas');
+  if (!video || !canvas) return;
+
+  const status = document.getElementById('fdLabelScanStatus');
+  const captureBtn = document.getElementById('fdLabelCaptureBtn');
+  captureBtn.style.opacity = '0.5';
+  captureBtn.disabled = true;
+  status.textContent = 'Capturing...';
+
+  // Capture frame
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+
+  // Convert to blob for Tesseract
+  const dataUrl = canvas.toDataURL('image/png');
+
+  status.textContent = 'Reading label... (this may take a moment)';
+
+  // Run OCR
+  try {
+    if (!window.Tesseract) {
+      // Fallback load
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    const worker = await Tesseract.createWorker('eng');
+    const result = await worker.recognize(dataUrl);
+    const text = result.data.text;
+    await worker.terminate();
+
+    console.log('AH Performance: OCR raw text:', text);
+
+    // Parse nutrition values from the OCR text
+    const parsed = _fdParseNutritionLabel(text);
+
+    // Stop camera and show results
+    fdStopLabelScan();
+    _fdShowOverlay('fdLabelResultOverlay');
+
+    // Pre-fill the form
+    document.getElementById('fdLabelName').value = '';
+    document.getElementById('fdLabelCal').value = parsed.cal || '';
+    document.getElementById('fdLabelPro').value = parsed.protein || '';
+    document.getElementById('fdLabelCarb').value = parsed.carbs || '';
+    document.getElementById('fdLabelFat').value = parsed.fat || '';
+    document.getElementById('fdLabelGrams').value = 100;
+
+  } catch (err) {
+    console.error('OCR error:', err);
+    status.textContent = 'OCR failed — try again or add manually.';
+    setTimeout(() => {
+      captureBtn.style.opacity = '1';
+      captureBtn.disabled = false;
+    }, 2000);
+    return;
+  }
+
+  captureBtn.style.opacity = '1';
+  captureBtn.disabled = false;
+}
+
+function _fdParseNutritionLabel(text) {
+  // Best-effort extraction of per-100g nutrition values from OCR text
+  const result = { cal: 0, protein: 0, carbs: 0, fat: 0 };
+  const lines = text.split('\n').map(l => l.trim().toLowerCase());
+
+  // Helper: find a number after a keyword on the same line or nearby
+  function findValue(keywords, lines) {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      for (const kw of keywords) {
+        if (line.includes(kw)) {
+          // Try to find a number on this line
+          const nums = line.match(/(\d+[.,]?\d*)\s*(kcal|kj|g|mg)?/g);
+          if (nums && nums.length > 0) {
+            // For energy, prefer kcal values; skip kj
+            if (kw === 'energy' || kw === 'calories' || kw === 'kcal') {
+              for (const nm of nums) {
+                if (nm.includes('kj')) continue;
+                const v = parseFloat(nm.replace(',', '.'));
+                if (v > 0) return v;
+              }
+              // If only kJ found, convert
+              for (const nm of nums) {
+                if (nm.includes('kj')) {
+                  const v = parseFloat(nm.replace(',', '.').replace(/[a-z]/g,''));
+                  if (v > 0) return Math.round(v / 4.184);
+                }
+              }
+            }
+            // For macros, get the first reasonable number
+            const first = nums[0];
+            const v = parseFloat(first.replace(',', '.').replace(/[a-z]/g,''));
+            if (v >= 0 && v < 1000) return v;
+          }
+          // Check next line for a number
+          if (i + 1 < lines.length) {
+            const nextNums = lines[i+1].match(/(\d+[.,]?\d*)/);
+            if (nextNums) {
+              const v = parseFloat(nextNums[1].replace(',', '.'));
+              if (v >= 0 && v < 1000) return v;
+            }
+          }
+        }
+      }
+    }
+    return 0;
+  }
+
+  result.cal = findValue(['energy', 'calories', 'kcal', 'cal'], lines);
+  result.protein = findValue(['protein', 'protéines', 'eiweiß', 'eiwit'], lines);
+  result.carbs = findValue(['carbohydrate', 'carbs', 'glucides', 'kohlenhydrate', 'koolhydraten'], lines);
+  result.fat = findValue(['fat', 'lipides', 'fett', 'vet', 'graisses'], lines);
+
+  // If cal is 0 but we got macros, estimate cal = (pro * 4) + (carb * 4) + (fat * 9)
+  if (result.cal === 0 && (result.protein > 0 || result.carbs > 0 || result.fat > 0)) {
+    result.cal = Math.round(result.protein * 4 + result.carbs * 4 + result.fat * 9);
+  }
+
+  return result;
+}
+
+function fdCloseLabelResult() { _fdHideOverlay('fdLabelResultOverlay'); }
+
+function fdConfirmLabelIngredient() {
+  const name = document.getElementById('fdLabelName').value.trim() || 'Scanned Item';
+  const cal = parseFloat(document.getElementById('fdLabelCal').value) || 0;
+  const pro = parseFloat(document.getElementById('fdLabelPro').value) || 0;
+  const carb = parseFloat(document.getElementById('fdLabelCarb').value) || 0;
+  const fat = parseFloat(document.getElementById('fdLabelFat').value) || 0;
+  const grams = parseFloat(document.getElementById('fdLabelGrams').value) || 100;
+
+  _fdRecipeIngredients.push({
+    name: name,
+    cal100: cal,
+    pro100: pro,
+    carb100: carb,
+    fat100: fat,
+    grams: grams
+  });
+
+  fdCloseLabelResult();
+  fdCloseRecipeSearch();
+  fdRenderRecipeIngredients();
 }
 
 // ═══════════════════════════════════════
