@@ -273,6 +273,27 @@ def save_state():
                     print(f'  MERGE: preserved onboarding submission (id={cs.get("id")}) from server')
             data['onboardingSubmissions'] = incoming_submissions
 
+        # LOG FIELD PROTECTION: never let a stale device's smaller per-client log
+        # (workouts, check-ins, cycle log, nutrition, food log, neuro data) overwrite
+        # a richer log already on the server. Per-client array merge by length.
+        if _state_cache and isinstance(_state_cache, dict):
+            for field in ('workoutLog', 'checkinLog', 'cycleLog', 'clientNutrition', 'foodLog', 'neuroData', 'neuroEpisodes'):
+                current_field = _state_cache.get(field)
+                if not isinstance(current_field, dict):
+                    continue
+                incoming_field = data.get(field) if isinstance(data, dict) else None
+                if not isinstance(incoming_field, dict):
+                    incoming_field = {}
+                merged_field = dict(incoming_field)
+                for k, cur_arr in current_field.items():
+                    inc_arr = merged_field.get(k)
+                    cur_len = len(cur_arr) if isinstance(cur_arr, list) else 0
+                    inc_len = len(inc_arr) if isinstance(inc_arr, list) else 0
+                    if inc_len < cur_len:
+                        print(f'  MERGE: kept existing {field}[{k}] ({cur_len} entries) over incoming ({inc_len} entries)')
+                        merged_field[k] = cur_arr
+                data[field] = merged_field
+
         _save_to_disk(data, 'save')
         return jsonify({'ok': True, 'clients': final_count})
     except Exception as e:

@@ -2792,6 +2792,23 @@ function _buildState() {
   };
 }
 
+// Per-client merge for log-style dict stores (workoutLog, checkinLog, etc.)
+// Never let an incoming array silently shrink a client's logged history —
+// if a stale device pushes fewer entries for a client than we already have,
+// keep the richer local copy for that client instead of wiping it.
+function _mergeLogDict(target, incoming, label, source) {
+  if (!incoming) return;
+  Object.keys(incoming).forEach(k => {
+    const inArr = Array.isArray(incoming[k]) ? incoming[k] : [];
+    const curArr = Array.isArray(target[k]) ? target[k] : [];
+    if (inArr.length >= curArr.length) {
+      target[k] = inArr;
+    } else {
+      console.warn('AH Performance: BLOCKED ' + label + '[' + k + '] overwrite — incoming has ' + inArr.length + ' entries, current has ' + curArr.length + ' (source: ' + (source||'unknown') + ')');
+    }
+  });
+}
+
 function _applyState(state, _source) {
   if (!state || !state.savedAt) return;
   // SAFETY: block if incoming state has drastically fewer clients (protects against data wipe from empty deploys)
@@ -2883,9 +2900,9 @@ function _applyState(state, _source) {
       }
     }
   }
-  // FULL REPLACE for dict-shaped stores (prevents deleted client data from resurrecting via Object.assign merge)
-  if (state.workoutLog) { Object.keys(WORKOUT_LOG).forEach(k => delete WORKOUT_LOG[k]); Object.assign(WORKOUT_LOG, state.workoutLog); }
-  if (state.checkinLog) { Object.keys(CHECKIN_LOG).forEach(k => delete CHECKIN_LOG[k]); Object.assign(CHECKIN_LOG, state.checkinLog); }
+  // Per-client merge (prevents a stale device's smaller log from wiping newer entries)
+  if (state.workoutLog) { _mergeLogDict(WORKOUT_LOG, state.workoutLog, 'workoutLog', _source); }
+  if (state.checkinLog) { _mergeLogDict(CHECKIN_LOG, state.checkinLog, 'checkinLog', _source); }
   if (state.programmeWeeks) {
     const _pwSess = (obj) => { let n=0; Object.values(obj||{}).forEach(wk => { n += (wk && wk.sessions) ? wk.sessions.length : 0; }); return n; };
     const inPW = _pwSess(state.programmeWeeks);
@@ -2972,11 +2989,11 @@ function _applyState(state, _source) {
       console.warn('AH Performance: BLOCKED ptProgrammes overwrite — incoming has no week data (source: ' + (_source||'unknown') + ')');
     }
   }
-  if (state.cycleLog) { Object.keys(CYCLE_LOG).forEach(k => delete CYCLE_LOG[k]); Object.assign(CYCLE_LOG, state.cycleLog); }
-  if (state.clientNutrition) { Object.keys(CLIENT_NUTRITION).forEach(k => delete CLIENT_NUTRITION[k]); Object.assign(CLIENT_NUTRITION, state.clientNutrition); }
-  if (state.foodLog) { Object.keys(FOOD_LOG).forEach(k => delete FOOD_LOG[k]); Object.assign(FOOD_LOG, state.foodLog); }
-  if (state.neuroData) { Object.keys(NEURO_DATA).forEach(k => delete NEURO_DATA[k]); Object.assign(NEURO_DATA, state.neuroData); }
-  if (state.neuroEpisodes) { Object.keys(NEURO_EPISODES).forEach(k => delete NEURO_EPISODES[k]); Object.assign(NEURO_EPISODES, state.neuroEpisodes); }
+  if (state.cycleLog) { _mergeLogDict(CYCLE_LOG, state.cycleLog, 'cycleLog', _source); }
+  if (state.clientNutrition) { _mergeLogDict(CLIENT_NUTRITION, state.clientNutrition, 'clientNutrition', _source); }
+  if (state.foodLog) { _mergeLogDict(FOOD_LOG, state.foodLog, 'foodLog', _source); }
+  if (state.neuroData) { _mergeLogDict(NEURO_DATA, state.neuroData, 'neuroData', _source); }
+  if (state.neuroEpisodes) { _mergeLogDict(NEURO_EPISODES, state.neuroEpisodes, 'neuroEpisodes', _source); }
   // Clean up: fix any "undefined" client names in PT notifications
   PT_NOTIFICATIONS.forEach(n => {
     if (!n.client || n.client === 'undefined' || n.client === 'null') {
