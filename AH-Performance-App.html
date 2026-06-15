@@ -2579,6 +2579,7 @@ const CLIENT_NOTIFICATIONS = { 1: [] };
 //  EMAIL QUEUE (simulated — SendGrid ready)
 // ═══════════════════════════════════════
 const EMAIL_QUEUE = [];
+const DELETED_EMAIL_IDS = []; // Track intentionally deleted emails so server merge doesn't resurrect them
 
 // Per-client nutrition assignments from coach
 const CLIENT_NUTRITION = {};
@@ -2776,7 +2777,7 @@ function _buildState() {
     wellbeingData: WELLBEING_DATA,
     ptNotifications: PT_NOTIFICATIONS,
     clientNotifications: CLIENT_NOTIFICATIONS,
-    emailQueue: EMAIL_QUEUE,
+    emailQueue: DELETED_EMAIL_IDS.length > 0 ? EMAIL_QUEUE.filter(e => !DELETED_EMAIL_IDS.includes(e.id)) : EMAIL_QUEUE,
     ptConversations: PT_CONVERSATIONS,
     onboardingSubmissions: ONBOARDING_SUBMISSIONS,
     ptProgrammes: typeof PT_PROGRAMMES !== 'undefined' ? PT_PROGRAMMES : [],
@@ -2786,6 +2787,7 @@ function _buildState() {
     neuroData: NEURO_DATA,
     neuroEpisodes: NEURO_EPISODES,
     _deletedClientIds: DELETED_CLIENT_IDS,
+    _deletedEmailIds: DELETED_EMAIL_IDS,
     savedAt: Date.now()
   };
 }
@@ -2831,6 +2833,12 @@ function _applyState(state, _source) {
   if (state._deletedClientIds && Array.isArray(state._deletedClientIds)) {
     state._deletedClientIds.forEach(id => {
       if (!DELETED_CLIENT_IDS.includes(id)) DELETED_CLIENT_IDS.push(id);
+    });
+  }
+  // Restore deleted email IDs tracking (so a stale server snapshot can't resurrect a deleted email)
+  if (state._deletedEmailIds && Array.isArray(state._deletedEmailIds)) {
+    state._deletedEmailIds.forEach(id => {
+      if (!DELETED_EMAIL_IDS.includes(id)) DELETED_EMAIL_IDS.push(id);
     });
   }
   // ── Self-healing: deduplicate clients by email (keep highest ID = most recent) ──
@@ -2919,7 +2927,12 @@ function _applyState(state, _source) {
       newClientNotifs.forEach(n => _showBrowserNotification('AH Performance', n.message || ''));
     }
   }
-  if (state.emailQueue && state.emailQueue.length) { EMAIL_QUEUE.length = 0; state.emailQueue.forEach(e => EMAIL_QUEUE.push(e)); }
+  if (state.emailQueue && state.emailQueue.length) {
+    // Filter out any emails the user has intentionally deleted, so a stale
+    // server snapshot (e.g. from the 30s auto-sync) can't bring them back
+    const incomingEmails = DELETED_EMAIL_IDS.length > 0 ? state.emailQueue.filter(e => !DELETED_EMAIL_IDS.includes(e.id)) : state.emailQueue;
+    EMAIL_QUEUE.length = 0; incomingEmails.forEach(e => EMAIL_QUEUE.push(e));
+  }
   if (state.ptConversations && state.ptConversations.length) {
     // Merge conversations: keep any local messages not yet on server
     state.ptConversations.forEach(serverCv => {
@@ -8074,7 +8087,9 @@ function startNewPTConversation() {
 function openPTConversation(idx) {
   activePTConvo = idx;
   const cv = PT_CONVERSATIONS[idx];
+  const _wasUnread = cv.unread;
   cv.unread = false;
+  if (_wasUnread) scheduleSave(); // persist "read" status so it doesn't revert on next auto-sync
   updateSidebarBadges();
   renderPTMessages();
   const thread = document.getElementById('ptMsgThread');
@@ -12859,6 +12874,7 @@ function deleteEmail(eId) {
   const idx = EMAIL_QUEUE.findIndex(x => x.id === eId);
   if (idx < 0) return;
   EMAIL_QUEUE.splice(idx, 1);
+  if (!DELETED_EMAIL_IDS.includes(eId)) DELETED_EMAIL_IDS.push(eId);
   renderEmailQueue();
   scheduleSave();
 }
