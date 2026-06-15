@@ -1291,10 +1291,13 @@
           <div id="fdRecentsContent" style="display:flex;flex-direction:column;gap:6px;"></div>
         </div>
 
-        <!-- Manual entry button -->
-        <div style="margin-top:16px;text-align:center;">
+        <!-- Manual entry & recipe buttons -->
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px;">
           <button onclick="fdShowManualEntry()" class="btn" style="background:var(--slate-raised);color:var(--text-body);border:1px solid var(--slate-border);width:100%;padding:14px;border-radius:10px;font-size:14px;cursor:pointer;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8612D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> &nbsp;Add Custom Food
+          </button>
+          <button onclick="fdShowRecipeList()" class="btn" style="background:var(--slate-raised);color:var(--text-body);border:1px solid var(--slate-border);width:100%;padding:14px;border-radius:10px;font-size:14px;cursor:pointer;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ocean)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> &nbsp;My Recipes
           </button>
         </div>
       </div>
@@ -1448,6 +1451,137 @@
           <input type="text" id="fdManualBarcode" inputmode="numeric" placeholder="Or type barcode number..." style="flex:1;padding:12px;border-radius:10px;border:none;background:rgba(255,255,255,0.15);color:#fff;font-size:14px;text-align:center;">
           <button onclick="fdManualBarcodeLookup()" style="padding:12px 18px;border-radius:10px;border:none;background:var(--ember);color:#fff;font-weight:600;font-size:13px;cursor:pointer;">Go</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Food Diary: Recipe Builder Overlay -->
+    <div id="fdRecipeOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--slate-bg);z-index:10000;overflow-y:auto;">
+      <div style="max-width:500px;margin:0 auto;padding:16px;padding-top:calc(16px + env(safe-area-inset-top, 0px));">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <button onclick="fdCloseRecipeBuilder()" style="background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;padding:8px;">&larr; Back</button>
+          <h3 id="fdRecipeTitle" style="margin:0;font-size:14px;">Recipe Builder</h3>
+          <div style="width:60px;"></div>
+        </div>
+
+        <!-- Recipe name -->
+        <div class="card" style="padding:16px;margin-bottom:12px;">
+          <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">Recipe Name *</label>
+          <input type="text" id="fdRecipeName" placeholder="e.g. Chicken Stir Fry" style="width:100%;padding:12px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;">
+        </div>
+
+        <!-- Ingredients list -->
+        <div class="card" style="padding:16px;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:12px;font-weight:600;color:var(--ocean);text-transform:uppercase;letter-spacing:0.5px;">Ingredients</div>
+            <button onclick="fdRecipeAddIngredient()" style="background:var(--ocean);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
+              + Add
+            </button>
+          </div>
+          <div id="fdRecipeIngredients" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+
+        <!-- Recipe totals -->
+        <div id="fdRecipeTotals" class="card" style="padding:16px;margin-bottom:12px;display:none;">
+          <div style="font-size:11px;font-weight:600;color:var(--ember);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Recipe Totals</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:6px;text-align:center;">
+            <div>
+              <div id="fdRecipeTotalWeight" style="font-size:16px;font-weight:700;color:var(--text-body);font-family:'Space Grotesk';">0g</div>
+              <div style="font-size:9px;color:var(--text-dim);">total</div>
+            </div>
+            <div>
+              <div id="fdRecipeTotalCal" style="font-size:16px;font-weight:700;color:var(--ember);font-family:'Space Grotesk';">0</div>
+              <div style="font-size:9px;color:var(--text-dim);">kcal</div>
+            </div>
+            <div>
+              <div id="fdRecipeTotalPro" style="font-size:16px;font-weight:700;color:var(--ocean);font-family:'Space Grotesk';">0g</div>
+              <div style="font-size:9px;color:var(--text-dim);">protein</div>
+            </div>
+            <div>
+              <div id="fdRecipeTotalCarb" style="font-size:16px;font-weight:700;color:var(--text-body);font-family:'Space Grotesk';">0g</div>
+              <div style="font-size:9px;color:var(--text-dim);">carbs</div>
+            </div>
+            <div>
+              <div id="fdRecipeTotalFat" style="font-size:16px;font-weight:700;color:var(--text-body);font-family:'Space Grotesk';">0g</div>
+              <div style="font-size:9px;color:var(--text-dim);">fat</div>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="fdSaveRecipe()" class="btn btn-ember" style="width:100%;padding:14px;font-size:14px;font-weight:600;border-radius:12px;cursor:pointer;">
+          Save Recipe
+        </button>
+      </div>
+    </div>
+
+    <!-- Food Diary: Recipe Portion Overlay -->
+    <div id="fdRecipePortionOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--slate-bg);z-index:10000;overflow-y:auto;">
+      <div style="max-width:500px;margin:0 auto;padding:16px;padding-top:calc(16px + env(safe-area-inset-top, 0px));">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <button onclick="fdCloseRecipePortion()" style="background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;padding:8px;">&larr; Back</button>
+          <h3 style="margin:0;font-size:14px;">Log Recipe Portion</h3>
+          <div style="width:60px;"></div>
+        </div>
+
+        <div class="card" style="padding:16px;margin-bottom:12px;">
+          <div id="fdPortionRecipeName" style="font-size:16px;font-weight:700;color:var(--text-body);margin-bottom:8px;"></div>
+          <div id="fdPortionRecipeInfo" style="font-size:12px;color:var(--text-dim);margin-bottom:16px;"></div>
+
+          <!-- Portion selector -->
+          <div style="margin-bottom:16px;">
+            <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:8px;">How much did you eat?</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+              <button onclick="fdSetPortion(0.25)" class="fdPortionBtn" style="padding:8px 14px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:13px;font-weight:600;cursor:pointer;">1/4</button>
+              <button onclick="fdSetPortion(0.333)" class="fdPortionBtn" style="padding:8px 14px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:13px;font-weight:600;cursor:pointer;">1/3</button>
+              <button onclick="fdSetPortion(0.5)" class="fdPortionBtn" style="padding:8px 14px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:13px;font-weight:600;cursor:pointer;">1/2</button>
+              <button onclick="fdSetPortion(0.667)" class="fdPortionBtn" style="padding:8px 14px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:13px;font-weight:600;cursor:pointer;">2/3</button>
+              <button onclick="fdSetPortion(0.75)" class="fdPortionBtn" style="padding:8px 14px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:13px;font-weight:600;cursor:pointer;">3/4</button>
+              <button onclick="fdSetPortion(1)" class="fdPortionBtn" style="padding:8px 14px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-body);font-size:13px;font-weight:600;cursor:pointer;">All</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label style="font-size:12px;color:var(--text-dim);white-space:nowrap;">Or grams:</label>
+              <input type="number" id="fdPortionGrams" placeholder="e.g. 350" min="1" oninput="fdUpdatePortionFromGrams()" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:16px;text-align:center;">
+            </div>
+          </div>
+
+          <!-- Calculated portion preview -->
+          <div id="fdPortionPreview" style="background:linear-gradient(135deg,var(--ember-soft),var(--slate-raised));border-radius:10px;padding:12px;">
+            <div style="font-size:11px;font-weight:600;color:var(--ember);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">What you'll log</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;text-align:center;">
+              <div>
+                <div id="fdPortionCal" style="font-size:18px;font-weight:700;color:var(--ember);font-family:'Space Grotesk';">0</div>
+                <div style="font-size:10px;color:var(--text-dim);">kcal</div>
+              </div>
+              <div>
+                <div id="fdPortionPro" style="font-size:18px;font-weight:700;color:var(--ocean);font-family:'Space Grotesk';">0g</div>
+                <div style="font-size:10px;color:var(--text-dim);">protein</div>
+              </div>
+              <div>
+                <div id="fdPortionCarb" style="font-size:18px;font-weight:700;color:var(--text-body);font-family:'Space Grotesk';">0g</div>
+                <div style="font-size:10px;color:var(--text-dim);">carbs</div>
+              </div>
+              <div>
+                <div id="fdPortionFat" style="font-size:18px;font-weight:700;color:var(--text-body);font-family:'Space Grotesk';">0g</div>
+                <div style="font-size:10px;color:var(--text-dim);">fat</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="fdLogRecipePortion()" class="btn btn-ember" style="width:100%;padding:14px;font-size:14px;font-weight:600;border-radius:12px;cursor:pointer;">
+          Add to Diary
+        </button>
+      </div>
+    </div>
+
+    <!-- Food Diary: Recipe List Overlay -->
+    <div id="fdRecipeListOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--slate-bg);z-index:10000;overflow-y:auto;">
+      <div style="max-width:500px;margin:0 auto;padding:16px;padding-top:calc(16px + env(safe-area-inset-top, 0px));">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <button onclick="fdCloseRecipeList()" style="background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;padding:8px;">&larr; Back</button>
+          <h3 style="margin:0;font-size:14px;">My Recipes</h3>
+          <button onclick="fdOpenRecipeBuilder()" style="background:var(--ocean);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;">+ New</button>
+        </div>
+        <div id="fdRecipeListContent"></div>
       </div>
     </div>
 
@@ -2566,6 +2700,10 @@ const CYCLE_LOG = {};
 // Structure: FOOD_LOG[clientId] = { '2026-04-22': { breakfast: [...], lunch: [...], dinner: [...], snacks: [...] } }
 const FOOD_LOG = {};
 
+// Recipe store (per-client)
+// Structure: FOOD_RECIPES[clientId] = [ { id, name, items: [ {name, cal, protein, carbs, fat, serving} ], totalCal, totalProtein, totalCarbs, totalFat, totalWeight, createdAt } ]
+const FOOD_RECIPES = {};
+
 // Workout session log (per-client)
 const WORKOUT_LOG = { 1: [] };
 
@@ -2784,6 +2922,7 @@ function _buildState() {
     cycleLog: CYCLE_LOG,
     clientNutrition: CLIENT_NUTRITION,
     foodLog: FOOD_LOG,
+    foodRecipes: FOOD_RECIPES,
     neuroData: NEURO_DATA,
     neuroEpisodes: NEURO_EPISODES,
     _deletedClientIds: DELETED_CLIENT_IDS,
@@ -2799,13 +2938,56 @@ function _buildState() {
 function _mergeLogDict(target, incoming, label, source) {
   if (!incoming) return;
   Object.keys(incoming).forEach(k => {
-    const inArr = Array.isArray(incoming[k]) ? incoming[k] : [];
-    const curArr = Array.isArray(target[k]) ? target[k] : [];
-    if (inArr.length >= curArr.length) {
-      target[k] = inArr;
-    } else {
-      console.warn('AH Performance: BLOCKED ' + label + '[' + k + '] overwrite — incoming has ' + inArr.length + ' entries, current has ' + curArr.length + ' (source: ' + (source||'unknown') + ')');
+    const inVal = incoming[k];
+    const curVal = target[k];
+    // Both are arrays — use length-based guard (original behaviour for workoutLog, checkinLog, etc.)
+    if (Array.isArray(inVal) && Array.isArray(curVal)) {
+      if (inVal.length >= curVal.length) {
+        target[k] = inVal;
+      } else {
+        console.warn('AH Performance: BLOCKED ' + label + '[' + k + '] overwrite — incoming has ' + inVal.length + ' entries, current has ' + curVal.length + ' (source: ' + (source||'unknown') + ')');
+      }
+      return;
     }
+    // Both are objects — deep-merge per key (for foodLog, clientNutrition, cycleLog, neuroData, etc.)
+    if (inVal && typeof inVal === 'object' && !Array.isArray(inVal)) {
+      if (!curVal || typeof curVal !== 'object' || Array.isArray(curVal)) {
+        // Current is missing/corrupted — accept incoming
+        target[k] = inVal;
+      } else {
+        // Both are objects — merge keys, preferring the richer version per-key
+        _mergeObjectDeep(curVal, inVal, label + '[' + k + ']', source);
+      }
+      return;
+    }
+    // Fallback: accept incoming if current is empty/missing
+    if (!curVal) target[k] = inVal;
+  });
+}
+
+// Deep-merge for nested object stores (foodLog dates→meals, cycleLog fields, etc.)
+function _mergeObjectDeep(target, incoming, path, source) {
+  if (!incoming || typeof incoming !== 'object') return;
+  Object.keys(incoming).forEach(k => {
+    const inVal = incoming[k];
+    const curVal = target[k];
+    if (Array.isArray(inVal) && Array.isArray(curVal)) {
+      // For arrays inside objects, keep the longer one
+      if (inVal.length >= curVal.length) target[k] = inVal;
+    } else if (inVal && typeof inVal === 'object' && !Array.isArray(inVal)) {
+      if (!curVal || typeof curVal !== 'object' || Array.isArray(curVal)) {
+        target[k] = inVal;
+      } else {
+        _mergeObjectDeep(curVal, inVal, path + '.' + k, source);
+      }
+    } else {
+      // Primitive — accept incoming (server is source of truth for scalars)
+      target[k] = inVal;
+    }
+  });
+  // Also add any keys in incoming that target doesn't have
+  Object.keys(incoming).forEach(k => {
+    if (!(k in target)) target[k] = incoming[k];
   });
 }
 
@@ -2992,6 +3174,7 @@ function _applyState(state, _source) {
   if (state.cycleLog) { _mergeLogDict(CYCLE_LOG, state.cycleLog, 'cycleLog', _source); }
   if (state.clientNutrition) { _mergeLogDict(CLIENT_NUTRITION, state.clientNutrition, 'clientNutrition', _source); }
   if (state.foodLog) { _mergeLogDict(FOOD_LOG, state.foodLog, 'foodLog', _source); }
+  if (state.foodRecipes) { _mergeLogDict(FOOD_RECIPES, state.foodRecipes, 'foodRecipes', _source); }
   if (state.neuroData) { _mergeLogDict(NEURO_DATA, state.neuroData, 'neuroData', _source); }
   if (state.neuroEpisodes) { _mergeLogDict(NEURO_EPISODES, state.neuroEpisodes, 'neuroEpisodes', _source); }
   // Clean up: fix any "undefined" client names in PT notifications
@@ -7674,6 +7857,7 @@ function removeClient() {
   delete PROGRAMME_WEEKS[cid];
   delete CYCLE_LOG[cid];
   delete FOOD_LOG[cid];
+  delete FOOD_RECIPES[cid];
   delete CLIENT_NUTRITION[cid];
   if (typeof NEURO_DATA !== 'undefined') delete NEURO_DATA[cid];
   if (typeof NEURO_EPISODES !== 'undefined') delete NEURO_EPISODES[cid];
@@ -8469,7 +8653,7 @@ function _fdHideOverlay(id) {
   const el = document.getElementById(id);
   if (el) el.style.display = 'none';
   // Only restore app content if ALL food diary overlays are hidden
-  const anyOpen = ['fdLogOverlay','fdProductOverlay','fdManualOverlay','fdScanOverlay'].some(
+  const anyOpen = ['fdLogOverlay','fdProductOverlay','fdManualOverlay','fdScanOverlay','fdRecipeOverlay','fdRecipePortionOverlay','fdRecipeListOverlay'].some(
     oid => { const o = document.getElementById(oid); return o && o.style.display !== 'none'; }
   );
   if (!anyOpen) {
@@ -8946,6 +9130,317 @@ function fdLookupBarcode(code) {
     .catch(() => {
       document.getElementById('fdSearchResults').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">Lookup failed — check your connection and try again.</div>';
     });
+}
+
+// ═══════════════════════════════════════
+//  RECIPE BUILDER
+// ═══════════════════════════════════════
+let _fdRecipeIngredients = [];
+let _fdRecipeEditId = null;
+let _fdPortionRecipe = null;
+let _fdPortionFraction = 1;
+
+function _fdGetRecipes() {
+  const cid = _fdGetClientId();
+  if (!FOOD_RECIPES[cid]) FOOD_RECIPES[cid] = [];
+  return FOOD_RECIPES[cid];
+}
+
+function fdShowRecipeList() {
+  _fdShowOverlay('fdRecipeListOverlay');
+  fdRenderRecipeList();
+}
+function fdCloseRecipeList() { _fdHideOverlay('fdRecipeListOverlay'); }
+
+function fdRenderRecipeList() {
+  const recipes = _fdGetRecipes();
+  const el = document.getElementById('fdRecipeListContent');
+  if (!el) return;
+  if (recipes.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-dim);font-size:13px;">No recipes yet. Tap <b>+ New</b> to create your first recipe.</div>';
+    return;
+  }
+  let html = '';
+  recipes.forEach((r, idx) => {
+    html += '<div class="card" style="padding:14px;margin-bottom:10px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
+        '<div style="flex:1;min-width:0;cursor:pointer;" onclick="fdOpenRecipeForLog(' + idx + ')">' +
+          '<div style="font-size:14px;font-weight:600;color:var(--text-body);margin-bottom:4px;">' + (r.name || 'Untitled Recipe') + '</div>' +
+          '<div style="font-size:11px;color:var(--text-dim);">' + (r.items ? r.items.length : 0) + ' ingredients · ' + Math.round(r.totalCal || 0) + ' kcal total · ' + Math.round(r.totalWeight || 0) + 'g</div>' +
+          '<div style="font-size:10px;color:var(--text-dim);margin-top:2px;">P: ' + Math.round(r.totalProtein || 0) + 'g · C: ' + Math.round(r.totalCarbs || 0) + 'g · F: ' + Math.round(r.totalFat || 0) + 'g</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;flex-shrink:0;">' +
+          '<button onclick="fdEditRecipe(' + idx + ')" style="background:none;border:none;cursor:pointer;opacity:0.6;padding:4px;" title="Edit">' + ic('edit','var(--ocean)',14) + '</button>' +
+          '<button onclick="fdDeleteRecipe(' + idx + ')" style="background:none;border:none;cursor:pointer;opacity:0.4;padding:4px;" title="Delete">' + ic('trash','var(--text-muted)',14) + '</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function fdOpenRecipeBuilder(editIdx) {
+  _fdRecipeEditId = (editIdx !== undefined) ? editIdx : null;
+  const recipes = _fdGetRecipes();
+  if (_fdRecipeEditId !== null && recipes[_fdRecipeEditId]) {
+    const r = recipes[_fdRecipeEditId];
+    document.getElementById('fdRecipeName').value = r.name || '';
+    _fdRecipeIngredients = (r.items || []).map(it => ({ ...it }));
+    document.getElementById('fdRecipeTitle').textContent = 'Edit Recipe';
+  } else {
+    document.getElementById('fdRecipeName').value = '';
+    _fdRecipeIngredients = [];
+    document.getElementById('fdRecipeTitle').textContent = 'Recipe Builder';
+  }
+  _fdShowOverlay('fdRecipeOverlay');
+  fdRenderRecipeIngredients();
+}
+function fdCloseRecipeBuilder() { _fdHideOverlay('fdRecipeOverlay'); }
+
+function fdEditRecipe(idx) {
+  fdOpenRecipeBuilder(idx);
+}
+
+function fdDeleteRecipe(idx) {
+  const recipes = _fdGetRecipes();
+  if (!recipes[idx]) return;
+  if (!confirm('Delete recipe "' + (recipes[idx].name || 'Untitled') + '"?')) return;
+  recipes.splice(idx, 1);
+  scheduleSave();
+  fdRenderRecipeList();
+}
+
+function fdRecipeAddIngredient() {
+  _fdRecipeIngredients.push({ name: '', cal100: 0, pro100: 0, carb100: 0, fat100: 0, grams: 100 });
+  fdRenderRecipeIngredients();
+}
+
+function fdRecipeRemoveIngredient(idx) {
+  _fdRecipeIngredients.splice(idx, 1);
+  fdRenderRecipeIngredients();
+}
+
+function fdRecipeUpdateIngredient(idx, field, value) {
+  if (_fdRecipeIngredients[idx]) {
+    _fdRecipeIngredients[idx][field] = (field === 'name') ? value : (parseFloat(value) || 0);
+  }
+  fdUpdateRecipeTotals();
+}
+
+function fdRenderRecipeIngredients() {
+  const el = document.getElementById('fdRecipeIngredients');
+  if (!el) return;
+  if (_fdRecipeIngredients.length === 0) {
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-dim);font-size:12px;">No ingredients yet. Tap <b>+ Add</b> to start building your recipe.</div>';
+    fdUpdateRecipeTotals();
+    return;
+  }
+  let html = '';
+  _fdRecipeIngredients.forEach((ing, idx) => {
+    html += '<div style="background:var(--slate-deep);border-radius:10px;padding:10px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+        '<input type="text" value="' + (ing.name || '').replace(/"/g, '&quot;') + '" placeholder="Ingredient name" ' +
+          'onchange="fdRecipeUpdateIngredient(' + idx + ',\'name\',this.value)" ' +
+          'style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:13px;font-weight:500;">' +
+        '<button onclick="fdRecipeRemoveIngredient(' + idx + ')" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:16px;padding:4px 0 4px 8px;">✕</button>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:6px;">' +
+        '<div>' +
+          '<label style="font-size:9px;color:var(--text-dim);display:block;margin-bottom:2px;">Grams</label>' +
+          '<input type="number" value="' + (ing.grams || 100) + '" min="1" onchange="fdRecipeUpdateIngredient(' + idx + ',\'grams\',this.value)" ' +
+            'style="width:100%;padding:5px 4px;border-radius:5px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:12px;text-align:center;">' +
+        '</div>' +
+        '<div>' +
+          '<label style="font-size:9px;color:var(--text-dim);display:block;margin-bottom:2px;">Cal/100g</label>' +
+          '<input type="number" value="' + (ing.cal100 || 0) + '" min="0" onchange="fdRecipeUpdateIngredient(' + idx + ',\'cal100\',this.value)" ' +
+            'style="width:100%;padding:5px 4px;border-radius:5px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:12px;text-align:center;">' +
+        '</div>' +
+        '<div>' +
+          '<label style="font-size:9px;color:var(--ocean);display:block;margin-bottom:2px;">Pro/100g</label>' +
+          '<input type="number" value="' + (ing.pro100 || 0) + '" min="0" step="0.1" onchange="fdRecipeUpdateIngredient(' + idx + ',\'pro100\',this.value)" ' +
+            'style="width:100%;padding:5px 4px;border-radius:5px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:12px;text-align:center;">' +
+        '</div>' +
+        '<div>' +
+          '<label style="font-size:9px;color:var(--text-dim);display:block;margin-bottom:2px;">Carb/100g</label>' +
+          '<input type="number" value="' + (ing.carb100 || 0) + '" min="0" step="0.1" onchange="fdRecipeUpdateIngredient(' + idx + ',\'carb100\',this.value)" ' +
+            'style="width:100%;padding:5px 4px;border-radius:5px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:12px;text-align:center;">' +
+        '</div>' +
+        '<div>' +
+          '<label style="font-size:9px;color:var(--text-dim);display:block;margin-bottom:2px;">Fat/100g</label>' +
+          '<input type="number" value="' + (ing.fat100 || 0) + '" min="0" step="0.1" onchange="fdRecipeUpdateIngredient(' + idx + ',\'fat100\',this.value)" ' +
+            'style="width:100%;padding:5px 4px;border-radius:5px;border:1px solid var(--slate-border);background:var(--slate-bg);color:var(--text-body);font-size:12px;text-align:center;">' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  });
+  el.innerHTML = html;
+  fdUpdateRecipeTotals();
+}
+
+function fdUpdateRecipeTotals() {
+  let totalCal = 0, totalPro = 0, totalCarb = 0, totalFat = 0, totalWeight = 0;
+  _fdRecipeIngredients.forEach(ing => {
+    const g = ing.grams || 0;
+    const ratio = g / 100;
+    totalWeight += g;
+    totalCal += (ing.cal100 || 0) * ratio;
+    totalPro += (ing.pro100 || 0) * ratio;
+    totalCarb += (ing.carb100 || 0) * ratio;
+    totalFat += (ing.fat100 || 0) * ratio;
+  });
+  const totalsEl = document.getElementById('fdRecipeTotals');
+  if (totalsEl) totalsEl.style.display = _fdRecipeIngredients.length > 0 ? '' : 'none';
+  const w = document.getElementById('fdRecipeTotalWeight');
+  if (w) w.textContent = Math.round(totalWeight) + 'g';
+  const c = document.getElementById('fdRecipeTotalCal');
+  if (c) c.textContent = Math.round(totalCal);
+  const p = document.getElementById('fdRecipeTotalPro');
+  if (p) p.textContent = Math.round(totalPro * 10) / 10 + 'g';
+  const cb = document.getElementById('fdRecipeTotalCarb');
+  if (cb) cb.textContent = Math.round(totalCarb * 10) / 10 + 'g';
+  const f = document.getElementById('fdRecipeTotalFat');
+  if (f) f.textContent = Math.round(totalFat * 10) / 10 + 'g';
+}
+
+function fdSaveRecipe() {
+  const name = document.getElementById('fdRecipeName').value.trim();
+  if (!name) { alert('Please enter a recipe name.'); return; }
+  if (_fdRecipeIngredients.length === 0) { alert('Please add at least one ingredient.'); return; }
+
+  let totalCal = 0, totalPro = 0, totalCarb = 0, totalFat = 0, totalWeight = 0;
+  const items = _fdRecipeIngredients.map(ing => {
+    const g = ing.grams || 0;
+    const ratio = g / 100;
+    totalWeight += g;
+    totalCal += (ing.cal100 || 0) * ratio;
+    totalPro += (ing.pro100 || 0) * ratio;
+    totalCarb += (ing.carb100 || 0) * ratio;
+    totalFat += (ing.fat100 || 0) * ratio;
+    return {
+      name: ing.name || 'Unnamed',
+      grams: g,
+      cal100: ing.cal100 || 0,
+      pro100: ing.pro100 || 0,
+      carb100: ing.carb100 || 0,
+      fat100: ing.fat100 || 0,
+      cal: Math.round((ing.cal100 || 0) * ratio),
+      protein: Math.round((ing.pro100 || 0) * ratio * 10) / 10,
+      carbs: Math.round((ing.carb100 || 0) * ratio * 10) / 10,
+      fat: Math.round((ing.fat100 || 0) * ratio * 10) / 10
+    };
+  });
+
+  const recipe = {
+    id: (_fdRecipeEditId !== null && _fdGetRecipes()[_fdRecipeEditId]) ? _fdGetRecipes()[_fdRecipeEditId].id : Date.now(),
+    name: name,
+    items: items,
+    totalCal: Math.round(totalCal),
+    totalProtein: Math.round(totalPro * 10) / 10,
+    totalCarbs: Math.round(totalCarb * 10) / 10,
+    totalFat: Math.round(totalFat * 10) / 10,
+    totalWeight: Math.round(totalWeight),
+    createdAt: (_fdRecipeEditId !== null && _fdGetRecipes()[_fdRecipeEditId]) ? _fdGetRecipes()[_fdRecipeEditId].createdAt : new Date().toISOString()
+  };
+
+  const recipes = _fdGetRecipes();
+  if (_fdRecipeEditId !== null) {
+    recipes[_fdRecipeEditId] = recipe;
+  } else {
+    recipes.push(recipe);
+  }
+  scheduleSave();
+  fdCloseRecipeBuilder();
+  fdRenderRecipeList();
+}
+
+function fdOpenRecipeForLog(idx) {
+  const recipes = _fdGetRecipes();
+  if (!recipes[idx]) return;
+  _fdPortionRecipe = recipes[idx];
+  _fdPortionFraction = 1;
+
+  document.getElementById('fdPortionRecipeName').textContent = _fdPortionRecipe.name;
+  document.getElementById('fdPortionRecipeInfo').textContent =
+    _fdPortionRecipe.items.length + ' ingredients · ' + Math.round(_fdPortionRecipe.totalWeight) + 'g total · ' + Math.round(_fdPortionRecipe.totalCal) + ' kcal';
+  document.getElementById('fdPortionGrams').value = '';
+
+  // Highlight "All" button by default
+  fdSetPortion(1);
+  _fdShowOverlay('fdRecipePortionOverlay');
+}
+
+function fdCloseRecipePortion() { _fdHideOverlay('fdRecipePortionOverlay'); }
+
+function fdSetPortion(fraction) {
+  _fdPortionFraction = fraction;
+  // Highlight the selected button
+  document.querySelectorAll('.fdPortionBtn').forEach(btn => {
+    const btnFrac = parseFloat(btn.getAttribute('onclick').match(/fdSetPortion\(([\d.]+)\)/)?.[1] || 0);
+    if (Math.abs(btnFrac - fraction) < 0.01) {
+      btn.style.background = 'var(--ember)';
+      btn.style.color = '#fff';
+      btn.style.borderColor = 'var(--ember)';
+    } else {
+      btn.style.background = 'var(--slate-card)';
+      btn.style.color = 'var(--text-body)';
+      btn.style.borderColor = 'var(--slate-border)';
+    }
+  });
+  // Clear grams input to show we're using fraction
+  document.getElementById('fdPortionGrams').value = '';
+  fdUpdatePortionPreview();
+}
+
+function fdUpdatePortionFromGrams() {
+  const grams = parseFloat(document.getElementById('fdPortionGrams').value) || 0;
+  if (grams > 0 && _fdPortionRecipe && _fdPortionRecipe.totalWeight > 0) {
+    _fdPortionFraction = grams / _fdPortionRecipe.totalWeight;
+    // Un-highlight all fraction buttons
+    document.querySelectorAll('.fdPortionBtn').forEach(btn => {
+      btn.style.background = 'var(--slate-card)';
+      btn.style.color = 'var(--text-body)';
+      btn.style.borderColor = 'var(--slate-border)';
+    });
+  }
+  fdUpdatePortionPreview();
+}
+
+function fdUpdatePortionPreview() {
+  if (!_fdPortionRecipe) return;
+  const f = _fdPortionFraction;
+  const cal = Math.round((_fdPortionRecipe.totalCal || 0) * f);
+  const pro = Math.round((_fdPortionRecipe.totalProtein || 0) * f * 10) / 10;
+  const carb = Math.round((_fdPortionRecipe.totalCarbs || 0) * f * 10) / 10;
+  const fat = Math.round((_fdPortionRecipe.totalFat || 0) * f * 10) / 10;
+  document.getElementById('fdPortionCal').textContent = cal;
+  document.getElementById('fdPortionPro').textContent = pro + 'g';
+  document.getElementById('fdPortionCarb').textContent = carb + 'g';
+  document.getElementById('fdPortionFat').textContent = fat + 'g';
+}
+
+function fdLogRecipePortion() {
+  if (!_fdPortionRecipe || !_fdCurrentMeal) return;
+  const f = _fdPortionFraction;
+  const entry = {
+    name: _fdPortionRecipe.name + (f < 1 ? ' (' + Math.round(f * 100) + '%)' : ''),
+    brand: 'Recipe',
+    serving: Math.round((_fdPortionRecipe.totalWeight || 0) * f),
+    cal: Math.round((_fdPortionRecipe.totalCal || 0) * f),
+    protein: Math.round((_fdPortionRecipe.totalProtein || 0) * f * 10) / 10,
+    carbs: Math.round((_fdPortionRecipe.totalCarbs || 0) * f * 10) / 10,
+    fat: Math.round((_fdPortionRecipe.totalFat || 0) * f * 10) / 10,
+    fibre: 0, sugar: 0, salt: 0, barcode: '',
+    recipeId: _fdPortionRecipe.id,
+    time: new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'})
+  };
+  const dateStr = _fdDateStr(_fdSelectedDate);
+  const day = _fdGetDayLog(dateStr);
+  day[_fdCurrentMeal].push(entry);
+  scheduleSave();
+  fdCloseRecipePortion();
+  fdCloseRecipeList();
+  fdCloseLog();
+  renderFoodDiary();
 }
 
 // ═══════════════════════════════════════
