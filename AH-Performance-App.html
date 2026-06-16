@@ -3195,31 +3195,53 @@ function _applyState(state, _source) {
   if (state.wellbeingData && state.wellbeingData.length) { WELLBEING_DATA.length = 0; state.wellbeingData.forEach(w => WELLBEING_DATA.push(w)); }
   if (state.ptNotifications && state.ptNotifications.length) {
     // Merge notifications: preserve local read/dismissed state, add new ones only
+    if (!window._ahDismissedPTNotifIds) window._ahDismissedPTNotifIds = new Set();
     const localReadIds = new Set(PT_NOTIFICATIONS.filter(n => n.read).map(n => n.id));
     const localIds = new Set(PT_NOTIFICATIONS.map(n => n.id));
     // Detect genuinely new notifications arriving from another device
-    const newPTNotifs = state.ptNotifications.filter(sn => !localIds.has(sn.id) && !sn.read);
-    // Update existing notifications from server but keep local read state
+    const newPTNotifs = state.ptNotifications.filter(sn => !localIds.has(sn.id) && !sn.read && !window._ahDismissedPTNotifIds.has(sn.id));
+    // Update existing notifications from server but keep local read state, filter dismissed
     state.ptNotifications.forEach(sn => {
       if (localReadIds.has(sn.id)) sn.read = true; // preserve local "read"
     });
+    const filteredPT = state.ptNotifications.filter(n => !window._ahDismissedPTNotifIds.has(n.id));
     PT_NOTIFICATIONS.length = 0;
-    state.ptNotifications.forEach(n => PT_NOTIFICATIONS.push(n));
+    filteredPT.forEach(n => PT_NOTIFICATIONS.push(n));
     // Fire browser push notifications for new items (e.g. client submitted check-in)
     if (_source === 'auto-sync' && currentRole === 'pt') {
       newPTNotifs.forEach(n => _showBrowserNotification(n.client || 'AH Performance', n.message || ''));
     }
   }
   if (state.clientNotifications) {
-    // Detect new client notifications arriving from another device (e.g. coach reviewed check-in)
+    // Merge client notifications: preserve local read state and respect local dismissals
     const cid = loggedInUser && loggedInUser.clientId ? loggedInUser.clientId : 1;
-    const localClientIds = new Set((CLIENT_NOTIFICATIONS[cid] || []).map(n => n.id));
+    const localNotifs = CLIENT_NOTIFICATIONS[cid] || [];
+    const localReadIds = new Set(localNotifs.filter(n => n.read).map(n => n.id));
+    const localIds = new Set(localNotifs.map(n => n.id));
     const incomingClientNotifs = (state.clientNotifications[cid] || []);
-    const newClientNotifs = incomingClientNotifs.filter(n => !localClientIds.has(n.id) && !n.read);
-    Object.keys(CLIENT_NOTIFICATIONS).forEach(k => delete CLIENT_NOTIFICATIONS[k]); Object.assign(CLIENT_NOTIFICATIONS, state.clientNotifications);
+    // Detect genuinely new notifications arriving from another device
+    const newClientNotifs = incomingClientNotifs.filter(n => !localIds.has(n.id) && !n.read);
+    // Track locally dismissed notification IDs so sync can't bring them back
+    if (!window._ahDismissedClientNotifIds) window._ahDismissedClientNotifIds = new Set();
+    // Merge: preserve local read state, filter out dismissed ones
+    Object.keys(state.clientNotifications).forEach(k => {
+      const incoming = state.clientNotifications[k] || [];
+      const localForK = CLIENT_NOTIFICATIONS[k] || [];
+      const localReadForK = new Set(localForK.filter(n => n.read).map(n => n.id));
+      // Keep local read state and filter dismissed
+      incoming.forEach(sn => {
+        if (localReadForK.has(sn.id)) sn.read = true;
+      });
+      const filtered = incoming.filter(n => !window._ahDismissedClientNotifIds.has(n.id));
+      CLIENT_NOTIFICATIONS[k] = filtered;
+    });
+    // Preserve any local-only client keys not on server
+    Object.keys(CLIENT_NOTIFICATIONS).forEach(k => {
+      if (!state.clientNotifications[k]) { /* keep local */ }
+    });
     // Fire browser push notifications for new items (skip if push is active — push already shows OS notification)
     if (_source === 'auto-sync' && currentRole === 'client' && !window._ahPushActive) {
-      newClientNotifs.forEach(n => _showBrowserNotification('AH Performance', n.message || ''));
+      newClientNotifs.filter(n => !window._ahDismissedClientNotifIds.has(n.id)).forEach(n => _showBrowserNotification('AH Performance', n.message || ''));
     }
   }
   if (state.emailQueue && state.emailQueue.length) {
@@ -3229,15 +3251,26 @@ function _applyState(state, _source) {
     EMAIL_QUEUE.length = 0; incomingEmails.forEach(e => EMAIL_QUEUE.push(e));
   }
   if (state.ptConversations && state.ptConversations.length) {
-    // Merge conversations: keep any local messages not yet on server
+    // Merge conversations: keep local messages not yet on server AND preserve read state
     state.ptConversations.forEach(serverCv => {
       const localCv = PT_CONVERSATIONS.find(lc => lc.clientId === serverCv.clientId || lc.name === serverCv.name);
-      if (localCv && localCv.messages && localCv.messages.length > 0) {
-        // Find local messages that aren't on the server yet (unsaved)
-        const serverMsgTexts = new Set((serverCv.messages || []).map(m => m.from + '|' + m.text));
-        const unsavedLocal = localCv.messages.filter(m => !serverMsgTexts.has(m.from + '|' + m.text));
-        if (unsavedLocal.length > 0) {
-          serverCv.messages = [...(serverCv.messages || []), ...unsavedLocal];
+      if (localCv) {
+        // Preserve local unread=false (user has read this conversation)
+        if (localCv.unread === false) serverCv.unread = false;
+        if (localCv.messages && localCv.messages.length > 0) {
+          // Build a set of locally-read message keys
+          const localReadMsgs = new Set(localCv.messages.filter(m => m.read).map(m => m.from + '|' + m.text + '|' + (m.time || '')));
+          // Find local messages that aren't on the server yet (unsaved)
+          const serverMsgTexts = new Set((serverCv.messages || []).map(m => m.from + '|' + m.text));
+          const unsavedLocal = localCv.messages.filter(m => !serverMsgTexts.has(m.from + '|' + m.text));
+          if (unsavedLocal.length > 0) {
+            serverCv.messages = [...(serverCv.messages || []), ...unsavedLocal];
+          }
+          // Preserve local read state on server messages
+          (serverCv.messages || []).forEach(m => {
+            const key = m.from + '|' + m.text + '|' + (m.time || '');
+            if (localReadMsgs.has(key)) m.read = true;
+          });
         }
       }
     });
@@ -11780,6 +11813,8 @@ function markAllClientNotifsRead() {
   notifs.forEach(n => n.read = true);
   renderClientNotifs();
   renderClientNotifFullList();
+  updateSidebarBadges();
+  scheduleSave();
 }
 
 function handleClientNotif(nId, type) {
@@ -11834,6 +11869,9 @@ function dismissClientNotif(nId) {
   const notifs = CLIENT_NOTIFICATIONS[cid] || [];
   const idx = notifs.findIndex(x => String(x.id) === String(nId));
   if (idx !== -1) notifs.splice(idx, 1);
+  // Track dismissed IDs so auto-sync can't resurrect them
+  if (!window._ahDismissedClientNotifIds) window._ahDismissedClientNotifIds = new Set();
+  window._ahDismissedClientNotifIds.add(nId);
   renderClientNotifs();
   renderClientNotifFullList();
   updateSidebarBadges();
@@ -11905,6 +11943,9 @@ function toggleNotifications() {
 function dismissPTNotif(nId) {
   const idx = PT_NOTIFICATIONS.findIndex(x => String(x.id) === String(nId));
   if (idx !== -1) PT_NOTIFICATIONS.splice(idx, 1);
+  // Track dismissed IDs so auto-sync can't resurrect them
+  if (!window._ahDismissedPTNotifIds) window._ahDismissedPTNotifIds = new Set();
+  window._ahDismissedPTNotifIds.add(nId);
   renderPTNotifications();
   updateSidebarBadges();
   scheduleSave();
