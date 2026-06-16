@@ -3036,11 +3036,27 @@ function _mergeLogDict(target, incoming, label, source) {
   Object.keys(incoming).forEach(k => {
     const inVal = incoming[k];
     const curVal = target[k];
-    // Both are arrays — use length-based guard (original behaviour for workoutLog, checkinLog, etc.)
+    // Both are arrays — smart merge with per-element _lastEdit comparison
     if (Array.isArray(inVal) && Array.isArray(curVal)) {
-      if (inVal.length >= curVal.length) {
+      if (inVal.length > curVal.length) {
+        // Incoming has more entries (new workouts added) — accept incoming
         target[k] = inVal;
-      } else {
+      } else if (inVal.length === curVal.length && inVal.length > 0) {
+        // Same length — element-wise merge: keep whichever version was edited more recently
+        for (let i = 0; i < inVal.length; i++) {
+          const inEl = inVal[i], curEl = curVal[i];
+          if (inEl && curEl && typeof inEl === 'object' && typeof curEl === 'object') {
+            const inEdit = inEl._lastEdit || 0;
+            const curEdit = curEl._lastEdit || 0;
+            if (inEdit >= curEdit) {
+              curVal[i] = inEl; // Incoming is newer (or same age) — accept it
+            }
+            // else: local version was edited more recently — keep it
+          } else {
+            curVal[i] = inEl; // Primitive or null — accept incoming
+          }
+        }
+      } else if (inVal.length < curVal.length) {
         console.warn('AH Performance: BLOCKED ' + label + '[' + k + '] overwrite — incoming has ' + inVal.length + ' entries, current has ' + curVal.length + ' (source: ' + (source||'unknown') + ')');
       }
       return;
@@ -5664,6 +5680,7 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
     rpe: wlSessionRPE,
     notes: sessionNotes,
     timestamp: Date.now(),
+    _lastEdit: Date.now(),
     distance: sessionDistance,
     distUnit: sessionDistUnit,
     time: sessionTime
@@ -6649,6 +6666,7 @@ function saveHistoryEdit(idx) {
   const cid = loggedInUser ? loggedInUser.clientId : null;
   if (!cid || !WORKOUT_LOG[cid] || !WORKOUT_LOG[cid][idx]) return;
   const w = WORKOUT_LOG[cid][idx];
+  w._lastEdit = Date.now(); // Timestamp edit so sync merge keeps the newer version
   w.sessionName = document.getElementById(`histEditName${idx}`)?.value || w.sessionName;
   const dateVal = document.getElementById(`histEditDate${idx}`)?.value;
   if (dateVal) w.date = dateVal;
@@ -6758,10 +6776,11 @@ function saveHistoryEdit(idx) {
       }
     });
   }
-  // Recalculate volume
+  // Recalculate volume (skip cardio exercises — their weight field is time, not kg)
   let vol = 0, sets = 0;
   (w.exercises || []).forEach(ex => {
-    ex.sets.forEach(s => { sets++; vol += (parseFloat(s.weight) || 0) * (parseInt(s.reps) || 0); });
+    const isC = ex.isCardio || _isCardioExercise(ex.name);
+    ex.sets.forEach(s => { sets++; if (!isC) vol += (parseFloat(s.weight) || 0) * (parseInt(s.reps) || 0); });
   });
   w.totalSets = sets;
   w.totalVolume = Math.round(vol);
@@ -7606,12 +7625,18 @@ function openClientDetail(id) {
         <div class="session-metrics">
           <div class="session-metric">${ic('stopwatch','#4A9DC8',12)} <span class="sm-val">${w.duration || '—'}</span></div>
           <div class="session-metric">${ic('dumbbell','var(--ember)',12)} <span class="sm-val">${w.totalSets || 0} sets</span></div>
-          ${w.totalVolume ? `<div class="session-metric">${ic('trending','var(--sage)',12)} <span class="sm-val">${w.totalVolume.toLocaleString()} kg</span></div>` : ''}
+          ${w.type === 'cardio' ? (w.distance ? `<div class="session-metric">${ic('trending','var(--sage)',12)} <span class="sm-val">${w.distance} ${w.distUnit || 'km'}</span></div>` : '') : (w.totalVolume ? `<div class="session-metric">${ic('trending','var(--sage)',12)} <span class="sm-val">${w.totalVolume.toLocaleString()} kg</span></div>` : '')}
           ${w.rpe ? `<div class="session-metric">${ic('bolt','#D45B5B',12)} RPE <span class="sm-val">${w.rpe}</span></div>` : ''}
           ${w.feedback ? `<div class="session-metric"><span class="sm-val" style="font-size:10px;">${_feedbackLabels[w.feedback]||w.feedback}</span></div>` : ''}
         </div>
         <div class="session-detail hidden" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--slate-border);">
-          ${w.exercises && w.exercises.length ? w.exercises.map(ex => `<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid var(--slate-border);"><span style="font-size:12px;font-weight:600;color:var(--text-bright);min-width:130px;">${ex.name}</span><span style="font-size:11px;color:var(--text-muted);">${ex.sets.map(s => s.isDrop ? '<span style="color:#e74c3c;font-size:9px;">DROP</span> '+s.weight+'kg × '+s.reps : s.weight+'kg × '+s.reps).join(' → ')}</span></div>`).join('') : ''}
+          ${w.exercises && w.exercises.length ? w.exercises.map(ex => {
+            const isCardioEx = ex.isCardio || _isCardioExercise(ex.name);
+            return `<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid var(--slate-border);"><span style="font-size:12px;font-weight:600;color:var(--text-bright);min-width:130px;">${ex.name}</span><span style="font-size:11px;color:var(--text-muted);">${ex.sets.map(s => {
+              if (isCardioEx) return s.weight + ' × ' + s.reps + (s.reps ? ' km' : '');
+              return s.isDrop ? '<span style="color:#e74c3c;font-size:9px;">DROP</span> '+s.weight+'kg × '+s.reps : s.weight+'kg × '+s.reps;
+            }).join(' → ')}</span></div>`;
+          }).join('') : ''}
           ${w.notes ? `<div style="font-size:12px;color:var(--text-muted);font-style:italic;line-height:1.5;margin-top:8px;background:var(--slate-card);border:1px solid var(--slate-border);border-radius:8px;padding:8px;">"${w.notes}"</div>` : ''}
         </div>
       </div>`).join('');
@@ -11051,23 +11076,29 @@ function renderCompletedSessions() {
       <div class="session-metrics">
         <div class="session-metric">${ic('stopwatch','#4A9DC8',12)} <span class="sm-val">${w.duration || '—'}</span></div>
         <div class="session-metric">${ic('dumbbell','var(--ember)',12)} <span class="sm-val">${w.totalSets || 0} sets</span></div>
-        ${w.totalVolume ? `<div class="session-metric">${ic('trending','var(--sage)',12)} <span class="sm-val">${w.totalVolume.toLocaleString()} kg</span></div>` : ''}
+        ${w.type === 'cardio' ? (w.distance ? `<div class="session-metric">${ic('trending','var(--sage)',12)} <span class="sm-val">${w.distance} ${w.distUnit || 'km'}</span></div>` : '') : (w.totalVolume ? `<div class="session-metric">${ic('trending','var(--sage)',12)} <span class="sm-val">${w.totalVolume.toLocaleString()} kg</span></div>` : '')}
         ${w.rpe ? `<div class="session-metric">${ic('bolt','#D45B5B',12)} RPE <span class="sm-val">${w.rpe}</span></div>` : ''}
       </div>
       <div id="wdetail_wc_${idx}" class="hidden" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--slate-border);">
-        ${w.exercises && w.exercises.length ? `<div style="margin-bottom:10px;">${w.exercises.map(ex => `<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid var(--slate-border);"><span style="font-size:12px;font-weight:600;color:var(--text-bright);min-width:130px;">${ex.name}</span><span style="font-size:11px;color:var(--text-muted);">${ex.sets.map(s => s.isDrop ? '<span style="color:#e74c3c;font-size:9px;">DROP</span> '+s.weight+'kg × '+s.reps : s.weight+'kg × '+s.reps).join(' → ')}</span></div>`).join('')}</div>` : ''}
+        ${w.exercises && w.exercises.length ? `<div style="margin-bottom:10px;">${w.exercises.map(ex => {
+          const isCardioEx = ex.isCardio || _isCardioExercise(ex.name);
+          return `<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid var(--slate-border);"><span style="font-size:12px;font-weight:600;color:var(--text-bright);min-width:130px;">${ex.name}</span><span style="font-size:11px;color:var(--text-muted);">${ex.sets.map(s => {
+            if (isCardioEx) return s.weight + ' × ' + s.reps + (s.reps ? ' km' : '');
+            return s.isDrop ? '<span style="color:#e74c3c;font-size:9px;">DROP</span> '+s.weight+'kg × '+s.reps : s.weight+'kg × '+s.reps;
+          }).join(' → ')}</span></div>`;
+        }).join('')}</div>` : ''}
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:${w.notes?'10px':'0'};">
           <div style="background:rgba(74,157,200,0.06);border-radius:8px;padding:10px;text-align:center;">
             <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;">Duration</div>
             <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--ocean-text);">${w.duration || '—'}</div>
           </div>
           <div style="background:rgba(224,122,58,0.06);border-radius:8px;padding:10px;text-align:center;">
-            <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;">Sets</div>
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--ember);">${w.totalSets || 0}</div>
+            <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;">${w.type==='cardio'?'Distance':'Sets'}</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--ember);">${w.type==='cardio' ? (w.distance ? w.distance+' '+(w.distUnit||'km') : '—') : (w.totalSets || 0)}</div>
           </div>
           <div style="background:rgba(139,176,126,0.06);border-radius:8px;padding:10px;text-align:center;">
-            <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;">Volume</div>
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--sage-text);">${w.totalVolume ? w.totalVolume.toLocaleString()+' kg' : '—'}</div>
+            <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;">${w.type==='cardio'?'RPE':'Volume'}</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--sage-text);">${w.type==='cardio' ? (w.rpe || '—') : (w.totalVolume ? w.totalVolume.toLocaleString()+' kg' : '—')}</div>
           </div>
         </div>
         ${w.notes ? `<div style="font-size:12px;color:var(--text-muted);font-style:italic;line-height:1.5;background:var(--slate-card);border:1px solid var(--slate-border);border-radius:8px;padding:10px;">"${w.notes}"</div>` : ''}
@@ -11083,7 +11114,7 @@ function toggleWorkoutDetail(wId) {
 function saveWorkoutNote(wId, note) {
   for (const cId in WORKOUT_LOG) {
     const w = WORKOUT_LOG[cId].find(x => x.id === wId);
-    if (w) { w.notes = note; scheduleSave(); break; }
+    if (w) { w.notes = note; w._lastEdit = Date.now(); scheduleSave(); break; }
   }
 }
 
