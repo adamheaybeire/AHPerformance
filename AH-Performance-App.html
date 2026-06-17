@@ -4007,7 +4007,7 @@ function initClientApp() {
             <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${exSummary || w.type || '—'}</div>
           </div>
           <div style="text-align:right;">
-            <div style="font-size:11px;color:${typeColor};font-weight:600;">${w.duration || '—'}</div>
+            <div style="font-size:11px;color:${typeColor};font-weight:600;">${(w.type==='cardio' && w.time) ? w.time : (w.duration || '—')}</div>
             <div style="font-size:10px;color:var(--text-dim);">${w.date ? new Date(w.date + 'T00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '—'}</div>
           </div>
         </div>`;
@@ -5665,6 +5665,24 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
     sessionDistUnit = document.getElementById('wlCardioDistUnit')?.value || 'km';
     sessionTime = document.getElementById('wlCardioTime')?.value || null;
   }
+  // For cardio: prefer manually-entered time over the form-filling timer duration
+  // (timer keeps running if user forgets to stop it — the entered time is the real duration)
+  let finalDuration = duration;
+  if (isCardioType && sessionTime) {
+    const tp = sessionTime.split(':').map(Number);
+    let secs = 0;
+    if (tp.length >= 3) secs = (tp[0]||0)*3600 + (tp[1]||0)*60 + (tp[2]||0);
+    else if (tp.length === 2) secs = (tp[0]||0)*60 + (tp[1]||0);
+    else secs = (tp[0]||0)*60;
+    if (secs > 0) {
+      const dH = Math.floor(secs / 3600);
+      const dM = Math.floor((secs % 3600) / 60);
+      const dS = secs % 60;
+      finalDuration = dH > 0
+        ? `${dH}:${String(dM).padStart(2,'0')}:${String(dS).padStart(2,'0')}`
+        : `${dM}:${String(dS).padStart(2,'0')}`;
+    }
+  }
   // Create workout log entry
   const entry = {
     date: today,
@@ -5673,7 +5691,7 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
     _programmeName: wlCurrentSession._programmeName || '',
     day: wlCurrentSession.day || '',
     type: _resolvedType,
-    duration: duration,
+    duration: finalDuration,
     exercises: exerciseLogs,
     totalSets: totalSets,
     totalVolume: Math.round(totalVolume),
@@ -6549,7 +6567,7 @@ function renderWorkoutHistory() {
       <div style="padding:12px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" onclick="toggleHistoryEntry(${wi})">
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--text-bright);">${w.sessionName || 'Workout'}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${w.date ? new Date(w.date + 'T00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}) : '—'} · ${(w.type === 'cardio' && !(w.exercises||[]).length && w.time) ? w.time : (w.duration || '—')} · ${w.totalSets || 0} sets</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${w.date ? new Date(w.date + 'T00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}) : '—'} · ${(w.type === 'cardio' && w.time) ? w.time : (w.duration || '—')} · ${w.totalSets || 0} sets</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
           <span style="font-size:10px;font-weight:600;color:${typeColor};background:${typeColor}15;padding:2px 8px;border-radius:20px;">${typeLabel}</span>
@@ -6886,10 +6904,10 @@ function _buildOneWeek(workouts, monday, localDateStr) {
     let strength = 0, running = 0, otherCardio = 0;
     let dayRunKm = 0;
     dayWorkouts.forEach(w => {
-      // For cardio sessions with no exercises: prefer w.time (actual workout time entered by user)
-      // over w.duration (which may just be the timer/form-filling time)
+      // For cardio sessions: prefer w.time (actual workout time entered by user)
+      // over w.duration (which may just be the timer/form-filling time, e.g. forgot to stop)
       let durSource = w.duration || '0:00';
-      if (w.type === 'cardio' && !(w.exercises || []).length && w.time) {
+      if (w.type === 'cardio' && w.time) {
         durSource = w.time;
       }
       const dParts = String(durSource).split(':').map(Number);
@@ -7623,7 +7641,7 @@ function openClientDetail(id) {
           <span class="session-date">${w.day ? w.day + ' · ' : ''}${w.date}</span>
         </div>
         <div class="session-metrics">
-          <div class="session-metric">${ic('stopwatch','#4A9DC8',12)} <span class="sm-val">${w.duration || '—'}</span></div>
+          <div class="session-metric">${ic('stopwatch','#4A9DC8',12)} <span class="sm-val">${(w.type==='cardio' && w.time) ? w.time : (w.duration || '—')}</span></div>
           <div class="session-metric">${ic('dumbbell','var(--ember)',12)} <span class="sm-val">${w.totalSets || 0} sets</span></div>
           ${w.type === 'cardio' ? (w.distance ? `<div class="session-metric">${ic('trending','var(--sage)',12)} <span class="sm-val">${w.distance} ${w.distUnit || 'km'}</span></div>` : '') : (w.totalVolume ? `<div class="session-metric">${ic('trending','var(--sage)',12)} <span class="sm-val">${w.totalVolume.toLocaleString()} kg</span></div>` : '')}
           ${w.rpe ? `<div class="session-metric">${ic('bolt','#D45B5B',12)} RPE <span class="sm-val">${w.rpe}</span></div>` : ''}
@@ -11074,7 +11092,7 @@ function renderCompletedSessions() {
         <span class="session-date">${w.day ? w.day + ' · ' : ''}${w.date}</span>
       </div>
       <div class="session-metrics">
-        <div class="session-metric">${ic('stopwatch','#4A9DC8',12)} <span class="sm-val">${w.duration || '—'}</span></div>
+        <div class="session-metric">${ic('stopwatch','#4A9DC8',12)} <span class="sm-val">${(w.type==='cardio' && w.time) ? w.time : (w.duration || '—')}</span></div>
         <div class="session-metric">${ic('dumbbell','var(--ember)',12)} <span class="sm-val">${w.totalSets || 0} sets</span></div>
         ${w.type === 'cardio' ? (w.distance ? `<div class="session-metric">${ic('trending','var(--sage)',12)} <span class="sm-val">${w.distance} ${w.distUnit || 'km'}</span></div>` : '') : (w.totalVolume ? `<div class="session-metric">${ic('trending','var(--sage)',12)} <span class="sm-val">${w.totalVolume.toLocaleString()} kg</span></div>` : '')}
         ${w.rpe ? `<div class="session-metric">${ic('bolt','#D45B5B',12)} RPE <span class="sm-val">${w.rpe}</span></div>` : ''}
@@ -11090,7 +11108,7 @@ function renderCompletedSessions() {
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:${w.notes?'10px':'0'};">
           <div style="background:rgba(74,157,200,0.06);border-radius:8px;padding:10px;text-align:center;">
             <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;">Duration</div>
-            <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--ocean-text);">${w.duration || '—'}</div>
+            <div style="font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;color:var(--ocean-text);">${(w.type==='cardio' && w.time) ? w.time : (w.duration || '—')}</div>
           </div>
           <div style="background:rgba(224,122,58,0.06);border-radius:8px;padding:10px;text-align:center;">
             <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;">${w.type==='cardio'?'Distance':'Sets'}</div>
