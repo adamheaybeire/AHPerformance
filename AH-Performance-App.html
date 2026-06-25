@@ -1291,8 +1291,11 @@
           <div id="fdRecentsContent" style="display:flex;flex-direction:column;gap:6px;"></div>
         </div>
 
-        <!-- Manual entry & recipe buttons -->
+        <!-- Manual entry, scan label & recipe buttons -->
         <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px;">
+          <button onclick="fdStartLabelScan()" class="btn" style="background:var(--slate-raised);color:var(--text-body);border:1px solid var(--slate-border);width:100%;padding:14px;border-radius:10px;font-size:14px;cursor:pointer;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ocean)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> &nbsp;Scan Nutrition Label
+          </button>
           <button onclick="fdShowManualEntry()" class="btn" style="background:var(--slate-raised);color:var(--text-body);border:1px solid var(--slate-border);width:100%;padding:14px;border-radius:10px;font-size:14px;cursor:pointer;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8612D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> &nbsp;Add Custom Food
           </button>
@@ -1678,6 +1681,55 @@
           <input type="number" id="fdLabelGrams" value="100" min="1" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;text-align:center;">
         </div>
         <button onclick="fdConfirmLabelIngredient()" style="width:100%;padding:14px;background:var(--ocean);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">Add to Recipe</button>
+      </div>
+    </div>
+
+    <!-- Food Diary: OCR Label Result (main food diary flow) -->
+    <div id="fdMainLabelResultOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:var(--slate-bg);z-index:10003;overflow-y:auto;">
+      <div style="max-width:500px;margin:0 auto;padding:16px;padding-top:calc(16px + env(safe-area-inset-top, 0px));">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <button onclick="fdCloseMainLabelResult()" style="background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;padding:8px;">&larr; Back</button>
+          <h3 style="margin:0;font-size:14px;">Scanned Nutrition</h3>
+          <div style="width:60px;"></div>
+        </div>
+        <div class="card" style="padding:16px;margin-bottom:12px;">
+          <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;text-align:center;">Review & correct the values below (per 100g/ml)</div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:2px;">Product Name</label>
+            <input type="text" id="fdMainLabelName" placeholder="e.g. Protein Powder" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;box-sizing:border-box;">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <label style="font-size:11px;color:var(--ember);display:block;margin-bottom:2px;">Calories (kcal)</label>
+              <input type="number" id="fdMainLabelCal" min="0" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;text-align:center;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--ocean);display:block;margin-bottom:2px;">Protein (g)</label>
+              <input type="number" id="fdMainLabelPro" min="0" step="0.1" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;text-align:center;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:2px;">Carbs (g)</label>
+              <input type="number" id="fdMainLabelCarb" min="0" step="0.1" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;text-align:center;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:2px;">Fat (g)</label>
+              <input type="number" id="fdMainLabelFat" min="0" step="0.1" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;text-align:center;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:2px;">Fibre (g)</label>
+              <input type="number" id="fdMainLabelFibre" min="0" step="0.1" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;text-align:center;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:2px;">Sugar (g)</label>
+              <input type="number" id="fdMainLabelSugar" min="0" step="0.1" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;text-align:center;box-sizing:border-box;">
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:12px;margin-bottom:12px;">
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px;">Amount consumed (grams)</label>
+          <input type="number" id="fdMainLabelGrams" value="100" min="1" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-deep);color:var(--text-body);font-size:14px;text-align:center;box-sizing:border-box;">
+        </div>
+        <button onclick="fdConfirmMainLabelEntry()" style="width:100%;padding:14px;background:var(--ember);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">Add to Food Diary</button>
       </div>
     </div>
 
@@ -5332,8 +5384,20 @@ function wlToggleSet(exIdx, setIdx) {
     const ex = wlCurrentSession.exercises[exIdx];
     let restStr = ex.rest || '';
 
-    // For superset exercises, use superset rest times if exercise doesn't have its own
-    if (!restStr && wlCurrentSession.supersets && wlCurrentSession.supersets.length) {
+    // Helper: parse rest string to seconds — supports "60", "60s", "1:30", "90 sec", etc
+    function _parseRestSecs(str) {
+      if (!str) return 0;
+      str = String(str).trim();
+      const colonMatch = str.match(/(\d+):(\d+)/);
+      if (colonMatch) return parseInt(colonMatch[1]) * 60 + parseInt(colonMatch[2]);
+      const numMatch = str.match(/(\d+)/);
+      return numMatch ? parseInt(numMatch[1]) : 0;
+    }
+
+    let restSecs = _parseRestSecs(restStr);
+
+    // If exercise's own rest is 0, check superset rest times
+    if (restSecs <= 0 && wlCurrentSession.supersets && wlCurrentSession.supersets.length) {
       const exOrigIdx = ex._idx !== undefined ? ex._idx : exIdx;
       const ssGroup = wlCurrentSession.supersets.find(ss =>
         (ss.exerciseIndices || []).includes(exOrigIdx)
@@ -5343,28 +5407,20 @@ function wlToggleSet(exIdx, setIdx) {
         const ssIndices = ssGroup.exerciseIndices || [];
         const posInSS = ssIndices.indexOf(exOrigIdx);
         const isLastInSuperset = posInSS === ssIndices.length - 1;
-        // Check if all exercises in superset have completed the current round
-        if (isLastInSuperset && ssGroup.restBetweenRound) {
-          restStr = String(ssGroup.restBetweenRound);
-        } else if (!isLastInSuperset && ssGroup.restBetweenEx) {
-          restStr = String(ssGroup.restBetweenEx);
-        } else if (ssGroup.restBetweenEx) {
-          restStr = String(ssGroup.restBetweenEx);
+        if (isLastInSuperset) {
+          // Finished last exercise — use rest between rounds
+          restSecs = _parseRestSecs(ssGroup.restBetweenRound);
+          // Fallback: if no round rest, use between-exercise rest
+          if (restSecs <= 0) restSecs = _parseRestSecs(ssGroup.restBetweenEx);
+        } else {
+          // Mid-superset — use rest between exercises
+          restSecs = _parseRestSecs(ssGroup.restBetweenEx);
+          // Fallback: if no between-exercise rest, use round rest (some coaches set only one value)
+          if (restSecs <= 0) restSecs = _parseRestSecs(ssGroup.restBetweenRound);
         }
       }
     }
 
-    // Parse rest time — supports "60", "60s", "1:30", "90 sec", etc
-    let restSecs = 0;
-    if (restStr) {
-      const colonMatch = restStr.match(/(\d+):(\d+)/);
-      if (colonMatch) {
-        restSecs = parseInt(colonMatch[1]) * 60 + parseInt(colonMatch[2]);
-      } else {
-        const numMatch = restStr.match(/(\d+)/);
-        if (numMatch) restSecs = parseInt(numMatch[1]);
-      }
-    }
     if (restSecs > 0) {
       wlStartRestTimer(restSecs);
     }
@@ -9102,19 +9158,17 @@ function fdSearchFood(query) {
           return;
         }
         document.getElementById('fdSearchResults').innerHTML = products.map(p => {
-          const n = p.nutriments;
-          const cal = Math.round(n['energy-kcal_100g'] || n['energy-kcal'] || (n.energy_100g || 0) / 4.184 || 0);
-          const pro = Math.round((n.proteins_100g || 0) * 10) / 10;
+          const nutr = _fdExtractNutrition(p.nutriments);
           return `<button onclick='fdSelectSearchResult(${JSON.stringify({
             name: p.product_name,
             brand: p.brands || '',
-            cal100: cal,
-            pro100: pro,
-            carb100: Math.round((n.carbohydrates_100g||0)*10)/10,
-            fat100: Math.round((n.fat_100g||0)*10)/10,
-            fibre100: Math.round((n.fiber_100g||0)*10)/10,
-            sugar100: Math.round((n.sugars_100g||0)*10)/10,
-            salt100: Math.round((n.salt_100g||0)*100)/100,
+            cal100: nutr.cal,
+            pro100: nutr.pro,
+            carb100: nutr.carb,
+            fat100: nutr.fat,
+            fibre100: nutr.fibre,
+            sugar100: nutr.sugar,
+            salt100: nutr.salt,
             barcode: p.code||''
           }).replace(/'/g,"&#39;")})' style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:10px;cursor:pointer;text-align:left;margin-bottom:6px;">
             <div style="flex:1;">
@@ -9122,8 +9176,8 @@ function fdSearchFood(query) {
               <div style="font-size:12px;color:var(--text-dim);">${p.brands || 'Unknown brand'} · per 100g</div>
             </div>
             <div style="text-align:right;">
-              <div style="font-size:14px;font-weight:600;color:var(--ember);font-family:'Space Grotesk';">${cal} kcal</div>
-              <div style="font-size:11px;color:var(--text-dim);">P:${pro}g</div>
+              <div style="font-size:14px;font-weight:600;color:var(--ember);font-family:'Space Grotesk';">${nutr.cal} kcal</div>
+              <div style="font-size:11px;color:var(--text-dim);">P:${nutr.pro}g</div>
             </div>
           </button>`;
         }).join('');
@@ -9142,19 +9196,14 @@ function fdSearchFood(query) {
               return;
             }
             document.getElementById('fdSearchResults').innerHTML = products.map(p => {
-              const n = p.nutriments;
-              const cal = Math.round(n['energy-kcal_100g'] || n['energy-kcal'] || (n.energy_100g || 0) / 4.184 || 0);
-              const pro = Math.round((n.proteins_100g || 0) * 10) / 10;
+              const nutr = _fdExtractNutrition(p.nutriments);
               return `<button onclick='fdSelectSearchResult(${JSON.stringify({
-                name: p.product_name, brand: p.brands || '', cal100: cal, pro100: pro,
-                carb100: Math.round((n.carbohydrates_100g||0)*10)/10,
-                fat100: Math.round((n.fat_100g||0)*10)/10,
-                fibre100: Math.round((n.fiber_100g||0)*10)/10,
-                sugar100: Math.round((n.sugars_100g||0)*10)/10,
-                salt100: Math.round((n.salt_100g||0)*100)/100, barcode: p.code||''
+                name: p.product_name, brand: p.brands || '', cal100: nutr.cal, pro100: nutr.pro,
+                carb100: nutr.carb, fat100: nutr.fat, fibre100: nutr.fibre,
+                sugar100: nutr.sugar, salt100: nutr.salt, barcode: p.code||''
               }).replace(/'/g,"&#39;")})' style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:10px;cursor:pointer;text-align:left;margin-bottom:6px;">
                 <div style="flex:1;"><div style="font-size:14px;font-weight:500;color:var(--text-body);">${p.product_name}</div><div style="font-size:12px;color:var(--text-dim);">${p.brands || 'Generic'} · per 100g</div></div>
-                <div style="text-align:right;"><div style="font-size:14px;font-weight:600;color:var(--ember);font-family:'Space Grotesk';">${cal} kcal</div><div style="font-size:11px;color:var(--text-dim);">P:${pro}g</div></div>
+                <div style="text-align:right;"><div style="font-size:14px;font-weight:600;color:var(--ember);font-family:'Space Grotesk';">${nutr.cal} kcal</div><div style="font-size:11px;color:var(--text-dim);">P:${nutr.pro}g</div></div>
               </button>`;
             }).join('');
           })
@@ -9268,6 +9317,45 @@ function fdKillCamera() {
   }
 }
 
+// Helper: extract per-100g nutrition from Open Food Facts nutriments object
+function _fdExtractNutrition(n) {
+  // Energy: prefer energy-kcal_100g, then compute from kJ, then try serving values scaled to 100g
+  let cal = 0;
+  if (n['energy-kcal_100g'] && n['energy-kcal_100g'] > 0) {
+    cal = Math.round(n['energy-kcal_100g']);
+  } else if (n['energy_100g'] && n['energy_100g'] > 0) {
+    cal = Math.round(n['energy_100g'] / 4.184); // kJ to kcal
+  } else if (n['energy-kcal_serving'] && n['serving_size']) {
+    // Fallback: compute from per-serving if serving size in grams is known
+    const servG = parseFloat(String(n['serving_size']).replace(/[^0-9.]/g,''));
+    if (servG > 0) cal = Math.round((n['energy-kcal_serving'] / servG) * 100);
+  }
+
+  // Macros: prefer _100g, fallback to _serving scaled to 100g
+  function macro100(key100, keySrv) {
+    if (n[key100] != null && n[key100] >= 0) return Math.round(n[key100] * 10) / 10;
+    if (n[keySrv] != null && n['serving_size']) {
+      const servG = parseFloat(String(n['serving_size']).replace(/[^0-9.]/g,''));
+      if (servG > 0) return Math.round((n[keySrv] / servG) * 1000) / 10;
+    }
+    return 0;
+  }
+
+  const pro = macro100('proteins_100g', 'proteins_serving');
+  const carb = macro100('carbohydrates_100g', 'carbohydrates_serving');
+  const fat = macro100('fat_100g', 'fat_serving');
+  const fibre = macro100('fiber_100g', 'fiber_serving');
+  const sugar = macro100('sugars_100g', 'sugars_serving');
+  const salt = Math.round((n['salt_100g'] || 0) * 100) / 100;
+
+  // Sanity check: if cal is 0 but macros are present, estimate
+  if (cal === 0 && (pro > 0 || carb > 0 || fat > 0)) {
+    cal = Math.round(pro * 4 + carb * 4 + fat * 9);
+  }
+
+  return { cal, pro, carb, fat, fibre, sugar, salt };
+}
+
 function fdLookupBarcode(code) {
   const status = document.getElementById('fdScanStatus');
   // Show loading in log overlay
@@ -9280,21 +9368,28 @@ function fdLookupBarcode(code) {
     .then(r => r.json())
     .then(data => {
       if (data.status !== 1 || !data.product) {
-        document.getElementById('fdSearchResults').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">Product not found in database. Try searching by name or add manually.</div>';
+        document.getElementById('fdSearchResults').innerHTML = `<div style="padding:20px;text-align:center;">
+          <div style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">Product not found in database.</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button onclick="fdShowManualEntry()" style="padding:10px 20px;border:1px solid var(--ember);background:var(--ember-soft);color:var(--ember);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);">Add Manually</button>
+            <button onclick="fdStartLabelScan()" style="padding:10px 20px;border:1px solid var(--ocean);background:rgba(6,182,212,0.1);color:var(--ocean);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);">📷 Scan Nutrition Label</button>
+          </div>
+        </div>`;
         return;
       }
       const p = data.product;
       const n = p.nutriments || {};
+      const nutr = _fdExtractNutrition(n);
       _fdCurrentProduct = {
         name: p.product_name || 'Unknown Product',
         brand: p.brands || '',
-        cal100: Math.round(n['energy-kcal_100g'] || (n.energy_100g || 0) / 4.184 || 0),
-        pro100: Math.round((n.proteins_100g||0)*10)/10,
-        carb100: Math.round((n.carbohydrates_100g||0)*10)/10,
-        fat100: Math.round((n.fat_100g||0)*10)/10,
-        fibre100: Math.round((n.fiber_100g||0)*10)/10,
-        sugar100: Math.round((n.sugars_100g||0)*10)/10,
-        salt100: Math.round((n.salt_100g||0)*100)/100,
+        cal100: nutr.cal,
+        pro100: nutr.pro,
+        carb100: nutr.carb,
+        fat100: nutr.fat,
+        fibre100: nutr.fibre,
+        sugar100: nutr.sugar,
+        salt100: nutr.salt,
         barcode: code
       };
       fdShowProduct(100);
@@ -9765,6 +9860,7 @@ function fdRecipeLookupBarcode(code) {
 let _fdTesseractLoaded = false;
 
 async function fdRecipeStartLabelScan() {
+  _fdMainLabelMode = false; // route results to recipe flow
   _fdShowOverlay('fdLabelScanOverlay');
   const video = document.getElementById('fdLabelVideo');
   const status = document.getElementById('fdLabelScanStatus');
@@ -9826,16 +9922,12 @@ async function fdCaptureLabelPhoto() {
   canvas.height = video.videoHeight;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(video, 0, 0);
-
-  // Convert to blob for Tesseract
   const dataUrl = canvas.toDataURL('image/png');
 
   status.textContent = 'Reading label... (this may take a moment)';
 
-  // Run OCR
   try {
     if (!window.Tesseract) {
-      // Fallback load
       await new Promise((resolve, reject) => {
         const s = document.createElement('script');
         s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
@@ -9851,22 +9943,32 @@ async function fdCaptureLabelPhoto() {
     await worker.terminate();
 
     console.log('AH Performance: OCR raw text:', text);
-
-    // Parse nutrition values from the OCR text
     const parsed = _fdParseNutritionLabel(text);
 
-    // Stop camera and show results
     fdStopLabelScan();
-    _fdShowOverlay('fdLabelResultOverlay');
 
-    // Pre-fill the form
-    document.getElementById('fdLabelName').value = '';
-    document.getElementById('fdLabelCal').value = parsed.cal || '';
-    document.getElementById('fdLabelPro').value = parsed.protein || '';
-    document.getElementById('fdLabelCarb').value = parsed.carbs || '';
-    document.getElementById('fdLabelFat').value = parsed.fat || '';
-    document.getElementById('fdLabelGrams').value = 100;
-
+    if (_fdMainLabelMode) {
+      // Route to main food diary result overlay
+      _fdShowOverlay('fdMainLabelResultOverlay');
+      document.getElementById('fdMainLabelName').value = '';
+      document.getElementById('fdMainLabelCal').value = parsed.cal || '';
+      document.getElementById('fdMainLabelPro').value = parsed.protein || '';
+      document.getElementById('fdMainLabelCarb').value = parsed.carbs || '';
+      document.getElementById('fdMainLabelFat').value = parsed.fat || '';
+      document.getElementById('fdMainLabelFibre').value = parsed.fibre || '';
+      document.getElementById('fdMainLabelSugar').value = parsed.sugar || '';
+      document.getElementById('fdMainLabelGrams').value = 100;
+      _fdMainLabelMode = false;
+    } else {
+      // Route to recipe ingredient result overlay
+      _fdShowOverlay('fdLabelResultOverlay');
+      document.getElementById('fdLabelName').value = '';
+      document.getElementById('fdLabelCal').value = parsed.cal || '';
+      document.getElementById('fdLabelPro').value = parsed.protein || '';
+      document.getElementById('fdLabelCarb').value = parsed.carbs || '';
+      document.getElementById('fdLabelFat').value = parsed.fat || '';
+      document.getElementById('fdLabelGrams').value = 100;
+    }
   } catch (err) {
     console.error('OCR error:', err);
     status.textContent = 'OCR failed — try again or add manually.';
@@ -9883,7 +9985,7 @@ async function fdCaptureLabelPhoto() {
 
 function _fdParseNutritionLabel(text) {
   // Best-effort extraction of per-100g nutrition values from OCR text
-  const result = { cal: 0, protein: 0, carbs: 0, fat: 0 };
+  const result = { cal: 0, protein: 0, carbs: 0, fat: 0, fibre: 0, sugar: 0 };
   const lines = text.split('\n').map(l => l.trim().toLowerCase());
 
   // Helper: find a number after a keyword on the same line or nearby
@@ -9933,6 +10035,8 @@ function _fdParseNutritionLabel(text) {
   result.protein = findValue(['protein', 'protéines', 'eiweiß', 'eiwit'], lines);
   result.carbs = findValue(['carbohydrate', 'carbs', 'glucides', 'kohlenhydrate', 'koolhydraten'], lines);
   result.fat = findValue(['fat', 'lipides', 'fett', 'vet', 'graisses'], lines);
+  result.fibre = findValue(['fibre', 'fiber', 'fibres', 'ballaststoff'], lines);
+  result.sugar = findValue(['sugar', 'sucre', 'zucker', 'suiker', 'of which sugars'], lines);
 
   // If cal is 0 but we got macros, estimate cal = (pro * 4) + (carb * 4) + (fat * 9)
   if (result.cal === 0 && (result.protein > 0 || result.carbs > 0 || result.fat > 0)) {
@@ -9964,6 +10068,75 @@ function fdConfirmLabelIngredient() {
   fdCloseLabelResult();
   fdCloseRecipeSearch();
   fdRenderRecipeIngredients();
+}
+
+// ─── Main Food Diary: OCR Nutrition Label Scan ───
+// Reuses the same camera overlay (fdLabelScanOverlay) and OCR parsing as the recipe flow,
+// but routes results to the food diary instead of the recipe builder.
+
+let _fdMainLabelMode = false; // true when scanning for food diary (not recipe)
+
+async function fdStartLabelScan() {
+  _fdMainLabelMode = true;
+  _fdShowOverlay('fdLabelScanOverlay');
+  const video = document.getElementById('fdLabelVideo');
+  const status = document.getElementById('fdLabelScanStatus');
+
+  status.textContent = 'Starting camera...';
+  try {
+    let stream = _fdLabelStream;
+    if (!stream || !stream.active) {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } });
+      _fdLabelStream = stream;
+    }
+    video.srcObject = stream;
+    video.play();
+    status.textContent = 'Point at a nutrition label and tap the capture button';
+  } catch (err) {
+    status.textContent = 'Camera access denied.';
+    console.warn('Label scan camera error:', err);
+    setTimeout(() => fdStopLabelScan(), 3000);
+  }
+
+  // Preload Tesseract.js if not already loaded
+  if (!_fdTesseractLoaded && !window.Tesseract) {
+    try {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      document.head.appendChild(s);
+      s.onload = () => { _fdTesseractLoaded = true; };
+    } catch(e) { console.warn('Tesseract preload failed:', e); }
+  }
+}
+
+function fdCloseMainLabelResult() { _fdHideOverlay('fdMainLabelResultOverlay'); }
+
+function fdConfirmMainLabelEntry() {
+  const name = document.getElementById('fdMainLabelName').value.trim() || 'Scanned Item';
+  const cal100 = parseFloat(document.getElementById('fdMainLabelCal').value) || 0;
+  const pro100 = parseFloat(document.getElementById('fdMainLabelPro').value) || 0;
+  const carb100 = parseFloat(document.getElementById('fdMainLabelCarb').value) || 0;
+  const fat100 = parseFloat(document.getElementById('fdMainLabelFat').value) || 0;
+  const fibre100 = parseFloat(document.getElementById('fdMainLabelFibre').value) || 0;
+  const sugar100 = parseFloat(document.getElementById('fdMainLabelSugar').value) || 0;
+  const grams = parseFloat(document.getElementById('fdMainLabelGrams').value) || 100;
+
+  // Set as current product and show the product detail view (same as barcode/search flow)
+  _fdCurrentProduct = {
+    name: name,
+    brand: 'Scanned Label',
+    cal100: cal100,
+    pro100: pro100,
+    carb100: carb100,
+    fat100: fat100,
+    fibre100: fibre100,
+    sugar100: sugar100,
+    salt100: 0,
+    barcode: ''
+  };
+
+  fdCloseMainLabelResult();
+  fdShowProduct(grams);
 }
 
 // ═══════════════════════════════════════
