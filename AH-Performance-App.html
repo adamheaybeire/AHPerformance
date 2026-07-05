@@ -2970,21 +2970,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!document._swReloading) _showUpdateBanner();
     });
   }
-  await loadAppState();
-  buildSidebars();
-
-  // Auto-login: if user was previously logged in, restore their session
+  // ── Server-side session check BEFORE loading any state ──
+  // The server only returns data for a valid session, and clients only
+  // receive their own slice. Identity must be known before state loads.
   try {
-    const savedEmail = localStorage.getItem('ahLoggedInEmail');
-    if (savedEmail) {
-      const user = USERS.find(u => u.email === savedEmail);
-      if (user) {
-        loggedInUser = user;
-        login(user.role);
-        console.log('AH Performance: Auto-logged in as ' + user.name + ' (' + user.role + ')');
+    const meRes = await fetch('/api/me');
+    if (meRes.ok) {
+      const meData = await meRes.json();
+      if (meData && meData.user) {
+        loggedInUser = meData.user;
+        console.log('AH Performance: Session restored for ' + loggedInUser.name + ' (' + loggedInUser.role + ')');
       }
     }
   } catch(e) {}
+  // Clean up legacy artefacts (pre-auth versions stored full data + email locally)
+  try { localStorage.removeItem('ahLoggedInEmail'); } catch(e) {}
+  if (loggedInUser && loggedInUser.role === 'client') {
+    ['ahPerformanceState','ahPerformanceState_backup','ahPerformanceState_emergency'].forEach(k => {
+      try { localStorage.removeItem(k); } catch(e) {}
+    });
+  }
+
+  await loadAppState();
+  buildSidebars();
+
+  // Auto-login: restore UI session from the server-verified user
+  if (loggedInUser) {
+    login(loggedInUser.role);
+    if (loggedInUser.mustChangePassword) _showForcedPasswordChange();
+  }
 
   // Check for password reset token in URL (from email link)
   const _urlParams = new URLSearchParams(window.location.search);
@@ -2995,8 +3009,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Auto-sync from server every 30 seconds to pick up changes from other devices
   setInterval(async () => {
+    if (!loggedInUser || _sessionExpired) return;
     try {
       const res = await fetch('/api/state');
+      if (res.status === 401) { _handleSessionExpired(); return; }
       if (res.ok) {
         const state = await res.json();
         if (state && state.savedAt && state.savedAt > (_lastAppliedSavedAt || 0)) {
@@ -3161,14 +3177,15 @@ function _applyState(state, _source) {
   // Allow small reductions (1-2 clients) — these are legitimate deletions
   const incomingClients = (state.clients || []).length;
   const clientDiff = CLIENTS.length - incomingClients;
-  if (CLIENTS.length > 2 && clientDiff > 2) {
+  const _isClientRole = loggedInUser && loggedInUser.role === 'client';
+  if (!_isClientRole && CLIENTS.length > 2 && clientDiff > 2) {
     console.warn('AH Performance: BLOCKED state apply — would reduce clients from ' + CLIENTS.length + ' to ' + incomingClients + ' (source: ' + (_source||'unknown') + ')');
     return;
   }
   // Save emergency snapshot BEFORE applying (can recover from this if something goes wrong)
   try {
     const emergencySnap = JSON.stringify(_buildState());
-    localStorage.setItem('ahPerformanceState_emergency', emergencySnap);
+    localStorage.setItem(_lsKey('ahPerformanceState_emergency'), emergencySnap);
   } catch(e) {}
   if (state.clients && state.clients.length) {
     CLIENTS.length = 0; state.clients.forEach(c => CLIENTS.push(c));
@@ -3183,7 +3200,7 @@ function _applyState(state, _source) {
     // Start from saved users, then add any hardcoded defaults that aren't in saved state.
     const savedUsers = state.users.slice();
     const hardcoded = [
-      { email: 'adam@ahperformance.ie', password: 'coach2026', role: 'pt', name: 'Adam Heayberd' }
+      { email: 'adam@ahperformance.ie', role: 'pt', name: 'Adam Heayberd' }
     ];
     // Add hardcoded defaults only if not already in saved state
     hardcoded.forEach(hc => {
@@ -3389,20 +3406,41 @@ function _applyState(state, _source) {
   _lastAppliedSavedAt = state.savedAt;
 }
 
+// ── localStorage keys are namespaced per client account so two people
+//    sharing a device (or an old full-database blob) can never mix data.
+//    The PT keeps the legacy un-suffixed keys.
+function _lsKey(base) {
+  if (loggedInUser && loggedInUser.role === 'client' && loggedInUser.clientId != null) {
+    return base + '_c' + loggedInUser.clientId;
+  }
+  return base;
+}
+
+let _sessionExpired = false;
+function _handleSessionExpired() {
+  if (_sessionExpired) return;
+  _sessionExpired = true;
+  console.warn('AH Performance: session expired — showing login');
+  try { alert('Your session has expired. Please log in again.'); } catch(e) {}
+  window.location.reload();
+}
+
 function saveAppState() {
   // GUARD: Never save before state has fully loaded — prevents overwriting real data with demo/empty data
   if (!_stateFullyLoaded) {
     console.warn('AH Performance: saveAppState blocked — state not yet loaded');
     return;
   }
+  if (_sessionExpired) return;
+  if (!loggedInUser) return; // Not logged in — nothing may be saved
   const state = _buildState();
   const stateJSON = JSON.stringify(state);
   const clientCount = (state.clients || []).length;
   // Save to ALL localStorage slots (triple redundancy)
   try {
-    localStorage.setItem('ahPerformanceState', stateJSON);
-    localStorage.setItem('ahPerformanceState_backup', stateJSON);
-    localStorage.setItem('ahPerformanceState_emergency', stateJSON);
+    localStorage.setItem(_lsKey('ahPerformanceState'), stateJSON);
+    localStorage.setItem(_lsKey('ahPerformanceState_backup'), stateJSON);
+    localStorage.setItem(_lsKey('ahPerformanceState_emergency'), stateJSON);
   } catch (e) {}
   // Then save to server (for cross-device sync)
   try {
@@ -3410,7 +3448,10 @@ function saveAppState() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: stateJSON
-    }).then(r => r.json()).then(data => {
+    }).then(r => {
+      if (r.status === 401) { _handleSessionExpired(); throw new Error('401'); }
+      return r.json();
+    }).then(data => {
       // If server rejected the save (would reduce clients), re-fetch server data
       if (data && data.ok === false && data.currentClients > clientCount) {
         console.warn('AH Performance: Server has more clients (' + data.currentClients + ') than us (' + clientCount + '). Fetching server data...');
@@ -3438,18 +3479,21 @@ async function loadAppState() {
   let backupState = null;
   let emergencyState = null;
 
-  // Source A: Server
+  // Source A: Server (requires a valid session — 401 means show login)
   try {
     const res = await fetch('/api/state');
     if (res.ok) {
       const state = await res.json();
       if (state && state.savedAt) serverState = state;
+    } else if (res.status === 401 && loggedInUser) {
+      // We thought we had a session but the server disagrees
+      loggedInUser = null;
     }
   } catch (e) {}
 
   // Source B: localStorage (primary)
   try {
-    const raw = localStorage.getItem('ahPerformanceState');
+    const raw = localStorage.getItem(_lsKey('ahPerformanceState'));
     if (raw) {
       const state = JSON.parse(raw);
       if (state && state.savedAt) localState = state;
@@ -3458,7 +3502,7 @@ async function loadAppState() {
 
   // Source C: localStorage backup
   try {
-    const raw = localStorage.getItem('ahPerformanceState_backup');
+    const raw = localStorage.getItem(_lsKey('ahPerformanceState_backup'));
     if (raw) {
       const state = JSON.parse(raw);
       if (state && state.savedAt) backupState = state;
@@ -3467,7 +3511,7 @@ async function loadAppState() {
 
   // Source D: Emergency snapshot (written before every _applyState)
   try {
-    const raw = localStorage.getItem('ahPerformanceState_emergency');
+    const raw = localStorage.getItem(_lsKey('ahPerformanceState_emergency'));
     if (raw) {
       const state = JSON.parse(raw);
       if (state && state.savedAt) emergencyState = state;
@@ -3488,13 +3532,19 @@ async function loadAppState() {
     return;
   }
 
-  // 3. Sort: MOST clients wins, then newest savedAt breaks ties
-  candidates.sort((a, b) => {
-    const aClients = (a.state.clients || []).length;
-    const bClients = (b.state.clients || []).length;
-    if (aClients !== bClients) return bClients - aClients;
-    return b.state.savedAt - a.state.savedAt;
-  });
+  // 3. Sort. PT: MOST clients wins (protects against wipes), newest breaks ties.
+  //    Client accounts always hold exactly one client, so "most clients" is
+  //    meaningless — newest savedAt wins (offline changes beat a stale server slice).
+  if (loggedInUser && loggedInUser.role === 'client') {
+    candidates.sort((a, b) => b.state.savedAt - a.state.savedAt);
+  } else {
+    candidates.sort((a, b) => {
+      const aClients = (a.state.clients || []).length;
+      const bClients = (b.state.clients || []).length;
+      if (aClients !== bClients) return bClients - aClients;
+      return b.state.savedAt - a.state.savedAt;
+    });
+  }
 
   const chosen = candidates[0].state;
   const source = candidates[0].source;
@@ -3509,8 +3559,8 @@ async function loadAppState() {
 
   // 4. Sync ALL storage locations to the winning state
   const chosenJSON = JSON.stringify(chosen);
-  try { localStorage.setItem('ahPerformanceState', chosenJSON); } catch (e) {}
-  try { localStorage.setItem('ahPerformanceState_backup', chosenJSON); } catch (e) {}
+  try { localStorage.setItem(_lsKey('ahPerformanceState'), chosenJSON); } catch (e) {}
+  try { localStorage.setItem(_lsKey('ahPerformanceState_backup'), chosenJSON); } catch (e) {}
 
   // Re-push to server if it didn't have the best data
   if (source !== 'server') {
@@ -3545,8 +3595,8 @@ async function loadAppState() {
             _applyState(state, 'server-retry');
             // Update localStorage with the recovered data
             const stateJSON = JSON.stringify(state);
-            try { localStorage.setItem('ahPerformanceState', stateJSON); } catch(e) {}
-            try { localStorage.setItem('ahPerformanceState_backup', stateJSON); } catch(e) {}
+            try { localStorage.setItem(_lsKey('ahPerformanceState'), stateJSON); } catch(e) {}
+            try { localStorage.setItem(_lsKey('ahPerformanceState_backup'), stateJSON); } catch(e) {}
             // Re-render current view
             if (currentRole === 'client') {
               initClientApp(); renderClientMessages(); renderClientNotifs(); updateSidebarBadges();
@@ -3618,25 +3668,49 @@ function buildSidebars() {
 //  AUTHENTICATION SYSTEM
 // ═══════════════════════════════════════
 const USERS = [
-  { email: 'adam@ahperformance.ie', password: 'coach2026', role: 'pt', name: 'Adam Heayberd' }
+  { email: 'adam@ahperformance.ie', role: 'pt', name: 'Adam Heayberd' }
 ];
 let loggedInUser = null;
 
-function attemptLogin() {
+// ── Server-side login. Passwords never live in this file. ──
+async function attemptLogin() {
   const email = document.getElementById('loginEmail').value.trim().toLowerCase();
   const pw = document.getElementById('loginPassword').value;
   const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
 
-  const user = USERS.find(u => u.email === email && u.password === pw);
-  if (!user) {
+  let data = null;
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pw })
+    });
+    data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = (data && data.error) || 'Invalid email or password. Please try again.';
+      errEl.style.display = 'block';
+      return;
+    }
+  } catch(e) {
+    errEl.textContent = 'Could not reach the server. Check your connection and try again.';
     errEl.style.display = 'block';
     return;
   }
-  errEl.style.display = 'none';
-  loggedInUser = user;
-  // Remember login for next session
-  try { localStorage.setItem('ahLoggedInEmail', user.email); } catch(e) {}
-  login(user.role);
+
+  loggedInUser = data.user;
+  // Clients must never inherit a legacy full-database blob from this device
+  if (loggedInUser.role === 'client') {
+    ['ahPerformanceState','ahPerformanceState_backup','ahPerformanceState_emergency'].forEach(k => {
+      try { localStorage.removeItem(k); } catch(e) {}
+    });
+  }
+  // Reload state under the new identity (clients receive only their own slice)
+  _stateFullyLoaded = false;
+  await loadAppState();
+  buildSidebars();
+  login(loggedInUser.role);
+  if (loggedInUser.mustChangePassword) _showForcedPasswordChange();
 }
 
 function showForgotPassword() {
@@ -3708,6 +3782,18 @@ function showResetPasswordForm(token) {
   document.getElementById('resetConfirmPw').value = '';
 }
 
+// ── Forced password change (compromised default password detected) ──
+let _forcedChangeMode = false;
+function _showForcedPasswordChange() {
+  _forcedChangeMode = true;
+  document.getElementById('resetPasswordScreen').style.display = 'flex';
+  document.getElementById('resetError').style.display = 'none';
+  document.getElementById('resetNewPw').value = '';
+  document.getElementById('resetConfirmPw').value = '';
+  const sub = document.querySelector('#resetPasswordScreen .login-subtitle');
+  if (sub) sub.textContent = 'For security, please set a new password before continuing.';
+}
+
 function submitPasswordReset() {
   const newPw = document.getElementById('resetNewPw').value;
   const confirmPw = document.getElementById('resetConfirmPw').value;
@@ -3717,11 +3803,40 @@ function submitPasswordReset() {
   errEl.style.display = 'none';
 
   if (!newPw) { errEl.textContent = 'Please enter a new password.'; errEl.style.display = 'block'; return; }
-  if (newPw.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
+  if (newPw.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display = 'block'; return; }
   if (newPw !== confirmPw) { errEl.textContent = 'Passwords do not match.'; errEl.style.display = 'block'; return; }
 
   btn.disabled = true;
-  btn.textContent = 'Resetting...';
+  btn.textContent = 'Saving...';
+
+  if (_forcedChangeMode) {
+    fetch('/api/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: newPw })
+    })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      btn.textContent = 'Reset Password';
+      if (data.error) {
+        errEl.textContent = data.error;
+        errEl.style.display = 'block';
+      } else {
+        _forcedChangeMode = false;
+        if (loggedInUser) delete loggedInUser.mustChangePassword;
+        document.getElementById('resetPasswordScreen').style.display = 'none';
+        alert('Password updated. Use your new password next time you log in.');
+      }
+    })
+    .catch(() => {
+      errEl.textContent = 'Network error. Please try again.';
+      errEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Reset Password';
+    });
+    return;
+  }
 
   fetch('/api/reset-password', {
     method: 'POST',
@@ -3763,6 +3878,14 @@ function login(role) {
 }
 
 function logout() {
+  // End the server session
+  try { fetch('/api/logout', { method: 'POST' }).catch(() => {}); } catch(e) {}
+  // On shared devices a client's slice must not linger after logout
+  if (loggedInUser && loggedInUser.role === 'client') {
+    ['ahPerformanceState','ahPerformanceState_backup','ahPerformanceState_emergency'].forEach(b => {
+      try { localStorage.removeItem(_lsKey(b)); } catch(e) {}
+    });
+  }
   currentRole = null;
   loggedInUser = null;
   try { localStorage.removeItem('ahLoggedInEmail'); } catch(e) {}
@@ -13703,7 +13826,7 @@ function submitOnboardingForm() {
   })}).catch(function(){});
 
   // Store pending account info (user account created after password is set)
-  window._pendingNewClient = { email: p.email.toLowerCase(), name: name, clientId: newId };
+  window._pendingNewClient = { email: p.email.toLowerCase(), name: name, clientId: newId, client: newClient, submission: submission };
 
   // Show account creation step
   document.querySelectorAll('.ob-section').forEach(s => s.classList.remove('active'));
@@ -13723,8 +13846,8 @@ function createClientAccount() {
   const confirm = document.getElementById('obAccPassConfirm')?.value || '';
   const errEl = document.getElementById('obAccError');
 
-  if (pass.length < 6) {
-    if (errEl) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; }
+  if (pass.length < 8) {
+    if (errEl) { errEl.textContent = 'Password must be at least 8 characters.'; errEl.style.display = 'block'; }
     return;
   }
   if (pass !== confirm) {
@@ -13735,6 +13858,43 @@ function createClientAccount() {
 
   const pending = window._pendingNewClient;
   if (!pending) return;
+
+  // ── Landing-page onboarding (not logged in): the account and client are
+  //    created SERVER-SIDE via the public /api/onboard endpoint. ──
+  if (onboardingContext === 'landing' && !loggedInUser) {
+    fetch('/api/onboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: pending.email,
+        name: pending.name,
+        password: pass,
+        client: pending.client || null,
+        submission: pending.submission || null
+      })
+    })
+    .then(r => r.json().then(data => ({ ok: r.ok, data })))
+    .then(({ ok, data }) => {
+      if (!ok) {
+        if (errEl) { errEl.textContent = (data && data.error) || 'Sign-up failed. Please try again.'; errEl.style.display = 'block'; }
+        return;
+      }
+      loggedInUser = data.user;
+      window._pendingNewClient = null;
+      // Move to confirmation; "Go to Dashboard" completes the login
+      document.querySelectorAll('.ob-section').forEach(s => s.classList.remove('active'));
+      const confirmEl = document.getElementById('obSecConfirm');
+      if (confirmEl) {
+        confirmEl.classList.add('active');
+        const dashBtn = confirmEl.querySelector('.btn-ember');
+        if (dashBtn) dashBtn.setAttribute('onclick', 'finishLandingOnboarding()');
+      }
+    })
+    .catch(() => {
+      if (errEl) { errEl.textContent = 'Could not reach the server. Please try again.'; errEl.style.display = 'block'; }
+    });
+    return;
+  }
 
   // Check if user account already exists for this email — update password if so
   const existingUser = USERS.find(u => u && u.email && u.email.toLowerCase() === pending.email.toLowerCase() && u.role === 'client');
@@ -13772,11 +13932,12 @@ function createClientAccount() {
   }
 }
 
-function finishLandingOnboarding() {
-  // Get the most recently created user
-  const newUser = USERS[USERS.length - 1];
-  loggedInUser = newUser;
+async function finishLandingOnboarding() {
+  // loggedInUser was set by /api/onboard (server-created session).
   onboardingContext = 'app';
+  _stateFullyLoaded = false;
+  await loadAppState();
+  buildSidebars();
   login('client');
 }
 
@@ -14128,6 +14289,11 @@ let ptNotifCounter = PT_NOTIFICATIONS.length;
 let clientNotifCounter = (CLIENT_NOTIFICATIONS[loggedInUser && loggedInUser.clientId ? loggedInUser.clientId : 1] || []).length;
 
 function addPTNotification(type, clientId, clientName, message) {
+  // If a CLIENT triggered this, also push it to the coach's devices
+  if (currentRole === 'client') {
+    const who = (loggedInUser && loggedInUser.name) || clientName || 'A client';
+    try { _sendPushToClient('pt', who, message || 'New client activity', type); } catch(e) {}
+  }
   ptNotifCounter++;
   // Resolve client name — look up from CLIENTS if not provided
   let resolvedName = clientName;
@@ -14136,7 +14302,7 @@ function addPTNotification(type, clientId, clientName, message) {
     resolvedName = c ? c.name : 'System';
   }
   PT_NOTIFICATIONS.unshift({
-    id: 'n' + ptNotifCounter,
+    id: 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     type: type,
     clientId: clientId,
     client: resolvedName,
@@ -14219,9 +14385,12 @@ async function _subscribeToPush() {
   if (!('serviceWorker' in navigator)) { _pd('No serviceWorker'); return; }
   if (!('PushManager' in window)) { _pd('No PushManager'); return; }
   if (!loggedInUser) { _pd('No loggedInUser'); return; }
-  if (!loggedInUser.clientId) { _pd('No clientId on user: ' + JSON.stringify(Object.keys(loggedInUser))); return; }
+  // PT accounts subscribe too (server keys them as 'pt') — so the coach
+  // gets push notifications for check-ins and messages when the app is closed.
+  const _pushIdentity = loggedInUser.role === 'pt' ? 'pt' : loggedInUser.clientId;
+  if (_pushIdentity == null) { _pd('No push identity on user: ' + JSON.stringify(Object.keys(loggedInUser))); return; }
 
-  _pd('Starting subscription for clientId=' + loggedInUser.clientId);
+  _pd('Starting subscription for ' + _pushIdentity);
 
   try {
     // Check SW registration state first
@@ -14246,24 +14415,37 @@ async function _subscribeToPush() {
     ]);
     _pd('SW ready, scope=' + reg.scope);
 
+    // Get the server's current VAPID public key first (needed for rotation check)
+    const keyRes = await fetch('/api/push/vapid-public-key');
+    if (!keyRes.ok) { _pd('VAPID key fetch failed: ' + keyRes.status); return; }
+    const { publicKey } = await keyRes.json();
+    if (!publicKey) { _pd('No publicKey in response — push not configured on server'); return; }
+
+    // Convert base64url to Uint8Array
+    const padding = '='.repeat((4 - publicKey.length % 4) % 4);
+    const raw = atob(publicKey.replace(/-/g, '+').replace(/_/g, '/') + padding);
+    const uint8 = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) uint8[i] = raw.charCodeAt(i);
+
     // Check if already subscribed
     let sub = await reg.pushManager.getSubscription();
     _pd('Existing subscription: ' + (sub ? 'yes' : 'no'));
 
+    // KEY ROTATION: if the existing subscription was created with an old
+    // VAPID key, silently drop it and re-subscribe with the current one.
+    if (sub && sub.options && sub.options.applicationServerKey) {
+      const existingKey = new Uint8Array(sub.options.applicationServerKey);
+      let same = existingKey.length === uint8.length;
+      if (same) { for (let i = 0; i < uint8.length; i++) { if (existingKey[i] !== uint8[i]) { same = false; break; } } }
+      if (!same) {
+        _pd('VAPID key changed — re-subscribing');
+        try { await sub.unsubscribe(); } catch(e) {}
+        sub = null;
+      }
+    }
+
     if (!sub) {
-      // Get VAPID public key from server
-      const keyRes = await fetch('/api/push/vapid-public-key');
-      if (!keyRes.ok) { _pd('VAPID key fetch failed: ' + keyRes.status); return; }
-      const { publicKey } = await keyRes.json();
-      if (!publicKey) { _pd('No publicKey in response'); return; }
-      _pd('Got VAPID key, subscribing...');
-
-      // Convert base64url to Uint8Array
-      const padding = '='.repeat((4 - publicKey.length % 4) % 4);
-      const raw = atob(publicKey.replace(/-/g, '+').replace(/_/g, '/') + padding);
-      const uint8 = new Uint8Array(raw.length);
-      for (let i = 0; i < raw.length; i++) uint8[i] = raw.charCodeAt(i);
-
+      _pd('Subscribing with current VAPID key...');
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: uint8
@@ -14271,19 +14453,18 @@ async function _subscribeToPush() {
       _pd('PushManager subscribed OK');
     }
 
-    // Send subscription to server
+    // Send subscription to server (server keys it by SESSION identity)
     const subRes = await fetch('/api/push/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        clientId: loggedInUser.clientId,
         subscription: sub.toJSON()
       })
     });
     const subData = await subRes.json();
     _pd('Server subscribe response: ' + JSON.stringify(subData));
     window._ahPushActive = true;
-    console.log('AH Performance: Push subscription active for client ' + loggedInUser.clientId);
+    console.log('AH Performance: Push subscription active for ' + _pushIdentity);
   } catch(e) {
     _pd('FAILED: ' + e.message + ' | ' + e.name);
     console.warn('AH Performance: Push subscription failed:', e);

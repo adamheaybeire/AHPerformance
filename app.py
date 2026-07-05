@@ -14,9 +14,10 @@ DATA PERSISTENCE:
   The server keeps an in-memory copy and NEVER overwrites richer data with emptier data.
 """
 
-from flask import Flask, request, jsonify, send_from_directory, send_file
+from flask import Flask, request, jsonify, send_from_directory, send_file, g
 import json
 import os
+import copy
 import uuid
 import time
 import secrets
@@ -24,11 +25,16 @@ import hashlib
 import glob as globmod
 import shutil
 import smtplib
+from functools import wraps
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(__name__, static_folder='.', static_url_path='')
+# SECURITY: static_folder=None — Flask's built-in static handler would serve
+# EVERY file in this directory (server code, data files, spreadsheets).
+# All static serving goes through the allowlisted static_files() route below.
+app = Flask(__name__, static_folder=None)
 
 # ─── Persistent storage path ───
 # If RENDER_DISK_PATH is set (e.g. /var/data), use it — survives deploys.
@@ -158,9 +164,14 @@ SMTP_FROM = os.environ.get('SMTP_FROM', 'adam@ahperformance.co.uk')
 SMTP_FROM_NAME = os.environ.get('SMTP_FROM_NAME', 'AH Performance')
 
 # ─── Web Push (VAPID) config ───
-VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', 'w7vZORuqzehSgl4wpoKFI3pQK09kVRTdSuE7-NTHS6k')
-VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', 'BDcRi3IVNQjo7TXKtJB6nKfvpX0wwk8MHDlty_Sj2SEo7HKg2W8EOGQ6vCn5bAxmI7EtJJUC9fL0mOAn2ZwWXi4')
+# SECURITY: keys MUST come from environment variables (Render → Environment).
+# There are deliberately no fallback values — the old hardcoded keys were
+# exposed in the public repo and have been rotated.
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
 VAPID_CLAIMS_EMAIL = os.environ.get('VAPID_CLAIMS_EMAIL', 'mailto:adam@ahperformance.co.uk')
+if not VAPID_PRIVATE_KEY or not VAPID_PUBLIC_KEY:
+    print('  WARNING: VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY not set — push notifications disabled until configured.')
 
 # Push subscriptions stored on disk alongside state
 PUSH_SUBS_FILE = os.path.join(DISK_PATH, 'push_subscriptions.json') if DISK_PATH and os.path.isdir(DISK_PATH) else os.path.join(os.path.dirname(os.path.abspath(__file__)), 'push_subscriptions.json')
@@ -183,12 +194,110 @@ def _save_push_subs(subs):
 
 _push_subs = _load_push_subs()
 
-# ─── API: Shared data sync ───
+# ═══════════════════════════════════════════════════════════════
+#  AUTHENTICATION & SESSIONS
+#  All /api/* routes (except login / password-reset / vapid key)
+#  require a valid session. Sessions persist across restarts.
+# ═══════════════════════════════════════════════════════════════
 
-@app.route('/api/state', methods=['GET'])
-def get_state():
-    """Return the current state. Uses in-memory cache if disk file is missing."""
-    # Try disk first (may have been updated by another process)
+SESSIONS_FILE = os.path.join(DISK_PATH, 'sessions.json') if DISK_PATH and os.path.isdir(DISK_PATH) else os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sessions.json')
+SESSION_TTL = 60 * 60 * 24 * 30  # 30 days
+SESSION_COOKIE = 'ah_session'
+
+def _load_sessions():
+    try:
+        if os.path.exists(SESSIONS_FILE):
+            with open(SESSIONS_FILE, 'r') as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+def _save_sessions():
+    try:
+        with open(SESSIONS_FILE, 'w') as f:
+            json.dump(_sessions, f)
+    except Exception as e:
+        print(f'  Warning: failed to persist sessions: {e}')
+
+_sessions = _load_sessions()
+
+def _prune_sessions():
+    now = time.time()
+    stale = [t for t, s in _sessions.items() if s.get('expires', 0) < now]
+    for t in stale:
+        del _sessions[t]
+    if stale:
+        _save_sessions()
+
+# ── Login throttling (per email+IP, in-memory) ──
+_login_fails = {}  # key -> {count, lockedUntil}
+LOGIN_MAX_FAILS = 5
+LOGIN_LOCK_SECONDS = 900  # 15 minutes
+
+def _throttle_key():
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr or '?').split(',')[0].strip()
+    email = ''
+    try:
+        email = (request.get_json(force=True, silent=True) or {}).get('email', '')
+    except Exception:
+        pass
+    return f'{ip}|{(email or "").lower()}'
+
+def _is_locked_out():
+    rec = _login_fails.get(_throttle_key())
+    return bool(rec and rec.get('lockedUntil', 0) > time.time())
+
+def _record_login_fail():
+    k = _throttle_key()
+    rec = _login_fails.setdefault(k, {'count': 0, 'lockedUntil': 0})
+    rec['count'] += 1
+    if rec['count'] >= LOGIN_MAX_FAILS:
+        rec['lockedUntil'] = time.time() + LOGIN_LOCK_SECONDS
+        rec['count'] = 0
+        print(f'  AUTH: locked out {k.split("|")[0]} for {LOGIN_LOCK_SECONDS}s')
+
+def _clear_login_fails():
+    _login_fails.pop(_throttle_key(), None)
+
+# ── Password storage ──
+# Users carry 'passwordHash' (werkzeug). Legacy plaintext 'password' fields
+# are migrated to hashes on startup and on every save. Plaintext is never
+# stored and hashes are never sent to any browser.
+
+COMPROMISED_DEFAULTS = {'coach2026'}  # old hardcoded password — force change on next login
+
+def _ensure_password_hashes(state):
+    """Migrate any plaintext passwords in state['users'] to hashes. Returns True if changed."""
+    if not state or not isinstance(state, dict):
+        return False
+    changed = False
+    for u in state.get('users', []):
+        if not isinstance(u, dict):
+            continue
+        plain = u.pop('password', None)
+        if plain is not None:
+            changed = True
+            existing = u.get('passwordHash')
+            if not existing or not check_password_hash(existing, plain):
+                u['passwordHash'] = generate_password_hash(plain)
+            if plain in COMPROMISED_DEFAULTS:
+                u['mustChangePassword'] = True
+    return changed
+
+def _strip_user_secrets(users):
+    """Return copies of user dicts safe to send to a browser."""
+    out = []
+    for u in users or []:
+        if not isinstance(u, dict):
+            continue
+        c = {k: v for k, v in u.items() if k not in ('passwordHash', 'password')}
+        out.append(c)
+    return out
+
+def _best_state():
+    """Current best-known state (disk vs memory), same rule as get_state."""
+    global _state_cache
     disk_state = None
     try:
         if os.path.exists(DATA_FILE):
@@ -196,29 +305,407 @@ def get_state():
                 disk_state = json.load(f)
     except Exception:
         pass
-
-    # Use whichever has MORE clients (disk vs memory cache)
-    global _state_cache
-    best = None
     if disk_state and isinstance(disk_state, dict) and disk_state.get('savedAt'):
         if _state_cache and _count_clients(_state_cache) > _count_clients(disk_state):
-            best = _state_cache  # Memory has richer data
-        else:
-            best = disk_state
-            _state_cache = disk_state  # Update cache from disk
-    elif _state_cache:
-        best = _state_cache  # Disk is empty but memory has data — use memory
+            return _state_cache
+        _state_cache = disk_state
+        return disk_state
+    return _state_cache
 
-    if best:
-        return json.dumps(best), 200, {'Content-Type': 'application/json'}
-    return '{}', 200, {'Content-Type': 'application/json'}
+# Migrate plaintext passwords at startup
+if _state_cache and _ensure_password_hashes(_state_cache):
+    _save_to_disk(_state_cache, 'password-hash-migration')
+    print('  AUTH: migrated plaintext passwords to hashes')
+
+def _session_from_request():
+    _prune_sessions()
+    token = request.cookies.get(SESSION_COOKIE, '')
+    if not token:
+        auth = request.headers.get('Authorization', '')
+        if auth.startswith('Bearer '):
+            token = auth[7:]
+    if not token:
+        return None
+    s = _sessions.get(token)
+    if not s or s.get('expires', 0) < time.time():
+        return None
+    return s
+
+def require_auth(role=None):
+    """Decorator: require a valid session; optionally a specific role ('pt')."""
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            s = _session_from_request()
+            if not s:
+                return jsonify({'error': 'Not authenticated'}), 401
+            if role and s.get('role') != role:
+                return jsonify({'error': 'Not authorised'}), 403
+            g.session = s
+            return fn(*args, **kwargs)
+        return wrapper
+    return decorator
+
+def _set_session_cookie(resp, token):
+    secure = request.headers.get('X-Forwarded-Proto', request.scheme) == 'https'
+    resp.set_cookie(SESSION_COOKIE, token, max_age=SESSION_TTL, httponly=True,
+                    samesite='Lax', secure=secure, path='/')
+    return resp
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    if _is_locked_out():
+        return jsonify({'error': 'Too many failed attempts. Try again in 15 minutes.'}), 429
+    data = request.get_json(force=True, silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    password = data.get('password') or ''
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required.'}), 400
+
+    state = _best_state() or {}
+    user = next((u for u in state.get('users', []) if isinstance(u, dict) and (u.get('email') or '').lower() == email), None)
+
+    ok = False
+    if user:
+        if user.get('passwordHash'):
+            ok = check_password_hash(user['passwordHash'], password)
+        elif user.get('password'):  # legacy plaintext not yet migrated
+            ok = secrets.compare_digest(str(user['password']), password)
+            if ok:
+                user['passwordHash'] = generate_password_hash(password)
+                user.pop('password', None)
+                if password in COMPROMISED_DEFAULTS:
+                    user['mustChangePassword'] = True
+                _save_to_disk(state, 'password-upgrade')
+    if not ok:
+        _record_login_fail()
+        return jsonify({'error': 'Invalid email or password.'}), 401
+
+    _clear_login_fails()
+    token = secrets.token_urlsafe(32)
+    _sessions[token] = {
+        'email': email,
+        'role': user.get('role', 'client'),
+        'clientId': user.get('clientId'),
+        'name': user.get('name', ''),
+        'created': time.time(),
+        'expires': time.time() + SESSION_TTL
+    }
+    _save_sessions()
+    safe_user = _strip_user_secrets([user])[0]
+    resp = jsonify({'ok': True, 'user': safe_user})
+    return _set_session_cookie(resp, token)
+
+@app.route('/api/logout', methods=['POST'])
+def api_logout():
+    token = request.cookies.get(SESSION_COOKIE, '')
+    if token and token in _sessions:
+        del _sessions[token]
+        _save_sessions()
+    resp = jsonify({'ok': True})
+    resp.delete_cookie(SESSION_COOKIE, path='/')
+    return resp
+
+@app.route('/api/me', methods=['GET'])
+def api_me():
+    s = _session_from_request()
+    if not s:
+        return jsonify({'error': 'Not authenticated'}), 401
+    state = _best_state() or {}
+    user = next((u for u in state.get('users', []) if isinstance(u, dict) and (u.get('email') or '').lower() == s['email']), None)
+    if not user:
+        return jsonify({'error': 'Account no longer exists'}), 401
+    return jsonify({'ok': True, 'user': _strip_user_secrets([user])[0]})
+
+@app.route('/api/change-password', methods=['POST'])
+@require_auth()
+def api_change_password():
+    data = request.get_json(force=True, silent=True) or {}
+    current = data.get('current') or ''
+    new = data.get('password') or ''
+    if len(new) < 8:
+        return jsonify({'error': 'Password must be at least 8 characters.'}), 400
+    state = _best_state() or {}
+    user = next((u for u in state.get('users', []) if isinstance(u, dict) and (u.get('email') or '').lower() == g.session['email']), None)
+    if not user:
+        return jsonify({'error': 'Account not found.'}), 404
+    # Require the current password unless this is a forced change of a compromised default
+    if not user.get('mustChangePassword'):
+        if not user.get('passwordHash') or not check_password_hash(user['passwordHash'], current):
+            return jsonify({'error': 'Current password is incorrect.'}), 403
+    user['passwordHash'] = generate_password_hash(new)
+    user.pop('password', None)
+    user.pop('mustChangePassword', None)
+    _save_to_disk(state, 'password-change')
+    return jsonify({'ok': True})
+
+# ── Public new-client onboarding ──
+# The landing-page onboarding form is used by people who don't have an
+# account yet, so it can't go through /api/state. This endpoint creates
+# the client + account server-side with strict rules:
+#   • an email that already has a user OR client record is rejected
+#     (prevents hijacking an existing client's data by knowing their email)
+#   • the server assigns the client id
+#   • the password is hashed, a session is issued (auto-login)
+_onboard_hits = {}  # ip -> [timestamps]
+
+@app.route('/api/onboard', methods=['POST'])
+def api_onboard():
+    # Rate limit: max 5 onboardings per IP per hour
+    ip = request.headers.get('X-Forwarded-For', request.remote_addr or '?').split(',')[0].strip()
+    now = time.time()
+    hits = [t for t in _onboard_hits.get(ip, []) if now - t < 3600]
+    if len(hits) >= 5:
+        return jsonify({'error': 'Too many sign-ups from this connection. Try again later.'}), 429
+    hits.append(now)
+    _onboard_hits[ip] = hits
+
+    data = request.get_json(force=True, silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    name = (data.get('name') or '').strip()
+    password = data.get('password') or ''
+    client_rec = data.get('client') if isinstance(data.get('client'), dict) else {}
+    submission = data.get('submission') if isinstance(data.get('submission'), dict) else None
+
+    if not email or '@' not in email or not name:
+        return jsonify({'error': 'Name and a valid email are required.'}), 400
+    if len(password) < 8:
+        return jsonify({'error': 'Password must be at least 8 characters.'}), 400
+
+    master = copy.deepcopy(_best_state() or {})
+    master.setdefault('clients', [])
+    master.setdefault('users', [])
+
+    if any((u.get('email') or '').lower() == email for u in master['users'] if isinstance(u, dict)):
+        return jsonify({'error': 'An account with this email already exists. Log in instead, or use "Forgot password".'}), 409
+    if any((c.get('email') or '').lower() == email for c in master['clients'] if isinstance(c, dict)):
+        return jsonify({'error': 'These details are already registered. Please contact your coach.'}), 409
+
+    # Server assigns the id — never trust the client-side one
+    new_id = max([c.get('id', 0) for c in master['clients'] if isinstance(c, dict)] + [0]) + 1
+    client_rec['id'] = new_id
+    client_rec['email'] = email
+    client_rec.setdefault('name', name)
+    client_rec.setdefault('status', 'new')
+    master['clients'].append(client_rec)
+
+    # Init per-client stores
+    for f in ('workoutLog', 'checkinLog', 'clientNotifications'):
+        master.setdefault(f, {})[str(new_id)] = []
+    master.setdefault('progressData', {})[str(new_id)] = {'strength': [], 'cardio': [], 'measurements': [], 'wearable': [], 'weekly': []}
+
+    if submission:
+        submission.setdefault('id', 'ob' + str(int(now * 1000)))
+        master.setdefault('onboardingSubmissions', []).append(submission)
+
+    master['users'].append({
+        'email': email, 'passwordHash': generate_password_hash(password),
+        'role': 'client', 'name': name, 'clientId': new_id
+    })
+
+    master.setdefault('ptNotifications', []).insert(0, {
+        'id': 'n' + format(int(now * 1000), 'x'),
+        'type': 'programme', 'clientId': new_id, 'client': name,
+        'message': 'New client onboarded via form — review their details',
+        'time': 'Just now', 'read': False
+    })
+
+    master['savedAt'] = int(now * 1000)
+    _save_to_disk(master, 'onboard')
+
+    # Tell the coach (email + push), best-effort
+    try:
+        if SMTP_HOST and SMTP_USER:
+            msg = MIMEMultipart('alternative')
+            msg['From'] = f'{SMTP_FROM_NAME} <{SMTP_FROM}>'
+            msg['To'] = 'adam@ahperformance.ie'
+            msg['Subject'] = f'New Client Onboarded: {name}'
+            msg.attach(MIMEText(f'Hi Adam,\n\n{name} has just completed their onboarding form.\n\nEmail: {email}\n\nLog in to review their details and assign a programme.\n\nAH Performance', 'plain'))
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+                server.starttls()
+                server.login(SMTP_USER, SMTP_PASS)
+                server.send_message(msg)
+    except Exception as e:
+        print(f'  Onboard: coach email failed: {e}')
+
+    # Auto-login the new client
+    token = secrets.token_urlsafe(32)
+    _sessions[token] = {
+        'email': email, 'role': 'client', 'clientId': new_id,
+        'name': name, 'created': now, 'expires': now + SESSION_TTL
+    }
+    _save_sessions()
+    resp = jsonify({'ok': True, 'user': {'email': email, 'role': 'client', 'name': name, 'clientId': new_id}})
+    return _set_session_cookie(resp, token)
+
+# ═══════════════════════════════════════════════════════════════
+#  PER-ROLE DATA ISOLATION
+# ═══════════════════════════════════════════════════════════════
+
+# Dict fields keyed by clientId
+PER_CLIENT_DICT_FIELDS = [
+    'workoutLog', 'checkinLog', 'clientProgrammes', 'programmeWeeks',
+    'progressData', 'clientNotifications', 'cycleLog', 'clientNutrition',
+    'foodLog', 'foodRecipes', 'neuroData', 'neuroEpisodes'
+]
+# List fields where each item carries a clientId
+PER_CLIENT_LIST_FIELDS = ['wellbeingData', 'ptProgrammes']
+# Fields a client must never receive
+PT_ONLY_FIELDS = ['ptNotifications', 'emailQueue', 'onboardingSubmissions', '_deletedClientIds', '_deletedEmailIds']
+
+def _cv_matches(cv, cid_s, client_name):
+    if not isinstance(cv, dict):
+        return False
+    if str(cv.get('clientId')) == cid_s:
+        return True
+    return bool(client_name) and cv.get('name') == client_name
+
+def _client_slice(state, cid, email):
+    """Build the filtered state a client account is allowed to see."""
+    cid_s = str(cid)
+    own_client = next((c for c in state.get('clients', []) if isinstance(c, dict) and str(c.get('id')) == cid_s), None)
+    client_name = own_client.get('name') if own_client else None
+    out = {
+        'clients': [own_client] if own_client else [],
+        'users': _strip_user_secrets([u for u in state.get('users', []) if isinstance(u, dict) and (u.get('email') or '').lower() == email]),
+        'savedAt': state.get('savedAt')
+    }
+    for f in PER_CLIENT_DICT_FIELDS:
+        d = state.get(f)
+        out[f] = {k: v for k, v in d.items() if str(k) == cid_s} if isinstance(d, dict) else {}
+    for f in PER_CLIENT_LIST_FIELDS:
+        lst = state.get(f)
+        out[f] = [x for x in lst if isinstance(x, dict) and str(x.get('clientId')) == cid_s] if isinstance(lst, list) else []
+    out['ptConversations'] = [cv for cv in state.get('ptConversations', []) if _cv_matches(cv, cid_s, client_name)]
+    for f in PT_ONLY_FIELDS:
+        out[f] = []
+    return out
+
+def _merge_log_arrays(cur_arr, inc_arr):
+    """Server-side guard: never let a shorter incoming log wipe a longer one."""
+    cur_len = len(cur_arr) if isinstance(cur_arr, list) else 0
+    inc_len = len(inc_arr) if isinstance(inc_arr, list) else 0
+    return cur_arr if inc_len < cur_len else inc_arr
+
+def _client_scoped_save(incoming, cid, email):
+    """Merge ONLY a client's own records into the master state."""
+    cid_s = str(cid)
+    master = copy.deepcopy(_best_state() or {})
+    if not master.get('clients'):
+        master.setdefault('clients', [])
+
+    # 1. Own client record (replace by id; a client cannot add or remove clients)
+    inc_client = next((c for c in incoming.get('clients', []) if isinstance(c, dict) and str(c.get('id')) == cid_s), None)
+    if inc_client:
+        idx = next((i for i, c in enumerate(master['clients']) if isinstance(c, dict) and str(c.get('id')) == cid_s), None)
+        if idx is not None:
+            master['clients'][idx] = inc_client
+    client_name = inc_client.get('name') if inc_client else None
+
+    # 2. Own user record (name changes etc.) — server-side hash always wins
+    inc_user = next((u for u in incoming.get('users', []) if isinstance(u, dict) and (u.get('email') or '').lower() == email), None)
+    if inc_user:
+        m_user = next((u for u in master.get('users', []) if isinstance(u, dict) and (u.get('email') or '').lower() == email), None)
+        if m_user:
+            preserved_hash = m_user.get('passwordHash')
+            preserved_flag = m_user.get('mustChangePassword')
+            for k, v in inc_user.items():
+                if k in ('password', 'passwordHash', 'role', 'email', 'clientId', 'mustChangePassword'):
+                    continue  # a client cannot change their own role/identity via sync
+                m_user[k] = v
+            if preserved_hash:
+                m_user['passwordHash'] = preserved_hash
+            if preserved_flag:
+                m_user['mustChangePassword'] = preserved_flag
+
+    # 3. Per-client dict fields — own key only, with log-shrink protection
+    for f in PER_CLIENT_DICT_FIELDS:
+        inc_d = incoming.get(f)
+        if not isinstance(inc_d, dict):
+            continue
+        own = next((v for k, v in inc_d.items() if str(k) == cid_s), None)
+        if own is None:
+            continue
+        master.setdefault(f, {})
+        cur = master[f].get(cid_s, master[f].get(cid) if not isinstance(cid, str) else None)
+        if isinstance(own, list) and isinstance(cur, list):
+            merged = _merge_log_arrays(cur, own)
+            if merged is cur:
+                print(f'  SCOPED MERGE: kept existing {f}[{cid_s}] ({len(cur)} entries) over incoming ({len(own)})')
+            master[f][cid_s] = merged
+        else:
+            master[f][cid_s] = own
+        # normalise: drop a duplicate int key if present
+        if cid_s != cid and cid in master[f]:
+            del master[f][cid]
+
+    # 4. Per-client list fields — replace own items, keep everyone else's
+    for f in PER_CLIENT_LIST_FIELDS:
+        inc_l = incoming.get(f)
+        if not isinstance(inc_l, list):
+            continue
+        own_items = [x for x in inc_l if isinstance(x, dict) and str(x.get('clientId')) == cid_s]
+        others = [x for x in (master.get(f) or []) if not (isinstance(x, dict) and str(x.get('clientId')) == cid_s)]
+        master[f] = others + own_items
+
+    # 5. Own conversation thread
+    inc_cvs = [cv for cv in incoming.get('ptConversations', []) if _cv_matches(cv, cid_s, client_name)]
+    if inc_cvs:
+        others = [cv for cv in (master.get('ptConversations') or []) if not _cv_matches(cv, cid_s, client_name)]
+        master['ptConversations'] = others + inc_cvs
+
+    # 6. PT notifications & email queue — append-only (client actions notify the coach)
+    for f in ('ptNotifications', 'emailQueue'):
+        inc_l = incoming.get(f)
+        if not isinstance(inc_l, list):
+            continue
+        master.setdefault(f, [])
+        known = {x.get('id') for x in master[f] if isinstance(x, dict)}
+        for x in inc_l:
+            if isinstance(x, dict) and x.get('id') not in known:
+                master[f].insert(0, x)
+
+    master['savedAt'] = int(time.time() * 1000)
+    _ensure_password_hashes(master)
+    _save_to_disk(master, 'client-scoped-save')
+    return master
+
+# ─── API: Shared data sync ───
+
+@app.route('/api/state', methods=['GET'])
+@require_auth()
+def get_state():
+    """Return the current state — full for PT, own slice for clients."""
+    best = _best_state()
+    if not best:
+        return '{}', 200, {'Content-Type': 'application/json'}
+
+    if g.session.get('role') == 'client':
+        sliced = _client_slice(best, g.session.get('clientId'), g.session['email'])
+        return json.dumps(sliced), 200, {'Content-Type': 'application/json'}
+
+    # PT: full state, but passwords/hashes never leave the server
+    out = copy.deepcopy(best)
+    out['users'] = _strip_user_secrets(out.get('users', []))
+    return json.dumps(out), 200, {'Content-Type': 'application/json'}
 
 @app.route('/api/state', methods=['POST'])
+@require_auth()
 def save_state():
-    """Save state, merging clients so no device can accidentally remove another device's clients."""
+    """Save state. PT: full merge. Client: scoped merge of own records only."""
     global _state_cache
     try:
         data = request.get_json(force=True)
+
+        # ── Client role: strictly scoped save ──
+        if g.session.get('role') == 'client':
+            if g.session.get('clientId') is None:
+                return jsonify({'error': 'No client profile linked to this account'}), 403
+            merged = _client_scoped_save(data if isinstance(data, dict) else {},
+                                         g.session['clientId'], g.session['email'])
+            return jsonify({'ok': True, 'clients': len(merged.get('clients', []))})
+
+        # ── PT role: full-state merge (existing protections) ──
         incoming_clients = data.get('clients', []) if isinstance(data, dict) else []
         current_clients = _state_cache.get('clients', []) if _state_cache and isinstance(_state_cache, dict) else []
         current_count = len(current_clients)
@@ -294,12 +781,39 @@ def save_state():
                         merged_field[k] = cur_arr
                 data[field] = merged_field
 
+        # ── PASSWORD PRESERVATION: browsers never receive hashes, so re-attach
+        # them here. A plaintext 'password' field (new account / password change)
+        # is hashed; otherwise the existing server-side hash is kept.
+        server_users = {(u.get('email') or '').lower(): u
+                        for u in (_state_cache.get('users', []) if _state_cache and isinstance(_state_cache, dict) else [])
+                        if isinstance(u, dict)}
+        for u in data.get('users', []):
+            if not isinstance(u, dict):
+                continue
+            existing = server_users.get((u.get('email') or '').lower())
+            plain = u.pop('password', None)
+            if plain is not None:
+                if existing and existing.get('passwordHash') and check_password_hash(existing['passwordHash'], plain):
+                    u['passwordHash'] = existing['passwordHash']  # unchanged — avoid rehash churn
+                    if existing.get('mustChangePassword'):
+                        u['mustChangePassword'] = True
+                else:
+                    u['passwordHash'] = generate_password_hash(plain)
+                    if plain in COMPROMISED_DEFAULTS:
+                        u['mustChangePassword'] = True
+            elif existing:
+                if existing.get('passwordHash'):
+                    u['passwordHash'] = existing['passwordHash']
+                if existing.get('mustChangePassword'):
+                    u['mustChangePassword'] = True
+
         _save_to_disk(data, 'save')
         return jsonify({'ok': True, 'clients': final_count})
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
 @app.route('/api/state/info', methods=['GET'])
+@require_auth('pt')
 def state_info():
     """Quick endpoint to check how many clients the server has (for debugging)."""
     clients = _count_clients(_state_cache) if _state_cache else 0
@@ -314,6 +828,7 @@ def state_info():
 # ─── API: Backup management ───
 
 @app.route('/api/backups', methods=['GET'])
+@require_auth('pt')
 def list_backups_api():
     """List all available backups with client counts."""
     backups = _list_backups()
@@ -337,6 +852,7 @@ def list_backups_api():
     return jsonify({'ok': True, 'backups': result, 'total': len(result)})
 
 @app.route('/api/backups/restore', methods=['POST'])
+@require_auth('pt')
 def restore_backup_api():
     """Restore state from a specific backup file."""
     data = request.get_json(force=True)
@@ -351,6 +867,7 @@ def restore_backup_api():
     return jsonify({'ok': True, 'clients': client_count, 'restored_from': filename})
 
 @app.route('/api/backups/<filename>', methods=['GET'])
+@require_auth('pt')
 def preview_backup(filename):
     """Preview a backup — shows clients and users without restoring."""
     safe = secure_filename(filename)
@@ -377,6 +894,7 @@ def preview_backup(filename):
 # ─── API: Send email ───
 
 @app.route('/api/send-email', methods=['POST'])
+@require_auth('pt')
 def send_email():
     if not SMTP_HOST or not SMTP_USER:
         return jsonify({'error': 'Email not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS in Render environment variables.'}), 503
@@ -517,8 +1035,8 @@ def reset_password():
 
     if not token or not new_password:
         return jsonify({'error': 'Token and password are required.'}), 400
-    if len(new_password) < 6:
-        return jsonify({'error': 'Password must be at least 6 characters.'}), 400
+    if len(new_password) < 8:
+        return jsonify({'error': 'Password must be at least 8 characters.'}), 400
 
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     record = _reset_tokens.get(token_hash)
@@ -540,7 +1058,9 @@ def reset_password():
     if not user:
         return jsonify({'error': 'Account not found.'}), 404
 
-    user['password'] = new_password
+    user['passwordHash'] = generate_password_hash(new_password)
+    user.pop('password', None)
+    user.pop('mustChangePassword', None)
     _state_cache = state
 
     # Persist to disk
@@ -565,6 +1085,7 @@ def get_vapid_public_key():
 
 
 @app.route('/api/push/debug', methods=['GET'])
+@require_auth('pt')
 def push_debug():
     """Debug: show which client IDs have push subscriptions stored."""
     summary = {}
@@ -576,6 +1097,7 @@ def push_debug():
 _push_diag = []
 
 @app.route('/api/push/diag', methods=['POST'])
+@require_auth()
 def push_diag():
     """Receive diagnostic messages from client-side push subscription."""
     data = request.get_json(force=True)
@@ -589,15 +1111,21 @@ def push_diag():
 
 
 @app.route('/api/push/subscribe', methods=['POST'])
+@require_auth()
 def push_subscribe():
-    """Register a push subscription for a client."""
+    """Register a push subscription. Identity comes from the SESSION, not the request body."""
     global _push_subs
     data = request.get_json(force=True)
-    client_id = str(data.get('clientId', ''))
     subscription = data.get('subscription')
 
+    # Session decides who this subscription belongs to (client id, or 'pt' for the coach)
+    if g.session.get('role') == 'pt':
+        client_id = 'pt'
+    else:
+        client_id = str(g.session.get('clientId', ''))
+
     if not client_id or not subscription or not subscription.get('endpoint'):
-        return jsonify({'error': 'clientId and subscription required'}), 400
+        return jsonify({'error': 'subscription required'}), 400
 
     if client_id not in _push_subs:
         _push_subs[client_id] = []
@@ -612,11 +1140,12 @@ def push_subscribe():
 
 
 @app.route('/api/push/unsubscribe', methods=['POST'])
+@require_auth()
 def push_unsubscribe():
-    """Remove a push subscription."""
+    """Remove a push subscription (own identity only)."""
     global _push_subs
     data = request.get_json(force=True)
-    client_id = str(data.get('clientId', ''))
+    client_id = 'pt' if g.session.get('role') == 'pt' else str(g.session.get('clientId', ''))
     endpoint = data.get('endpoint', '')
 
     if client_id in _push_subs:
@@ -627,8 +1156,9 @@ def push_unsubscribe():
 
 
 @app.route('/api/push/send', methods=['POST'])
+@require_auth()
 def push_send():
-    """Send a push notification to a specific client. Called by coach actions."""
+    """Send a push notification. PT can target any client; a client can only notify the coach ('pt')."""
     data = request.get_json(force=True)
     client_id = str(data.get('clientId', ''))
     title = data.get('title', 'AH Performance')
@@ -638,6 +1168,8 @@ def push_send():
 
     if not client_id:
         return jsonify({'error': 'clientId required'}), 400
+    if g.session.get('role') != 'pt' and client_id != 'pt':
+        return jsonify({'error': 'Clients can only notify the coach'}), 403
 
     subs = _push_subs.get(client_id, [])
     print(f'Push send: clientId={client_id}, stored IDs={list(_push_subs.keys())}, subs_count={len(subs)}')
@@ -717,6 +1249,7 @@ def _allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/api/upload-photo', methods=['POST'])
+@require_auth()
 def upload_photo():
     """Accept a progress photo, save to persistent disk, return URL."""
     if 'photo' not in request.files:
@@ -735,7 +1268,11 @@ def upload_photo():
         return jsonify({'error': 'File too large. Maximum 10 MB.'}), 400
 
     # Generate unique filename: clientId_pose_timestamp.ext
-    client_id = request.form.get('clientId', 'unknown')
+    # Clients can only upload photos under their OWN id — session wins over form data.
+    if g.session.get('role') == 'client':
+        client_id = str(g.session.get('clientId', 'unknown'))
+    else:
+        client_id = request.form.get('clientId', 'unknown')
     pose = request.form.get('pose', 'photo')  # front, side, back
     ext = file.filename.rsplit('.', 1)[1].lower()
     if ext == 'heic':
@@ -753,18 +1290,25 @@ def upload_photo():
     return jsonify({'ok': True, 'url': photo_url, 'filename': safe_name})
 
 @app.route('/api/photos/<filename>', methods=['GET'])
+@require_auth()
 def serve_photo(filename):
-    """Serve a saved progress photo."""
+    """Serve a saved progress photo — clients can only access their own."""
     safe = secure_filename(filename)
+    if g.session.get('role') == 'client' and not safe.startswith(f"{g.session.get('clientId')}_"):
+        return jsonify({'error': 'Not authorised'}), 403
     filepath = os.path.join(PHOTO_DIR, safe)
     if not os.path.exists(filepath):
         return jsonify({'error': 'Photo not found'}), 404
     return send_from_directory(PHOTO_DIR, safe)
 
 @app.route('/api/photos', methods=['GET'])
+@require_auth()
 def list_photos():
-    """List photos for a given client (optional filter by clientId query param)."""
-    client_id = request.args.get('clientId', '')
+    """List photos for a given client (clients are locked to their own)."""
+    if g.session.get('role') == 'client':
+        client_id = str(g.session.get('clientId', ''))
+    else:
+        client_id = request.args.get('clientId', '')
     try:
         all_files = os.listdir(PHOTO_DIR)
         if client_id:
@@ -781,6 +1325,7 @@ def list_photos():
 # ─── Media uploads (chat: photo, video, voice) ───
 
 @app.route('/api/upload-media', methods=['POST'])
+@require_auth()
 def upload_media():
     """Accept photo/video/audio for chat messages."""
     if 'file' not in request.files:
@@ -806,6 +1351,7 @@ def upload_media():
     return jsonify({'ok': True, 'url': url, 'filename': safe_name, 'type': media_type})
 
 @app.route('/api/media/<filename>', methods=['GET'])
+@require_auth()
 def serve_media(filename):
     safe = secure_filename(filename)
     filepath = os.path.join(MEDIA_DIR, safe)
@@ -829,6 +1375,19 @@ def service_worker():
 
 @app.route('/<path:filename>')
 def static_files(filename):
+    # SECURITY: only serve genuine front-end assets. Data files, server code,
+    # spreadsheets and backups must never be reachable over HTTP.
+    lower = filename.lower()
+    blocked_names = {'ah-sync-data.json', 'push_subscriptions.json', 'sessions.json',
+                     'requirements.txt', 'render.yaml', 'deploy-guide.md'}
+    blocked_prefixes = ('backups/', 'photos/', 'media/', '.', '__pycache__/', 'deploy-to-github/')
+    allowed_ext = ('.html', '.htm', '.css', '.js', '.png', '.jpg', '.jpeg', '.webp',
+                   '.svg', '.ico', '.pdf', '.woff', '.woff2')
+    if (os.path.basename(lower) in blocked_names
+            or lower.startswith(blocked_prefixes)
+            or lower.endswith(('.py', '.pyc', '.xlsx', '.json', '.md', '.docx', '.tmp'))
+            or not lower.endswith(allowed_ext)):
+        return jsonify({'error': 'Not found'}), 404
     return send_from_directory('.', filename)
 
 # ─── Run ───
