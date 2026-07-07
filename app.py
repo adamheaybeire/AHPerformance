@@ -587,6 +587,63 @@ def _merge_log_arrays(cur_arr, inc_arr):
     inc_len = len(inc_arr) if isinstance(inc_arr, list) else 0
     return cur_arr if inc_len < cur_len else inc_arr
 
+# ── Conversation merging ──
+# Chat threads sync as part of the state blob. If a device saves a thread
+# copy that is even 30 seconds stale, wholesale replacement would UN-SEND
+# the other side's newest messages. Messages are therefore unioned by
+# identity (from|text|time) — no device can delete another device's message.
+
+def _msg_key(m):
+    return f"{m.get('from')}|{m.get('text')}|{m.get('time')}"
+
+def _merge_thread_messages(cur_msgs, inc_msgs):
+    cur = [m for m in (cur_msgs or []) if isinstance(m, dict)]
+    out = list(cur)
+    index = {_msg_key(m): i for i, m in enumerate(cur)}
+    for m in (inc_msgs or []):
+        if not isinstance(m, dict):
+            continue
+        k = _msg_key(m)
+        if k in index:
+            out[index[k]] = m  # incoming copy wins — carries read-state updates
+        else:
+            out.append(m)
+    return out
+
+def _refresh_thread_meta(cv):
+    """Keep the preview in step with the merged message list."""
+    msgs = cv.get('messages') or []
+    if msgs and isinstance(msgs[-1], dict):
+        text = msgs[-1].get('text') or ''
+        cv['preview'] = text[:40] + ('...' if len(text) > 40 else '')
+    return cv
+
+def _merge_conversations(master_list, incoming_list, deleted_client_ids=None):
+    """Merge incoming conversation threads into master, per-message.
+    Master threads absent from incoming are kept (a stale device must not
+    drop someone's thread) unless their client was explicitly deleted."""
+    deleted = {str(x) for x in (deleted_client_ids or [])}
+    merged = []
+    used_master = set()
+    master_list = [cv for cv in (master_list or []) if isinstance(cv, dict)]
+    for inc in (incoming_list or []):
+        if not isinstance(inc, dict):
+            continue
+        m_idx = next((i for i, cv in enumerate(master_list)
+                      if (cv.get('clientId') is not None and cv.get('clientId') == inc.get('clientId'))
+                      or (cv.get('name') and cv.get('name') == inc.get('name'))), None)
+        if m_idx is not None:
+            used_master.add(m_idx)
+            base = dict(inc)  # incoming metadata (unread, time) wins
+            base['messages'] = _merge_thread_messages(master_list[m_idx].get('messages'), inc.get('messages'))
+            merged.append(_refresh_thread_meta(base))
+        else:
+            merged.append(_refresh_thread_meta(dict(inc)))
+    for i, cv in enumerate(master_list):
+        if i not in used_master and str(cv.get('clientId')) not in deleted:
+            merged.append(cv)
+    return merged
+
 def _client_scoped_save(incoming, cid, email):
     """Merge ONLY a client's own records into the master state."""
     cid_s = str(cid)
@@ -648,11 +705,13 @@ def _client_scoped_save(incoming, cid, email):
         others = [x for x in (master.get(f) or []) if not (isinstance(x, dict) and str(x.get('clientId')) == cid_s)]
         master[f] = others + own_items
 
-    # 5. Own conversation thread
+    # 5. Own conversation thread — merged per-message so a stale copy from
+    #    this device can never un-send a message the coach just wrote
     inc_cvs = [cv for cv in incoming.get('ptConversations', []) if _cv_matches(cv, cid_s, client_name)]
     if inc_cvs:
+        own_master = [cv for cv in (master.get('ptConversations') or []) if _cv_matches(cv, cid_s, client_name)]
         others = [cv for cv in (master.get('ptConversations') or []) if not _cv_matches(cv, cid_s, client_name)]
-        master['ptConversations'] = others + inc_cvs
+        master['ptConversations'] = others + _merge_conversations(own_master, inc_cvs)
 
     # 6. PT notifications & email queue — append-only (client actions notify the coach)
     for f in ('ptNotifications', 'emailQueue'):
@@ -780,6 +839,14 @@ def save_state():
                         print(f'  MERGE: kept existing {field}[{k}] ({cur_len} entries) over incoming ({inc_len} entries)')
                         merged_field[k] = cur_arr
                 data[field] = merged_field
+
+        # ── CONVERSATION PROTECTION: merge chat threads per-message so a
+        # stale coach device can't un-send a client's newest messages either.
+        if _state_cache and isinstance(_state_cache, dict) and isinstance(data, dict):
+            data['ptConversations'] = _merge_conversations(
+                _state_cache.get('ptConversations'),
+                data.get('ptConversations'),
+                deleted_client_ids=data.get('_deletedClientIds'))
 
         # ── PASSWORD PRESERVATION: browsers never receive hashes, so re-attach
         # them here. A plaintext 'password' field (new account / password change)
