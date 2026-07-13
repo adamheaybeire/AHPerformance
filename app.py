@@ -651,11 +651,19 @@ def _client_scoped_save(incoming, cid, email):
     if not master.get('clients'):
         master.setdefault('clients', [])
 
-    # 1. Own client record (replace by id; a client cannot add or remove clients)
+    # 1. Own client record (replace by id; a client cannot add or remove clients).
+    #    COACH-OWNED FIELDS on the record are preserved from the master copy —
+    #    a client device (or a stale sync) can never modify or wipe them.
+    COACH_OWNED_CLIENT_FIELDS = ('coaching', 'notes')
     inc_client = next((c for c in incoming.get('clients', []) if isinstance(c, dict) and str(c.get('id')) == cid_s), None)
     if inc_client:
         idx = next((i for i, c in enumerate(master['clients']) if isinstance(c, dict) and str(c.get('id')) == cid_s), None)
         if idx is not None:
+            for f in COACH_OWNED_CLIENT_FIELDS:
+                if f in master['clients'][idx]:
+                    inc_client[f] = master['clients'][idx][f]
+                elif f in inc_client:
+                    del inc_client[f]
             master['clients'][idx] = inc_client
     client_name = inc_client.get('name') if inc_client else None
 

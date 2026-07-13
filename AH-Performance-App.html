@@ -2353,7 +2353,7 @@
   <nav class="sidebar" id="ptSidebar"></nav>
   <div class="mobile-tab-bar" id="ptMobileNav">
     <div class="tab-row">
-      <div class="mobile-tab active" onclick="ptMobileNav('ptClients')"><div class="tab-ic" id="mtPtClients"></div><span class="tab-label">Clients</span></div>
+      <div class="mobile-tab active" onclick="ptMobileNav('ptClients')"><div class="tab-ic" id="mtPtClients"></div><span class="tab-label">Athletes</span></div>
       <div class="mobile-tab" onclick="ptMobileNav('ptMessages')"><div class="tab-ic" id="mtPtMessages"></div><span class="tab-label">Messages</span></div>
       <div class="mobile-tab" onclick="ptMobileNav('ptProgrammes')"><div class="tab-ic" id="mtPtProg"></div><span class="tab-label">Programme</span></div>
       <div class="mobile-tab" onclick="ptMobileNav('ptPush')"><div class="tab-ic" id="mtPtPush"></div><span class="tab-label">Push</span></div>
@@ -2377,7 +2377,7 @@
       </div>
       <div class="kpi-row" id="ptKPIs"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
-        <div class="card card-ember"><h3>Needs Your Attention</h3><div id="ptAlerts"></div></div>
+        <div class="card card-ember"><h3>Requires Coach Attention</h3><div id="ptAlerts"></div></div>
         <div class="card card-ocean"><h3>Recent Activity</h3><div id="ptActivity"></div></div>
       </div>
       <!-- Email Queue Panel -->
@@ -2407,11 +2407,12 @@
 
     <!-- PT: Clients -->
     <div class="page" id="ptClients">
-      <div class="page-header"><h1>Clients</h1><p>Manage your client roster</p></div>
+      <div class="page-header"><h1>Athletes</h1><p>Manage your athlete roster</p></div>
       <div class="pt-search-bar">
         <input type="text" placeholder="Search clients..." id="ptClientSearch" oninput="filterClients()">
         <select id="ptClientFilter" onchange="filterClients()"><option value="">All Status</option><option value="active">Active</option><option value="new">New</option><option value="attention">Needs Attention</option><option value="inactive">Inactive</option></select>
-        <button class="btn btn-ember" onclick="showOnboardingForm()">+ Add Client</button>
+        <div id="ptClientChips" style="display:flex;flex-wrap:wrap;gap:6px;width:100%;margin-top:10px;"></div>
+        <button class="btn btn-ember" onclick="showOnboardingForm()">+ Add Athlete</button>
       </div>
       <div id="ptAttentionList" style="margin-bottom:14px;"></div>
       <div id="ptClientList"></div>
@@ -2426,7 +2427,7 @@
         <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
           <button class="btn btn-sm btn-secondary" onclick="showPTPage('ptMessages')">Message</button>
           <button class="btn btn-sm btn-ember" onclick="if(currentDetailClient) goToProgrammeBuilder(currentDetailClient.id)">Edit Programme</button>
-          <button class="btn btn-sm" style="background:none;border:1px solid var(--danger);color:var(--danger);font-size:11px;" onclick="removeClient()">Remove Client</button>
+          <button class="btn btn-sm" style="background:none;border:1px solid var(--danger);color:var(--danger);font-size:11px;" onclick="removeClient()">Remove Athlete</button>
         </div>
       </div>
       <div class="detail-tabs">
@@ -2435,6 +2436,7 @@
         <div class="detail-tab" onclick="showDetailTab('detailProgramme')">Programme</div>
         <div class="detail-tab" onclick="showDetailTab('detailWellbeing')">Wellbeing</div>
         <div class="detail-tab" onclick="showDetailTab('detailCheckins')">Check-Ins</div>
+        <div class="detail-tab" onclick="showDetailTab('detailCoaching')">Coaching</div>
         <div class="detail-tab" onclick="showDetailTab('detailNotes')">Notes</div>
         <div class="detail-tab" onclick="showDetailTab('detailOnboarding')">Onboarding</div>
         <div class="detail-tab" onclick="showDetailTab('detailFoodDiary')">Food Diary</div>
@@ -2450,6 +2452,7 @@
           <div class="card card-sage"><h3>Body Weight Trend</h3><div class="chart-container"><canvas id="detailWeightChart"></canvas></div></div>
         </div>
       </div>
+      <div class="tab-content" id="detailCoaching"><div id="coachingSettingsBody"></div></div>
       <div class="tab-content" id="detailProgress">
         <!-- PT Progress sub-tabs -->
         <div class="prog-sub-tabs" id="dtProgSubTabs" style="margin-bottom:16px;">
@@ -3627,8 +3630,8 @@ function scheduleSave() {
 function buildSidebars() {
   // Client sidebar
   document.getElementById('clientSidebar').innerHTML = `
-    <div class="sidebar-logo"><div class="mark">AH</div><div><div class="wordmark">AH Performance</div><div class="tag">Client Portal</div></div></div>
-    <div class="sidebar-user"><div class="user-name" id="clientName"></div><div class="user-role">Client</div></div>
+    <div class="sidebar-logo"><div class="mark">AH</div><div><div class="wordmark">AH Performance</div><div class="tag">Athlete Portal</div></div></div>
+    <div class="sidebar-user"><div class="user-name" id="clientName"></div><div class="user-role">Athlete</div></div>
     <div class="sidebar-section">Menu</div>
     <div class="nav-item active" onclick="showClientPage('clientDash')"><span class="nav-ic">${ic('dashboard','currentColor')}</span><span>Dashboard</span></div>
     <div class="nav-item" onclick="showClientPage('clientProgramme')"><span class="nav-ic">${ic('programme','currentColor')}</span><span>My Programme</span></div>
@@ -3648,7 +3651,7 @@ function buildSidebars() {
     <div class="sidebar-user"><div class="user-name">Adam Heayberd</div><div class="user-role">Head Coach</div></div>
     <div class="sidebar-section">Dashboard</div>
     <div class="nav-item active" onclick="showPTPage('ptDash')"><span class="nav-ic">${ic('dashboard','currentColor')}</span><span>Overview</span></div>
-    <div class="nav-item" onclick="showPTPage('ptClients')"><span class="nav-ic">${ic('clients','currentColor')}</span><span>Clients</span></div>
+    <div class="nav-item" onclick="showPTPage('ptClients')"><span class="nav-ic">${ic('clients','currentColor')}</span><span>Athletes</span></div>
     <div class="nav-item" onclick="showPTPage('ptMessages')"><span class="nav-ic">${ic('messages','currentColor')}</span><span>Messages</span><span class="badge hidden" id="ptMsgSidebarBadge"></span></div>
     <div class="sidebar-section">Tools</div>
     <div class="nav-item" onclick="showPTPage('ptProgrammes')"><span class="nav-ic">${ic('programme','currentColor')}</span><span>Programmes</span></div>
@@ -7597,8 +7600,8 @@ function initPTApp() {
   const unreadNotifs = PT_NOTIFICATIONS.filter(n => !n.read).length;
   const unreadMsgs = PT_CONVERSATIONS.filter(c => c.unread).length;
   document.getElementById('ptKPIs').innerHTML = `
-    <div class="kpi" style="border-top:3px solid var(--ember);"><div class="kpi-label">Active Clients</div><div class="kpi-value text-ember">${activeClients.length}</div><div class="kpi-sub">${CLIENTS.length} total</div></div>
-    <div class="kpi" style="border-top:3px solid var(--ocean);"><div class="kpi-label">Sessions Logged</div><div class="kpi-value text-ocean">${totalSessions}</div><div class="kpi-sub">All clients</div></div>
+    <div class="kpi" style="border-top:3px solid var(--ember);"><div class="kpi-label">Active Athletes</div><div class="kpi-value text-ember">${activeClients.length}</div><div class="kpi-sub">${CLIENTS.length} total</div></div>
+    <div class="kpi" style="border-top:3px solid var(--ocean);"><div class="kpi-label">Sessions Logged</div><div class="kpi-value text-ocean">${totalSessions}</div><div class="kpi-sub">All athletes</div></div>
     <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Unread Messages</div><div class="kpi-value text-sage">${unreadMsgs}</div><div class="kpi-sub">${PT_CONVERSATIONS.length} conversations</div></div>
     <div class="kpi"><div class="kpi-label">Notifications</div><div class="kpi-value text-warning">${unreadNotifs}</div><div class="kpi-sub">unread</div></div>`;
 
@@ -7609,9 +7612,11 @@ function initPTApp() {
     const c = CLIENTS.find(cl => cl.id === w.clientId);
     if (c) alerts.push({msg: `${c.name} — wellbeing flagged ${w.stress.toLowerCase()} stress`, sub: w.date, colour: 'var(--danger)', btn: 'Reviewed', action: `reviewWellbeingAlert(${c.id},'${w.timestamp}')`});
   });
-  // Clients without a programme assigned
-  CLIENTS.filter(c => c.status !== 'inactive' && !c.programme).forEach(c => {
-    alerts.push({msg: `${c.name} — no programme assigned`, sub: 'Needs programme', colour: 'var(--ocean)', btn: 'Plan', page: 'ptProgrammes'});
+  // Clients without a programme assigned — ONLY where a programme is
+  // actually expected for that athlete (Coaching Plan / overrides decide).
+  CLIENTS.filter(c => c.status !== 'inactive' && !c.programme
+      && coachingGeneratesAlerts(c) && coachingExpects(c, 'programme')).forEach(c => {
+    alerts.push({msg: `${c.name} — programme not yet assigned`, sub: 'Assign when ready', colour: 'var(--ocean)', btn: 'Plan', page: 'ptProgrammes'});
   });
   // Unread check-in notifications
   PT_NOTIFICATIONS.filter(n => !n.read && n.type === 'checkin').slice(0, 2).forEach(n => {
@@ -7639,43 +7644,73 @@ function renderDashClientList() {
   CLIENTS.filter(c=>c.status!=='inactive').slice(0,5).forEach(c => el.innerHTML += buildClientRow(c));
 }
 
+let _clientChipFilter = 'all';
+function setClientChipFilter(v) { _clientChipFilter = v; renderClientList(); }
+
+function renderClientChips() {
+  const el = document.getElementById('ptClientChips');
+  if (!el) return;
+  // Plans + attention states are fixed; tag chips appear for tags in use
+  const tagsInUse = [...new Set(CLIENTS.flatMap(c => getCoaching(c).tags))].sort().slice(0, 10);
+  const chips = [
+    ['all', 'All Athletes'],
+    ['plan:foundation', 'Foundation'], ['plan:progression', 'Progression'], ['plan:performance', 'Performance'],
+    ...tagsInUse.map(t => ['tag:' + t, t]),
+    ['attention', 'Needs Attention'], ['clear', 'No Action Required']
+  ];
+  el.innerHTML = chips.map(([v, label]) =>
+    `<span class="status-pill ${_clientChipFilter === v ? 'status-active' : 'status-inactive'}" style="cursor:pointer;" onclick="setClientChipFilter('${v.replace(/'/g, "\\'")}')">${label}</span>`
+  ).join('');
+}
+
 function renderClientList() {
   const el = document.getElementById('ptClientList');
   const search = (document.getElementById('ptClientSearch').value||'').toLowerCase();
   const filter = document.getElementById('ptClientFilter').value;
+  renderClientChips();
+  const chip = _clientChipFilter;
+  let attentionIds = null;
+  if (chip === 'attention' || chip === 'clear') {
+    attentionIds = new Set(computeAttentionAlerts().map(a => a.clientId));
+  }
   el.innerHTML = '';
   CLIENTS.filter(c => {
     if (search && !c.name.toLowerCase().includes(search)) return false;
     if (filter && c.status !== filter) return false;
+    if (chip === 'all') return true;
+    if (chip.startsWith('plan:')) return getCoaching(c).plan === chip.slice(5);
+    if (chip.startsWith('tag:')) return getCoaching(c).tags.includes(chip.slice(4));
+    if (chip === 'attention') return attentionIds.has(c.id);
+    if (chip === 'clear') return !attentionIds.has(c.id);
     return true;
   }).forEach(c => el.innerHTML += buildClientRow(c));
   renderAttentionList();
 }
 function filterClients() { renderClientList(); }
 
-function renderAttentionList() {
-  const el = document.getElementById('ptAttentionList');
-  if (!el || !CLIENTS.length) { if (el) el.innerHTML = ''; return; }
+function computeAttentionAlerts() {
   const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
   const alerts = [];
-  CLIENTS.filter(c => c.status === 'active' || c.status === 'new').forEach(c => {
+  if (!CLIENTS.length) return alerts;
+  // Context-aware: an athlete only generates alerts if their status allows it,
+  // and each alert type only fires when that behaviour is EXPECTED of them.
+  CLIENTS.filter(c => (c.status === 'active' || c.status === 'new') && coachingGeneratesAlerts(c)).forEach(c => {
     const workouts = WORKOUT_LOG[c.id] || [];
     const pd = PROGRESS_DATA[c.id];
-    // 1. No training in 3+ days
-    if (workouts.length) {
+    // 1. No training in 3+ days — only if workout logging is expected
+    if (workouts.length && coachingExpects(c, 'workoutLogging')) {
       const lastDate = workouts.reduce((latest, w) => (w.date||'') > latest ? (w.date||'') : latest, '');
       if (lastDate) {
         const diffDays = Math.floor((today - new Date(lastDate + 'T00:00')) / 86400000);
         if (diffDays >= 3) {
-          alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'inactive', icon: '🏋️', msg: `No training for ${diffDays} days`, priority: diffDays >= 7 ? 3 : 2 });
+          alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'inactive', icon: '🏋️', msg: `No training logged for ${diffDays} days — check in with them`, priority: diffDays >= 7 ? 3 : 2 });
         }
       }
-    } else if (c.status === 'active') {
-      alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'inactive', icon: '🏋️', msg: 'No workouts logged yet', priority: 1 });
+    } else if (!workouts.length && c.status === 'active' && coachingExpects(c, 'workoutLogging')) {
+      alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'inactive', icon: '🏋️', msg: 'No sessions logged yet — worth a welcome nudge', priority: 1 });
     }
-    // 2. Missed check-in (due date has passed)
-    if (c.nextCheckin) {
+    // 2. Missed check-in — only if check-ins are expected of this athlete
+    if (c.nextCheckin && coachingExpects(c, 'checkin')) {
       const daysOfWeek = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
       const checkinDayIdx = daysOfWeek.indexOf(c.nextCheckin);
       if (checkinDayIdx >= 0) {
@@ -7688,13 +7723,13 @@ function renderAttentionList() {
         const thisWeekStr = thisWeekStart.toISOString().split('T')[0];
         const hasCheckinThisWeek = logs.some(l => l.date >= thisWeekStr);
         if (!hasCheckinThisWeek && todayDayIdx > checkinDayIdx) {
-          alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'checkin', icon: '📋', msg: `Missed ${c.nextCheckin} check-in`, priority: 2 });
+          alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'checkin', icon: '📋', msg: `Check-in overdue (due ${c.nextCheckin})`, priority: 2 });
         }
       }
     }
-    // 3. Low compliance
-    if (typeof c.compliance === 'number' && c.compliance < 60) {
-      alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'compliance', icon: '📉', msg: `Compliance at ${c.compliance}%`, priority: c.compliance < 40 ? 3 : 2 });
+    // 3. Low compliance — meaningless unless a programme is expected
+    if (typeof c.compliance === 'number' && c.compliance < 60 && coachingExpects(c, 'programme')) {
+      alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'compliance', icon: '📉', msg: `Programme adherence at ${c.compliance}% — may need a conversation`, priority: c.compliance < 40 ? 3 : 2 });
     }
     // 4. Tough/couldn't finish recent workout
     if (workouts.length && workouts[0].feedback) {
@@ -7708,6 +7743,13 @@ function renderAttentionList() {
   });
   // Sort by priority (highest first)
   alerts.sort((a,b) => b.priority - a.priority);
+  return alerts;
+}
+
+function renderAttentionList() {
+  const el = document.getElementById('ptAttentionList');
+  if (!el) return;
+  const alerts = computeAttentionAlerts();
   if (!alerts.length) {
     el.innerHTML = '';
     return;
@@ -7717,7 +7759,7 @@ function renderAttentionList() {
     <div style="background:var(--slate-card);border:1px solid var(--slate-border);border-radius:12px;padding:14px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
         <span style="font-size:14px;">⚠️</span>
-        <h3 style="margin:0;font-size:14px;color:var(--text-bright);">Needs Attention</h3>
+        <h3 style="margin:0;font-size:14px;color:var(--text-bright);">Requires Coach Attention</h3>
         <span style="font-size:11px;color:var(--text-muted);margin-left:auto;">${alerts.length} alert${alerts.length>1?'s':''}</span>
       </div>
       ${alerts.map(a => `
@@ -7738,13 +7780,203 @@ function buildClientRow(c) {
   const sl = {active:'Active',new:'New',attention:'Attention',inactive:'Inactive'};
   return `<div class="client-row" onclick="openClientDetail(${c.id})">
     <div class="client-avatar" style="background:${c.bg};color:${c.colour};">${c.initials}</div>
-    <div><div class="client-name">${c.name}</div><div class="client-programme">${c.programme}</div></div>
+    <div><div class="client-name">${c.name}</div><div class="client-programme">${c.programme === 'No programme' || !c.programme ? 'Programme not yet assigned' : c.programme} · <span style="color:var(--ocean);">${COACHING_PLAN_LABELS[getCoaching(c).plan]}</span></div></div>
     <span class="status-pill ${sm[c.status]}">${sl[c.status]}</span>
     <div class="client-meta">${c.lastActivity}</div>
     <div class="client-meta">${c.nextCheckin}</div>
     <div class="client-compliance" style="color:${c.compliance>=85?'var(--sage-text)':c.compliance>=70?'var(--warning)':'var(--danger)'};">${c.compliance}%</div>
     <div class="client-actions"><div class="action-btn" onclick="event.stopPropagation();showPTPage('ptMessages');">${ic('messages','currentColor',14)}</div><div class="action-btn" onclick="event.stopPropagation();openClientDetail(${c.id});">${ic('eye','currentColor',14)}</div></div>
   </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  COACHING PLANS — behavioural layer (Version 1 refinement)
+//  ADDITIVE ONLY: all settings live in one namespaced object
+//  (client.coaching). Nothing here reads/writes any legacy field.
+//  Defaults are computed on READ — existing athletes need no
+//  migration and their records are never modified until the coach
+//  explicitly saves a setting.
+// ═══════════════════════════════════════════════════════════════
+const COACHING_PLAN_LABELS = { foundation: 'Foundation', progression: 'Progression', performance: 'Performance' };
+const COACHING_EXPECTATION_KEYS = [
+  ['programme',      'Programme'],
+  ['checkin',        'Weekly check-in'],
+  ['workoutLogging', 'Workout logging'],
+  ['wearable',       'Wearable data'],
+  ['nutrition',      'Nutrition tracking'],
+  ['photos',         'Progress photos'],
+  ['wellbeing',      'Wellbeing check-ins']
+];
+const COACHING_PLAN_DEFAULT_EXPECTATIONS = {
+  foundation:  { programme:false, checkin:false, workoutLogging:false, wearable:false, nutrition:false, photos:false, wellbeing:false },
+  progression: { programme:true,  checkin:true,  workoutLogging:true,  wearable:true,  nutrition:false, photos:false, wellbeing:true },
+  performance: { programme:true,  checkin:true,  workoutLogging:true,  wearable:true,  nutrition:true,  photos:true,  wellbeing:true }
+};
+const COACHING_STATUSES = ['Lead','Onboarding','Active','Paused','Completed','Inactive'];
+const COACHING_PROGRAMME_TYPES = ['None','Guidance','Structured','Personalised'];
+const COACHING_WEARABLES = ['None','Garmin','WHOOP','Apple','Polar','COROS','Suunto','Other'];
+const COACHING_CONFIDENCE = ['Low','Medium','High'];
+const COACHING_RELATIONSHIPS = ['Community Athlete','Running Athlete','HYROX Athlete','Personal Training Client','Online Client','Performance Athlete'];
+const COACHING_SUGGESTED_TAGS = ['HYROX','Running','Strength','Weight Loss','Online','Community','PT','Rehab','Junior','Masters'];
+
+// Infer a sensible plan for athletes configured before Coaching Plans existed:
+// anyone following a programme behaves like Progression; everyone else Foundation.
+function _inferCoachingPlan(c) {
+  return (c && c.programme && c.programme !== 'No programme') ? 'progression' : 'foundation';
+}
+
+// EFFECTIVE coaching settings — single source of truth all modules consult.
+// Never mutates the client record.
+function getCoaching(c) {
+  const stored = (c && c.coaching) || {};
+  const plan = COACHING_PLAN_LABELS[stored.plan] ? stored.plan : _inferCoachingPlan(c);
+  const legacyStatus = c && c.status;
+  return {
+    plan: plan,
+    programmeType: stored.programmeType || (plan === 'foundation' ? 'None' : 'Structured'),
+    wearable: stored.wearable || 'None',
+    dataConfidence: stored.dataConfidence || 'Medium',
+    relationship: stored.relationship || 'Personal Training Client',
+    status: stored.status || (legacyStatus === 'new' ? 'Onboarding' : legacyStatus === 'inactive' ? 'Inactive' : 'Active'),
+    tags: Array.isArray(stored.tags) ? stored.tags : [],
+    // Plan establishes DEFAULTS; stored.expectations holds only the coach's
+    // explicit OVERRIDES. Effective behaviour = defaults + overrides.
+    expectations: Object.assign({}, COACHING_PLAN_DEFAULT_EXPECTATIONS[plan], stored.expectations || {}),
+    expectationOverrides: Object.assign({}, stored.expectations || {})
+  };
+}
+
+// "Is this expected for this athlete?" — the question every reminder asks.
+function coachingExpects(c, key) { return !!getCoaching(c).expectations[key]; }
+
+// Should this athlete generate attention items at all?
+function coachingGeneratesAlerts(c) {
+  const s = getCoaching(c).status;
+  return s === 'Active' || s === 'Onboarding';
+}
+
+function renderCoachingSettings() {
+  const el = document.getElementById('coachingSettingsBody');
+  if (!el || !currentDetailClient) return;
+  const c = currentDetailClient;
+  const cs = getCoaching(c);
+  const sel = (id, options, current, labels) => `<select id="${id}" onchange="saveCoachingSettings()" style="width:100%;padding:8px 10px;font-size:12px;">${options.map(o => `<option value="${o}" ${o===current?'selected':''}>${labels?labels[o]:o}</option>`).join('')}</select>`;
+  const field = (label, control, hint) => `<div style="margin-bottom:14px;"><label style="display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;letter-spacing:0.4px;text-transform:uppercase;">${label}</label>${control}${hint?`<div style=\"font-size:11px;color:var(--text-muted);margin-top:4px;\">${hint}</div>`:''}</div>`;
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div class="card card-ember">
+        <h3>Service Level</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">The level of coaching service this athlete has chosen — not a measure of ability. Drives which reminders and workflows are active.</p>
+        ${field('Service Level', sel('csPlan', ['foundation','progression','performance'], cs.plan, COACHING_PLAN_LABELS), cs.plan==='foundation' ? 'General guidance — no programme, check-in or data expectations.' : cs.plan==='progression' ? 'Structured coaching — programme, check-ins and logging expected.' : 'Maximum performance — all coaching modules active.')}
+        ${field('Programme Type', sel('csProgType', COACHING_PROGRAMME_TYPES, cs.programmeType))}
+        ${field('Wearable', sel('csWearable', COACHING_WEARABLES, cs.wearable))}
+        ${field('Data Confidence', sel('csConfidence', COACHING_CONFIDENCE, cs.dataConfidence))}
+        ${field('Coach Relationship', sel('csRelationship', COACHING_RELATIONSHIPS, cs.relationship))}
+        ${field('Athlete Status', sel('csStatus', COACHING_STATUSES, cs.status), 'Paused, Completed, Lead and Inactive athletes never generate reminders.')}
+      </div>
+      <div>
+        <div class="card card-ocean" style="margin-bottom:20px;">
+          <h3>Athlete Expectations</h3>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">What is expected from this athlete. The Service Level sets sensible defaults — override anything individually.</p>
+          <div id="csExpectations">
+            ${COACHING_EXPECTATION_KEYS.map(([k, label]) => `
+              <label style="display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13px;cursor:pointer;border-bottom:1px solid var(--slate-border);">
+                <input type="checkbox" id="csExp_${k}" ${cs.expectations[k]?'checked':''} onchange="saveCoachingSettings()" style="accent-color:var(--ember);width:15px;height:15px;">
+                <span style="flex:1;">${label}</span>
+                ${k in cs.expectationOverrides ? '<span style="font-size:10px;color:var(--ember);letter-spacing:0.5px;">OVERRIDE</span>' : '<span style="font-size:10px;color:var(--text-muted);">service default</span>'}
+              </label>`).join('')}
+          </div>
+          <button class="btn btn-sm btn-secondary" style="margin-top:12px;" onclick="resetExpectationsToPlan()">Reset to Service Level defaults</button>
+        </div>
+        <div class="card card-sage">
+          <h3>Athlete Tags</h3>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Flexible labels for filtering. An athlete can have any number.</p>
+          <div id="csTagList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+            ${cs.tags.length ? cs.tags.map(t => `<span class="status-pill status-new" style="cursor:pointer;" title="Click to remove" onclick="removeCoachingTag('${t.replace(/'/g,"\\'")}')">${t} ✕</span>`).join('') : '<span style="font-size:12px;color:var(--text-muted);">No tags yet</span>'}
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            ${COACHING_SUGGESTED_TAGS.filter(t => !cs.tags.includes(t)).map(t => `<span class="status-pill status-inactive" style="cursor:pointer;" title="Click to add" onclick="addCoachingTag('${t}')">+ ${t}</span>`).join('')}
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <input id="csCustomTag" placeholder="Custom tag" style="flex:1;padding:8px 10px;font-size:12px;" onkeydown="if(event.key==='Enter')addCoachingTag(document.getElementById('csCustomTag').value)">
+            <button class="btn btn-sm btn-secondary" onclick="addCoachingTag(document.getElementById('csCustomTag').value)">Add</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function _ensureCoachingStored(c) {
+  // First explicit save. Expectations start as an EMPTY override map so the
+  // plan keeps supplying defaults; only deliberate coach changes are stored.
+  if (!c.coaching) {
+    const eff = getCoaching(c);
+    c.coaching = {
+      plan: eff.plan, programmeType: eff.programmeType, wearable: eff.wearable,
+      dataConfidence: eff.dataConfidence, relationship: eff.relationship,
+      status: eff.status, tags: eff.tags.slice(), expectations: {}
+    };
+  }
+  return c.coaching;
+}
+
+function saveCoachingSettings() {
+  const c = currentDetailClient; if (!c) return;
+  const cs = _ensureCoachingStored(c);
+  const val = id => { const e = document.getElementById(id); return e ? e.value : null; };
+  const prevPlan = cs.plan;
+  if (val('csPlan') !== null) cs.plan = val('csPlan');
+  if (val('csProgType') !== null) cs.programmeType = val('csProgType');
+  if (val('csWearable') !== null) cs.wearable = val('csWearable');
+  if (val('csConfidence') !== null) cs.dataConfidence = val('csConfidence');
+  if (val('csRelationship') !== null) cs.relationship = val('csRelationship');
+  if (val('csStatus') !== null) cs.status = val('csStatus');
+  // Expectations are stored as OVERRIDES of the plan defaults only.
+  // Plan change: defaults shift underneath, deliberate overrides survive,
+  // and any override now matching the new default prunes itself away.
+  const defaults = COACHING_PLAN_DEFAULT_EXPECTATIONS[cs.plan];
+  const overrides = {};
+  COACHING_EXPECTATION_KEYS.forEach(([k]) => {
+    const e = document.getElementById('csExp_' + k);
+    let value;
+    if (cs.plan !== prevPlan) {
+      // Plan just changed: keep previously stored overrides, ignore checkboxes
+      value = (cs.expectations && k in cs.expectations) ? cs.expectations[k] : defaults[k];
+    } else {
+      value = e ? e.checked : defaults[k];
+    }
+    if (value !== defaults[k]) overrides[k] = value;
+  });
+  cs.expectations = overrides;
+  scheduleSave();
+  renderCoachingSettings();
+  if (typeof renderPTDashboard === 'function') try { renderPTDashboard(); } catch(e) {}
+}
+
+function resetExpectationsToPlan() {
+  const c = currentDetailClient; if (!c) return;
+  const cs = _ensureCoachingStored(c);
+  cs.expectations = {}; // no overrides — plan defaults apply in full
+  scheduleSave();
+  renderCoachingSettings();
+}
+
+function addCoachingTag(tag) {
+  const c = currentDetailClient; if (!c) return;
+  tag = (tag || '').trim(); if (!tag) return;
+  const cs = _ensureCoachingStored(c);
+  if (!Array.isArray(cs.tags)) cs.tags = [];
+  if (!cs.tags.includes(tag)) cs.tags.push(tag);
+  scheduleSave();
+  renderCoachingSettings();
+}
+
+function removeCoachingTag(tag) {
+  const c = currentDetailClient; if (!c) return;
+  const cs = _ensureCoachingStored(c);
+  cs.tags = (cs.tags || []).filter(t => t !== tag);
+  scheduleSave();
+  renderCoachingSettings();
 }
 
 function openClientDetail(id) {
@@ -7795,7 +8027,7 @@ function openClientDetail(id) {
   document.getElementById('detailAvatar').style.color = c.colour;
   document.getElementById('detailAvatar').textContent = c.initials;
   document.getElementById('detailName').textContent = c.name;
-  document.getElementById('detailMeta').textContent = `Joined ${c.joined} · Goal: ${c.goal} · Programme: ${c.programme} (Week ${c.week})`;
+  document.getElementById('detailMeta').textContent = `Joined ${c.joined} · Goal: ${c.goal} · Programme: ${c.programme === 'No programme' || !c.programme ? 'Not yet assigned' : c.programme} (Week ${c.week})`;
 
   // Prefer most recent check-in weight if available; fall back to weight timeline, then onboarding start weight
   const lastW = c.currentWeight || (c.weight && c.weight.length ? c.weight[c.weight.length-1] : null) || c.startWeight || '—';
@@ -8239,6 +8471,7 @@ function showDetailTab(tabId) {
   if (tab) tab.classList.add('active');
   if (tabId === 'detailProgress') setTimeout(() => { if (currentDetailClient) initDetailProgress(currentDetailClient.id); }, 50);
   if (tabId === 'detailProgramme') renderDetailProgramme();
+  if (tabId === 'detailCoaching') renderCoachingSettings();
   if (tabId === 'detailOnboarding') renderDetailOnboarding();
   if (tabId === 'detailFoodDiary') renderPTFoodDiary();
   if (tabId === 'detailNeuro') ntRenderCoachView();
@@ -13954,7 +14187,7 @@ function showManualOnboardForm() {
   if (!container) return;
   container.innerHTML = `
     <div class="card" style="max-width:600px;margin:0 auto;">
-      <h3 style="margin-bottom:16px;">Add Client Manually</h3>
+      <h3 style="margin-bottom:16px;">Add Athlete Manually</h3>
       <div class="ob-row">
         <div class="ob-field"><label class="ob-field-label">First Name</label><input class="ob-input" id="obManFirst" placeholder="e.g. James"></div>
         <div class="ob-field"><label class="ob-field-label">Last Name</label><input class="ob-input" id="obManLast" placeholder="e.g. Wilson"></div>
@@ -13969,7 +14202,7 @@ function showManualOnboardForm() {
       </div>
       <div class="ob-field"><label class="ob-field-label">Notes</label><textarea class="ob-textarea" id="obManNotes" placeholder="Any relevant background..." style="min-height:70px;"></textarea></div>
       <div style="display:flex;gap:8px;margin-top:16px;">
-        <button class="btn btn-ember" onclick="completeManualOnboard()">Add Client</button>
+        <button class="btn btn-ember" onclick="completeManualOnboard()">Add Athlete</button>
         <button class="btn btn-secondary" onclick="renderPTOnboardingView()">Cancel</button>
       </div>
     </div>`;
