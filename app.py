@@ -711,6 +711,18 @@ def _client_scoped_save(incoming, cid, email):
             continue
         own_items = [x for x in inc_l if isinstance(x, dict) and str(x.get('clientId')) == cid_s]
         others = [x for x in (master.get(f) or []) if not (isinstance(x, dict) and str(x.get('clientId')) == cid_s)]
+        # PROGRAMME PROTECTION: a stale athlete device must never drop the
+        # coach's programme records for this client. Records with builderData
+        # missing from the incoming slice are preserved (programmes are never
+        # deleted in-app, so absence always means staleness).
+        if f == 'ptProgrammes':
+            cur_own = [x for x in (master.get(f) or [])
+                       if isinstance(x, dict) and str(x.get('clientId')) == cid_s]
+            inc_ids = {x.get('id') for x in own_items}
+            preserved = [x for x in cur_own if x.get('builderData') and x.get('id') not in inc_ids]
+            if preserved:
+                print(f'  SCOPED MERGE: preserved {len(preserved)} ptProgrammes record(s) for client {cid_s} missing from incoming save')
+            own_items = own_items + preserved
         master[f] = others + own_items
 
     # 5. Own conversation thread — merged per-message so a stale copy from
@@ -855,6 +867,23 @@ def save_state():
                 _state_cache.get('ptConversations'),
                 data.get('ptConversations'),
                 deleted_client_ids=data.get('_deletedClientIds'))
+
+        # ── PROGRAMME PROTECTION: never let a stale device's ptProgrammes list
+        # silently drop programme records the server already holds. Programmes
+        # are never deleted in-app, so a record with builderData that is missing
+        # from an incoming save means the device had a stale copy — keep it.
+        if _state_cache and isinstance(_state_cache, dict) and isinstance(data, dict):
+            cur_pp = _state_cache.get('ptProgrammes')
+            if isinstance(cur_pp, list) and cur_pp:
+                inc_pp = data.get('ptProgrammes')
+                if not isinstance(inc_pp, list):
+                    inc_pp = []
+                inc_ids = {p.get('id') for p in inc_pp if isinstance(p, dict)}
+                preserved = [p for p in cur_pp
+                             if isinstance(p, dict) and p.get('builderData') and p.get('id') not in inc_ids]
+                if preserved:
+                    print(f'  MERGE: preserved {len(preserved)} ptProgrammes record(s) missing from incoming save')
+                data['ptProgrammes'] = inc_pp + preserved
 
         # ── PASSWORD PRESERVATION: browsers never receive hashes, so re-attach
         # them here. A plaintext 'password' field (new account / password change)

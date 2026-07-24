@@ -3379,13 +3379,24 @@ function _applyState(state, _source) {
     }
   }
   if (state.ptProgrammes && typeof PT_PROGRAMMES !== 'undefined') {
-    // Don't replace programmes that have weeks with empty ones
-    const incomingHasData = state.ptProgrammes.some(p => p.weeks && Object.keys(p.weeks).length > 0);
-    const currentHasData = PT_PROGRAMMES.some(p => p.weeks && Object.keys(p.weeks).length > 0);
+    // Don't replace programmes that have data with empty ones.
+    // BUGFIX: records store their programme under `builderData` — the old check
+    // looked for a `weeks` field that never exists on these records, so this
+    // guard never fired and an empty/stale list could silently wipe real data.
+    const _ppHasData = p => !!(p && ((p.builderData && p.builderData.days && p.builderData.days.length) || (p.weeks && Object.keys(p.weeks).length)));
+    const incomingHasData = state.ptProgrammes.some(_ppHasData);
+    const currentHasData = PT_PROGRAMMES.some(_ppHasData);
     if (incomingHasData || !currentHasData) {
-      PT_PROGRAMMES.length = 0; state.ptProgrammes.forEach(p => PT_PROGRAMMES.push(p));
+      // Merge-preserve: programmes are never deleted in-app, so a record
+      // missing from the incoming state means the snapshot is stale — keep it.
+      const incomingIds = new Set(state.ptProgrammes.map(p => p && p.id));
+      const preserved = PT_PROGRAMMES.filter(p => _ppHasData(p) && !incomingIds.has(p.id));
+      if (preserved.length > 0) console.warn('AH Performance: preserved ' + preserved.length + ' programme record(s) missing from incoming state (source: ' + (_source||'unknown') + ')');
+      PT_PROGRAMMES.length = 0;
+      state.ptProgrammes.forEach(p => PT_PROGRAMMES.push(p));
+      preserved.forEach(p => PT_PROGRAMMES.push(p));
     } else {
-      console.warn('AH Performance: BLOCKED ptProgrammes overwrite — incoming has no week data (source: ' + (_source||'unknown') + ')');
+      console.warn('AH Performance: BLOCKED ptProgrammes overwrite — incoming has no programme data, current has ' + PT_PROGRAMMES.filter(_ppHasData).length + ' record(s) with data (source: ' + (_source||'unknown') + ')');
     }
   }
   if (state.cycleLog) { _mergeLogDict(CYCLE_LOG, state.cycleLog, 'cycleLog', _source); }
@@ -13299,7 +13310,17 @@ window.addEventListener('message', function(e) {
   if (e.data.type === 'ah-request-client-programme') {
     const cid = e.data.clientId;
     const clientProgs = PT_PROGRAMMES.filter(p => p.clientId === cid).sort((a,b) => (b.id || 0) - (a.id || 0));
-    const activeProg = clientProgs.find(p => p.status === 'active') || clientProgs[0];
+    // Prefer records that actually carry builder data — an active record with
+    // missing builderData must not mask an older record that still has it.
+    const activeProg = clientProgs.find(p => p.status === 'active' && p.builderData)
+      || clientProgs.find(p => p.builderData)
+      || clientProgs.find(p => p.status === 'active')
+      || clientProgs[0];
+    // Defensive check: never fail silently if a programme record exists but
+    // its builder data is missing (e.g. wiped by a stale sync).
+    if (activeProg && !activeProg.builderData) {
+      alert('Programme record "' + (activeProg.name || 'Untitled') + '" exists for this client but its builder data is missing.\n\nThe athlete\'s copy of the programme is unaffected. Check server backups to restore the coach copy — do not assign a new programme over it.');
+    }
     const iframe = document.querySelector('#ptProgrammes iframe');
     if (iframe && iframe.contentWindow) {
       iframe.contentWindow.postMessage({
@@ -13531,9 +13552,13 @@ function goToProgrammeBuilder(clientId) {
       }, '*');
       // Pre-select the client and load their programme after a short delay
       setTimeout(() => {
-        // Find the latest active programme for this client
+        // Find the latest active programme for this client — prefer records
+        // that actually carry builder data (same rule as ah-request-client-programme)
         const clientProgs = PT_PROGRAMMES.filter(p => p.clientId === clientId).sort((a,b) => (b.id || 0) - (a.id || 0));
-        const activeProg = clientProgs.find(p => p.status === 'active') || clientProgs[0];
+        const activeProg = clientProgs.find(p => p.status === 'active' && p.builderData)
+          || clientProgs.find(p => p.builderData)
+          || clientProgs.find(p => p.status === 'active')
+          || clientProgs[0];
         iframe.contentWindow.postMessage({
           type: 'ah-select-client',
           clientId: clientId,
