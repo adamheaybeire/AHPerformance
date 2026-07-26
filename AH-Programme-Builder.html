@@ -168,7 +168,7 @@ body { font-family: var(--font-body); background: var(--base); color: var(--text
 
 <div class="header">
   <div class="header-left">
-    <div class="logo">AH<span style="font-weight:400;color:var(--text-primary)"> Performance</span><span> Programme Builder</span></div>
+    <div class="logo"><span class="app-brand">AH<span style="font-weight:400;color:var(--text-primary)"> Performance</span> </span><span>Programme Builder</span></div>
   </div>
   <div class="header-actions">
     <button class="btn btn-secondary" onclick="showTemplates()">Load Template</button>
@@ -1266,6 +1266,10 @@ if (isEmbedded) {
   document.getElementById('copyPrevBtn').style.display = '';
   document.getElementById('clientSelect').style.display = '';
   document.getElementById('clientName').style.display = 'none';
+  // When embedded in the AH Performance app, drop the duplicate "AH Performance"
+  // branding so this reads as a section, not a separate application. The section
+  // title ("Programme Builder") remains. Standalone use is unaffected.
+  document.querySelectorAll('.app-brand').forEach(e => e.style.display = 'none');
   // Request client list from parent
   window.parent.postMessage({ type: 'ah-request-clients' }, '*');
 }

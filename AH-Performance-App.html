@@ -2732,7 +2732,7 @@
         <div class="kpi" style="border-top:3px solid var(--ocean);"><div class="kpi-label">Monthly Revenue</div><div class="kpi-value text-ocean">£2,400</div><div class="kpi-sub">8 active × £300</div></div>
         <div class="kpi"><div class="kpi-label">Avg Duration</div><div class="kpi-value">5.2<span style="font-size:12px;color:var(--text-dim);">mo</span></div><div class="kpi-sub">▲ from 4.1 last quarter</div></div>
       </div>
-      <div class="card card-sage"><h3>Compliance Trend</h3><div class="chart-container"><canvas id="ptComplianceChart"></canvas></div></div>
+      <div class="card card-sage"><h3>Compliance by Athlete</h3><div class="chart-container"><canvas id="ptComplianceChart"></canvas></div></div>
     </div>
 
     <!-- PT: Onboarding -->
@@ -7384,7 +7384,9 @@ function reviewWellbeingAlert(clientId, timestamp) {
     WELLBEING_DATA.filter(w => w.clientId === clientId && w.date === entryDate && (w.stress === 'Very High' || w.stress === 'High')).forEach(w => w.coachReviewed = true);
   }
   scheduleSave();
-  renderPTDashboard();
+  // Refresh whichever attention view is on screen (single source of truth).
+  if (typeof renderDashAttention === 'function') renderDashAttention();
+  if (typeof renderAttentionList === 'function') renderAttentionList();
 }
 
 function renderWellbeingHistory() {
@@ -7630,26 +7632,10 @@ function initPTApp() {
     <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Unread Messages</div><div class="kpi-value text-sage">${unreadMsgs}</div><div class="kpi-sub">${PT_CONVERSATIONS.length} conversations</div></div>
     <div class="kpi"><div class="kpi-label">Notifications</div><div class="kpi-value text-warning">${unreadNotifs}</div><div class="kpi-sub">unread</div></div>`;
 
-  // Dynamic "Needs Your Attention" — check for high stress wellbeing, unread check-ins, clients without programmes
-  const alerts = [];
-  // Clients with high stress wellbeing in last 7 days (not yet reviewed by coach)
-  WELLBEING_DATA.filter(w => (w.stress === 'Very High' || w.stress === 'High') && !w.coachReviewed).slice(0, 2).forEach((w, idx) => {
-    const c = CLIENTS.find(cl => cl.id === w.clientId);
-    if (c) alerts.push({msg: `${c.name} — wellbeing flagged ${w.stress.toLowerCase()} stress`, sub: w.date, colour: 'var(--danger)', btn: 'Reviewed', action: `reviewWellbeingAlert(${c.id},'${w.timestamp}')`});
-  });
-  // Clients without a programme assigned — ONLY where a programme is
-  // actually expected for that athlete (Coaching Plan / overrides decide).
-  CLIENTS.filter(c => c.status !== 'inactive' && !c.programme
-      && coachingGeneratesAlerts(c) && coachingExpects(c, 'programme')).forEach(c => {
-    alerts.push({msg: `${c.name} — programme not yet assigned`, sub: 'Assign when ready', colour: 'var(--ocean)', btn: 'Plan', page: 'ptProgrammes'});
-  });
-  // Unread check-in notifications
-  PT_NOTIFICATIONS.filter(n => !n.read && n.type === 'checkin').slice(0, 2).forEach(n => {
-    alerts.push({msg: `${n.client} — ${n.message}`, sub: n.time, colour: 'var(--warning)', btn: 'View', page: 'ptClients'});
-  });
-  document.getElementById('ptAlerts').innerHTML = alerts.length ? alerts.map((a, i) =>
-    `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;${i < alerts.length-1 ? 'border-bottom:1px solid var(--slate-border);':''}"><div style="width:8px;height:8px;border-radius:50%;background:${a.colour};flex-shrink:0;"></div><div style="flex:1;"><div style="font-size:13px;">${a.msg}</div><div style="font-size:11px;color:var(--text-dim);">${a.sub}</div></div><button class="btn btn-sm btn-secondary" onclick="${a.action || "showPTPage('" + a.page + "')"}">${a.btn}</button></div>`
-  ).join('') : '<p style="color:var(--text-dim);font-size:13px;padding:12px 0;">All clear — no urgent items right now.</p>';
+  // "Requires Coach Attention" — rendered from the single shared source of
+  // truth (computeAttentionAlerts) so the Dashboard and Athletes page can
+  // never disagree. See renderDashAttention().
+  renderDashAttention();
 
   // Dynamic "Recent Activity" — from PT_NOTIFICATIONS (most recent 5)
   const recentActivity = PT_NOTIFICATIONS.slice(0, 5);
@@ -7765,11 +7751,31 @@ function computeAttentionAlerts() {
         alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'feedback', icon: '😌', msg: `Found last session too easy (${workouts[0].sessionName})`, priority: 1 });
       }
     }
+    // 5. Programme not yet assigned — only where a programme is expected.
+    //    (Consolidated from the old Dashboard-only rule so both views match.)
+    if (!c.programme && coachingExpects(c, 'programme')) {
+      alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'programme', icon: '📝', msg: 'Programme not yet assigned', priority: 1 });
+    }
   });
+  // 6. Wellbeing flagged high stress and not yet reviewed by the coach.
+  //    (Consolidated from the old Dashboard-only rule. Carries an optional
+  //    action button so the "Reviewed" dismiss works identically on both views.)
+  WELLBEING_DATA.filter(w => (w.stress === 'Very High' || w.stress === 'High') && !w.coachReviewed).forEach(w => {
+    const c = CLIENTS.find(cl => cl.id === w.clientId);
+    if (!c || !coachingGeneratesAlerts(c)) return;
+    alerts.push({ clientId: c.id, name: c.name, initials: c.initials, bg: c.bg, colour: c.colour, type: 'wellbeing', icon: '😰', msg: `Wellbeing flagged ${w.stress.toLowerCase()} stress`, priority: 3, btn: 'Reviewed', action: `reviewWellbeingAlert(${c.id},'${w.timestamp}')` });
+  });
+  // Note: unread check-in *submissions* are intentionally NOT surfaced here.
+  // They are event notifications (already shown in the notification bell and the
+  // Recent Activity panel), not unresolved states needing intervention. The
+  // genuinely actionable check-in signal — an OVERDUE check-in — is rule 2 above.
   // Sort by priority (highest first)
   alerts.sort((a,b) => b.priority - a.priority);
   return alerts;
 }
+
+// Shared priority → colour mapping used by both attention views.
+function attentionPriorityColor(p) { return p >= 3 ? 'var(--danger)' : p >= 2 ? 'var(--warning)' : 'var(--ocean)'; }
 
 function renderAttentionList() {
   const el = document.getElementById('ptAttentionList');
@@ -7779,7 +7785,6 @@ function renderAttentionList() {
     el.innerHTML = '';
     return;
   }
-  const priorityColor = (p) => p >= 3 ? 'var(--danger)' : p >= 2 ? 'var(--warning)' : 'var(--ocean)';
   el.innerHTML = `
     <div style="background:var(--slate-card);border:1px solid var(--slate-border);border-radius:12px;padding:14px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
@@ -7794,10 +7799,31 @@ function renderAttentionList() {
             <div style="font-size:12px;font-weight:600;color:var(--text-bright);">${a.name}</div>
             <div style="font-size:11px;color:var(--text-muted);">${a.icon} ${a.msg}</div>
           </div>
-          <div style="width:6px;height:6px;border-radius:50%;background:${priorityColor(a.priority)};flex-shrink:0;"></div>
+          ${a.btn && a.action ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();${a.action}">${a.btn}</button>` : ''}
+          <div style="width:6px;height:6px;border-radius:50%;background:${attentionPriorityColor(a.priority)};flex-shrink:0;"></div>
         </div>
       `).join('')}
     </div>`;
+}
+
+// Dashboard "Requires Coach Attention" — same source of truth as the Athletes
+// page (computeAttentionAlerts). Rendered into the dashboard's #ptAlerts panel.
+function renderDashAttention() {
+  const el = document.getElementById('ptAlerts');
+  if (!el) return;
+  const alerts = computeAttentionAlerts();
+  el.innerHTML = alerts.length ? alerts.map((a, i) =>
+    `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;${i < alerts.length-1 ? 'border-bottom:1px solid var(--slate-border);':''}cursor:pointer;" onclick="openClientDetail(${a.clientId})"><div style="width:8px;height:8px;border-radius:50%;background:${attentionPriorityColor(a.priority)};flex-shrink:0;"></div><div style="flex:1;"><div style="font-size:13px;">${a.name}</div><div style="font-size:11px;color:var(--text-dim);">${a.icon} ${a.msg}</div></div><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();${a.action || 'openClientDetail(' + a.clientId + ')'}">${a.btn || 'View'}</button></div>`
+  ).join('') : '<p style="color:var(--text-dim);font-size:13px;padding:12px 0;">All clear — no urgent items right now.</p>';
+}
+
+// Single source of truth for adherence/compliance colour thresholds so the
+// same percentage always reads the same colour everywhere (roster, client tile).
+// >=85 green · >=70 amber · below red.
+function complianceColour(pct) {
+  const n = typeof pct === 'number' ? pct : parseFloat(pct);
+  if (!isFinite(n)) return 'var(--text-dim)';
+  return n >= 85 ? 'var(--sage-text)' : n >= 70 ? 'var(--warning)' : 'var(--danger)';
 }
 
 function buildClientRow(c) {
@@ -7809,7 +7835,7 @@ function buildClientRow(c) {
     <span class="status-pill ${sm[c.status]}">${sl[c.status]}</span>
     <div class="client-meta">${c.lastActivity}</div>
     <div class="client-meta">${c.nextCheckin}</div>
-    <div class="client-compliance" style="color:${c.compliance>=85?'var(--sage-text)':c.compliance>=70?'var(--warning)':'var(--danger)'};">${c.compliance}%</div>
+    <div class="client-compliance" style="color:${complianceColour(c.compliance)};">${c.compliance}%</div>
     <div class="client-actions"><div class="action-btn" onclick="event.stopPropagation();showPTPage('ptMessages');">${ic('messages','currentColor',14)}</div><div class="action-btn" onclick="event.stopPropagation();openClientDetail(${c.id});">${ic('eye','currentColor',14)}</div></div>
   </div>`;
 }
@@ -8059,7 +8085,7 @@ function openClientDetail(id) {
   const firstW = c.startWeight || (c.weight && c.weight.length ? c.weight[0] : null) || lastW;
   const delta = (typeof lastW === 'number' && typeof firstW === 'number') ? (lastW - firstW).toFixed(1) : '0.0';
   document.getElementById('detailKPIs').innerHTML = `
-    <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Compliance</div><div class="kpi-value" style="color:${c.compliance>=85?'var(--sage-text)':'var(--warning)'};">${c.compliance}%</div></div>
+    <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Compliance</div><div class="kpi-value" style="color:${complianceColour(c.compliance)};">${c.compliance}%</div></div>
     <div class="kpi"><div class="kpi-label">Body Weight</div><div class="kpi-value">${lastW}<span style="font-size:12px;color:var(--text-dim);">kg</span></div><div class="kpi-sub">${delta>0?'+':''}${delta}kg</div></div>
     <div class="kpi"><div class="kpi-label">Programme</div><div class="kpi-value" style="font-size:14px;">${c.programme}</div><div class="kpi-sub">Week ${c.week}</div></div>
     <div class="kpi"><div class="kpi-label">Check-In Day</div><div class="kpi-value" style="font-size:14px;">${c.checkinDay}</div><div class="kpi-sub">Next: ${c.nextCheckin}</div></div>`;
@@ -8826,6 +8852,14 @@ function renderDetailOnboarding() {
 function renderPTWellbeing() {
   const el = document.getElementById('ptWellbeingList'); el.innerHTML = '';
   const moodLabels = {1:'Struggling',2:'Low',3:'Neutral',4:'Good',5:'Great'};
+  if (!WELLBEING_DATA.length) {
+    el.innerHTML = `<div style="text-align:center;padding:56px 20px;color:var(--text-dim);">
+      <div style="font-size:32px;margin-bottom:12px;">🌱</div>
+      <div style="font-size:15px;font-weight:600;color:var(--text-body);margin-bottom:6px;">No wellbeing check-ins yet</div>
+      <div style="font-size:13px;max-width:440px;margin:0 auto;">When your athletes submit their wellbeing check-ins (mood, energy, sleep, soreness and stress), their latest responses will appear here — with high-stress entries flagged for your attention.</div>
+    </div>`;
+    return;
+  }
   WELLBEING_DATA.forEach(w => {
     const wbName = w.client || (CLIENTS.find(c => c.id === w.clientId) || {}).name || 'Unknown';
     const isAlert = w.stress==='Very High'||w.stress==='High';
@@ -8950,19 +8984,27 @@ function renderPTAnalytics() {
   const compData = CLIENTS.map(c => c.compliance || 0);
   const compLabels = CLIENTS.map(c => c.initials || c.name.substring(0,2));
   if (compData.length) {
-    renderChart('ptComplianceChart', compLabels, compData, 'Compliance (%)', '#8BB07E');
+    renderChart('ptComplianceChart', compLabels, compData, 'Compliance (%)', '#8BB07E', 'bar');
   }
 }
 
 // ═══════════════════════════════════════
 //  CHART HELPER
 // ═══════════════════════════════════════
-function renderChart(canvasId, labels, data, label, colour) {
+function renderChart(canvasId, labels, data, label, colour, type) {
   if (charts[canvasId]) charts[canvasId].destroy();
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
+  const chartType = type || 'line';           // default 'line' — existing callers unchanged
+  const isBar = chartType === 'bar';
   charts[canvasId] = new Chart(ctx, {
-    type:'line', data:{ labels, datasets:[{ label, data, borderColor:colour, backgroundColor:colour+'20', tension:0.3, fill:true, pointRadius:4, pointBackgroundColor:colour, pointBorderColor:'#0B1117', pointBorderWidth:2 }]},
+    type: chartType,
+    data:{ labels, datasets:[{ label, data,
+      borderColor:colour,
+      backgroundColor: isBar ? colour : colour+'20',
+      borderRadius: isBar ? 6 : undefined,
+      tension:0.3, fill: !isBar,
+      pointRadius: isBar ? 0 : 4, pointBackgroundColor:colour, pointBorderColor:'#0B1117', pointBorderWidth:2 }]},
     options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} },
       scales:{ x:{grid:{color:'rgba(36,56,72,0.4)'},ticks:{color:'#5A7585',font:{size:11}}}, y:{grid:{color:'rgba(36,56,72,0.4)'},ticks:{color:'#5A7585',font:{size:11}}}}}
   });
@@ -12671,6 +12713,15 @@ function saveNewExercise() {}
 // ── Internal state for the currently loaded client nutrition form ──
 let _nutState = {};
 
+// Shared empty-state markup for the Nutrition page (no athlete selected yet).
+function _nutritionEmptyState() {
+  return `<div style="text-align:center;padding:56px 20px;color:var(--text-dim);">
+    <div style="font-size:32px;margin-bottom:12px;">🥗</div>
+    <div style="font-size:15px;font-weight:600;color:var(--text-body);margin-bottom:6px;">Select an athlete to manage their nutrition</div>
+    <div style="font-size:13px;max-width:420px;margin:0 auto;">Choose a client above to view or assign their macro targets and nutrition guidance.</div>
+  </div>`;
+}
+
 function renderPTNutrition() {
   const sel = document.getElementById('nutClientSelect');
   if (!sel) return;
@@ -12678,6 +12729,9 @@ function renderPTNutrition() {
     CLIENTS.filter(c => c.status !== 'inactive').map(c =>
       `<option value="${c.id}">${c.name}</option>`
     ).join('');
+  // Show a guiding empty state until an athlete is chosen.
+  const body = document.getElementById('ptNutritionBody');
+  if (body && !sel.value) body.innerHTML = _nutritionEmptyState();
 }
 
 function loadNutritionClient() {
@@ -12685,7 +12739,7 @@ function loadNutritionClient() {
   const body = document.getElementById('ptNutritionBody');
   if (!sel || !body) return;
   const cid = parseInt(sel.value);
-  if (!cid) { body.innerHTML = ''; _nutState = {}; return; }
+  if (!cid) { body.innerHTML = _nutritionEmptyState(); _nutState = {}; return; }
   const client = CLIENTS.find(c => c.id === cid);
   if (!client) return;
 

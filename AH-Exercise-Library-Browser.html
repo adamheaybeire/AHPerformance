@@ -123,8 +123,8 @@ body { font-family: var(--font-body); background: var(--base); color: var(--text
 <div class="header">
   <div class="header-left">
     <div>
-      <div class="logo">AH<span style="font-weight:400;color:var(--text-primary)"> Performance</span><span> Exercise Library</span></div>
-      <div class="tagline">Performance for real life</div>
+      <div class="logo"><span class="app-brand">AH<span style="font-weight:400;color:var(--text-primary)"> Performance</span> </span><span>Exercise Library</span></div>
+      <div class="tagline app-brand">Performance for real life</div>
     </div>
   </div>
   <div class="header-right">
@@ -266,6 +266,13 @@ document.getElementById('totalCount').textContent = exercises.length;
 document.getElementById('hyroxCount').textContent = exercises.filter(e => e.sportTags.includes('HYROX')).length;
 document.getElementById('warmupCount').textContent = exercises.filter(e => e.warmupSuitable).length;
 applyFilters();
+
+// When embedded in the AH Performance app, drop the duplicate "AH Performance"
+// branding + tagline so this reads as a section rather than a separate app.
+// The section title ("Exercise Library") remains. Standalone use is unaffected.
+if (window.parent !== window) {
+  document.querySelectorAll('.app-brand').forEach(e => e.style.display = 'none');
+}
 </script>
 </body>
 </html>
