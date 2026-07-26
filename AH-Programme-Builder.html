@@ -20,6 +20,14 @@
   --font-body: 'Inter', sans-serif;
   --danger: #E05A5A;
 }
+/* Light theme — variable overrides only (no layout change). Applied when the
+   parent AH Performance app is in light mode; mirrors the Exercise Library
+   palette so the two tools match. Inert unless body.light is set (embedded). */
+body.light {
+  --base: #F4F0EB; --deep-slate: #EDE8E2; --card: #FFFFFF; --raised: #FFFFFF;
+  --text-primary: #13232E; --text-secondary: #5A6B7A; --text-muted: #8A9BAA;
+  --border: rgba(0,0,0,0.08);
+}
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: var(--font-body); background: var(--base); color: var(--text-primary); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
@@ -1185,6 +1193,11 @@ function copyPreviousWeek() {
 
 // Listen for client list from parent
 window.addEventListener('message', function(e) {
+  // Follow the parent app's theme when embedded (single source of truth).
+  if (e.data && e.data.type === 'ah-theme') {
+    document.body.classList.toggle('light', e.data.theme === 'light');
+    return;
+  }
   if (e.data && e.data.type === 'ah-client-list') {
     embeddedClients = e.data.clients || [];
     const sel = document.getElementById('clientSelect');
@@ -1270,6 +1283,8 @@ if (isEmbedded) {
   // branding so this reads as a section, not a separate application. The section
   // title ("Programme Builder") remains. Standalone use is unaffected.
   document.querySelectorAll('.app-brand').forEach(e => e.style.display = 'none');
+  // Ask the parent which theme to display so we match the app, not our own default.
+  window.parent.postMessage({ type: 'ah-request-theme' }, '*');
   // Request client list from parent
   window.parent.postMessage({ type: 'ah-request-clients' }, '*');
 }

@@ -272,6 +272,18 @@ applyFilters();
 // The section title ("Exercise Library") remains. Standalone use is unaffected.
 if (window.parent !== window) {
   document.querySelectorAll('.app-brand').forEach(e => e.style.display = 'none');
+  // Embedded: there is one global theme owned by the parent app, so hide this
+  // tool's independent toggle (no second source of truth) and follow the parent.
+  const _tt = document.querySelector('.theme-toggle');
+  if (_tt) _tt.style.display = 'none';
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'ah-theme') {
+      isDark = e.data.theme !== 'light';
+      document.body.classList.toggle('light', !isDark);
+    }
+  });
+  // Ask the parent which theme to display.
+  window.parent.postMessage({ type: 'ah-request-theme' }, '*');
 }
 </script>
 </body>

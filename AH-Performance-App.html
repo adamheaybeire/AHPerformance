@@ -905,7 +905,7 @@
             <span id="clientNotifBellIcon"></span>
             <span class="client-notif-count hidden" id="clientNotifCount">0</span>
           </div>
-          <button onclick="ahToggleTheme()" id="themeToggleBtn" style="width:28px;height:28px;border-radius:50%;border:1.5px solid var(--slate-border);background:var(--slate-card);color:#F5F0EB;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="Toggle light/dark mode">&#9788;</button>
+          <button onclick="ahToggleTheme()" id="themeToggleBtn" class="ah-theme-toggle" style="width:28px;height:28px;border-radius:50%;border:1.5px solid var(--slate-border);background:var(--slate-card);color:#F5F0EB;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="Toggle light/dark mode">&#9788;</button>
         </div>
         <div class="client-notif-dropdown hidden" id="clientNotifDropdown">
           <div style="padding:12px 16px;border-bottom:1px solid var(--slate-border);display:flex;justify-content:space-between;align-items:center;">
@@ -2363,6 +2363,7 @@
     <!-- PT: Overview Dashboard -->
     <div class="page active" id="ptDash">
       <div class="page-header" style="position:relative;"><h1>Dashboard</h1><p id="ptDateLine"></p>
+        <button onclick="ahToggleTheme()" class="ah-theme-toggle" style="position:absolute;top:0;right:46px;width:28px;height:28px;border-radius:50%;border:1.5px solid var(--slate-border);background:var(--slate-card);color:#F5F0EB;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;" aria-label="Toggle light/dark mode">&#9788;</button>
         <div class="notification-bell" id="ptNotifBell" onclick="toggleNotifications()">
           <span id="ptNotifBellIcon"></span>
           <span class="notif-count hidden" id="ptNotifCount">0</span>
@@ -2761,19 +2762,30 @@
 // ═══════════════════════════════════════
 //  THEME TOGGLE (Light / Dark)
 // ═══════════════════════════════════════
+// Theme is a single global source of truth: body.light-mode + localStorage['ah_theme'].
+// Every theme toggle button (client header, coach header) carries the class
+// .ah-theme-toggle so one function keeps them all in sync — no duplicate state.
+function _ahApplyThemeToButtons(isLight) {
+  document.querySelectorAll('.ah-theme-toggle').forEach(btn => {
+    btn.innerHTML = isLight ? '&#9790;' : '&#9788;';           // moon in light, sun in dark
+    btn.style.color = isLight ? '#1A2332' : '#F5F0EB';
+    btn.style.borderColor = isLight ? '#1A2332' : 'var(--slate-border)';
+  });
+}
+// Broadcast the active theme to the embedded tools so they render as sections
+// of the app rather than independent applications.
+function _ahBroadcastTheme() {
+  const theme = document.body.classList.contains('light-mode') ? 'light' : 'dark';
+  ['progBuilderFrame','exLibFrame'].forEach(id => {
+    const f = document.getElementById(id);
+    if (f && f.contentWindow) { try { f.contentWindow.postMessage({ type: 'ah-theme', theme }, '*'); } catch(e) {} }
+  });
+}
 function ahToggleTheme() {
   const isLight = document.body.classList.toggle('light-mode');
-  const btn = document.getElementById('themeToggleBtn');
-  if (isLight) {
-    btn.innerHTML = '&#9790;'; // moon icon in light mode
-    btn.style.color = '#1A2332'; // dark icon so it's visible on light background
-    btn.style.borderColor = '#1A2332';
-  } else {
-    btn.innerHTML = '&#9788;'; // sun icon in dark mode
-    btn.style.color = '#F5F0EB'; // light icon so it's visible on dark background
-    btn.style.borderColor = 'var(--slate-border)';
-  }
+  _ahApplyThemeToButtons(isLight);
   try { localStorage.setItem('ah_theme', isLight ? 'light' : 'dark'); } catch(e) {}
+  _ahBroadcastTheme();
 }
 // Apply saved theme immediately
 (function() {
@@ -2781,8 +2793,7 @@ function ahToggleTheme() {
     const saved = localStorage.getItem('ah_theme');
     if (saved === 'light') {
       document.body.classList.add('light-mode');
-      const btn = document.getElementById('themeToggleBtn');
-      if (btn) { btn.innerHTML = '&#9790;'; btn.style.color = '#1A2332'; btn.style.borderColor = '#1A2332'; }
+      _ahApplyThemeToButtons(true);
     }
   } catch(e) {}
 })();
@@ -4030,8 +4041,8 @@ function showPTPage(id) {
   if (id === 'ptWellbeing') renderPTWellbeing();
   if (id === 'ptMessages') renderPTMessages();
   if (id === 'ptReports') renderPTAnalytics();
-  if (id === 'ptProgrammes') { renderPTProgList(); sendClientListToIframe(); }
-  if (id === 'ptExercises') { initExLibrary(); }
+  if (id === 'ptProgrammes') { renderPTProgList(); sendClientListToIframe(); _ahBroadcastTheme(); }
+  if (id === 'ptExercises') { initExLibrary(); _ahBroadcastTheme(); }
   if (id === 'ptNutrition') { renderPTNutrition(); }
   if (id === 'ptOnboarding') { renderPTOnboardingView(); }
   if (id === 'ptPush') { renderPushPage(); }
@@ -13323,6 +13334,14 @@ function convertBuilderToClientFormat(builderProgramme, weekNumber, programmeNam
 // Listen for messages from Programme Builder iframe
 window.addEventListener('message', function(e) {
   if (!e.data || !e.data.type) return;
+
+  // An embedded tool is asking which theme to display — reply with the single
+  // source of truth so it renders as a section of the app (never its own theme).
+  if (e.data.type === 'ah-request-theme') {
+    const theme = document.body.classList.contains('light-mode') ? 'light' : 'dark';
+    if (e.source) { try { e.source.postMessage({ type: 'ah-theme', theme }, '*'); } catch(err) {} }
+    return;
+  }
 
   if (e.data.type === 'ah-request-clients') {
     // Send client list to the iframe
