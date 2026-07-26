@@ -5147,10 +5147,24 @@ function _isCardioExercise(name) {
   // "Ab Air Bike", "Bicycle Crunch", "Air Bike Crunch", etc. are NOT cardio
   const abExclusions = ['crunch','ab air','air bike crunch','bicycle crunch','ab bike'];
   if (abExclusions.some(k => n.includes(k))) return false;
+  // EXCLUDE: lunges are a STRENGTH exercise (weight × reps), not cardio.
+  // Without this, "Walking Lunge(s)" matches the 'walk' keyword below and wrongly
+  // gets time/distance inputs instead of weight/reps.
+  if (n.includes('lunge')) return false;
   // True cardio: time/distance based. Wall balls, burpees, carries are strength-style (weight/reps).
   // Sled push/pull are separate — they use weight+distance, not time.
   const cardioKeywords = ['outdoor run','indoor run','treadmill','run ','running','runner','ski erg','skierg','rowing','rower','assault bike','air bike','airbike','echo bike','exercise bike','stationary bike','spin bike','cycle','cycling','swim','walk','walking','jog','jogging','sprint','elliptical','cross trainer','stair'];
   return cardioKeywords.some(k => n.includes(k));
+}
+
+// Classify a SAVED workout-log exercise. Prefers the isCardio flag stored on the
+// entry at log time, so historical entries render/aggregate exactly as they were
+// saved even if the name-based classifier rule later changes (e.g. lunges moving
+// from cardio to strength). Falls back to the name rule for legacy entries that
+// predate the stored flag.
+function _exIsCardio(ex) {
+  if (ex && ex.isCardio !== undefined && ex.isCardio !== null) return !!ex.isCardio;
+  return _isCardioExercise(ex ? (ex.name || ex.n) : '');
 }
 
 // Filter for cardio data: removes entries that were incorrectly saved as cardio (e.g. Ab Air Bike, Bicycle Crunch)
@@ -5840,7 +5854,7 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
     const _sn = (wlCurrentSession.name || '').toLowerCase();
     const _cardioKeywords = ['run','jog','sprint','cycle','swim','walk','row','bike','threshold','tempo','interval','fartlek','track','hevo','parkrun'];
     const _nameIsCardio = _cardioKeywords.some(k => _sn.includes(k));
-    const _isCardioEx = (en) => /\brun\b|jog|sprint|cycle|swim|walk|row|bike|ski.*erg|assault.*bike|cardio/i.test(en);
+    const _isCardioEx = (en) => !/lunge/i.test(en) && /\brun\b|jog|sprint|cycle|swim|walk|row|bike|ski.*erg|assault.*bike|cardio/i.test(en);
     const _allExCardio = exerciseLogs.length > 0 && exerciseLogs.every(ex => _isCardioEx(ex.name || ''));
     // Only use session name as hint if there are NO logged exercises (pure cardio session)
     // If exercises exist, let the exercises determine the type — mixed sessions stay as 'strength'
@@ -6745,7 +6759,7 @@ function renderWorkoutHistory() {
   }
   container.innerHTML = workouts.map((w, wi) => {
     const exList = (w.exercises || []).map(e => {
-      const isC = _isCardioExercise(e.name);
+      const isC = _exIsCardio(e);
       const setsStr = e.sets.map(s => isC ? `${s.weight || '—'} / ${s.reps || '—'}` : (s.isDrop ? `<span style="color:#e74c3c;font-size:9px;">DROP</span> ${s.weight}kg × ${s.reps}` : `${s.weight}kg × ${s.reps}`)).join(', ');
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--slate-border);">
         <span style="font-size:12px;color:var(--text-body);">${_shortenExName(e.name)}</span>
@@ -6836,7 +6850,7 @@ function editWorkoutEntry(idx) {
   }
   html += `<div style="margin-bottom:10px;"><label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:4px;">Notes</label><textarea id="histEditNotes${idx}" style="${fieldStyle}resize:vertical;min-height:50px;">${w.notes || ''}</textarea></div>`;
   (w.exercises || []).forEach((ex, ei) => {
-    const isC = _isCardioExercise(ex.name);
+    const isC = _exIsCardio(ex);
     html += `<div style="margin-top:8px;padding:8px 10px;background:var(--slate-raised);border-radius:8px;box-sizing:border-box;max-width:100%;">
       <div style="font-size:12px;font-weight:600;color:var(--text-body);margin-bottom:6px;word-break:break-word;">${ex.name}</div>
       <div style="display:grid;grid-template-columns:22px 1fr 1fr;gap:6px;margin-bottom:4px;">
@@ -6868,8 +6882,8 @@ function updateHistorySet(wIdx, exIdx, setIdx, field, value) {
   if (!cid || !WORKOUT_LOG[cid] || !WORKOUT_LOG[cid][wIdx]) return;
   const ex = WORKOUT_LOG[cid][wIdx].exercises[exIdx];
   if (ex && ex.sets[setIdx]) {
-    if (field === 'weight') ex.sets[setIdx].weight = _isCardioExercise(ex.name) ? value : (parseFloat(value) || 0);
-    if (field === 'reps') ex.sets[setIdx].reps = _isCardioExercise(ex.name) ? value : (parseInt(value) || 0);
+    if (field === 'weight') ex.sets[setIdx].weight = _exIsCardio(ex) ? value : (parseFloat(value) || 0);
+    if (field === 'reps') ex.sets[setIdx].reps = _exIsCardio(ex) ? value : (parseInt(value) || 0);
   }
 }
 
@@ -6962,7 +6976,7 @@ function saveHistoryEdit(idx) {
         }
       }
       // Sync cardio progress entries — recalculate distance/time from sets
-      if (pd.cardio && (_isCardioExercise(ex.name) || _isSledExercise(ex.name))) {
+      if (pd.cardio && (_exIsCardio(ex) || _isSledExercise(ex.name))) {
         const _normName = _normalizeCardioActivity(ex.name) || ex.name;
         const cardioEntry = pd.cardio.find(c => c.date === w.date && ((c.activity || '').toLowerCase() === _normName.toLowerCase() || (c.exercise || '').toLowerCase() === _normName.toLowerCase() || (c.activity || '').toLowerCase() === exName || (c.exercise || '').toLowerCase() === exName));
         if (cardioEntry) {
@@ -7013,7 +7027,7 @@ function deleteWorkoutEntry(idx) {
     // Remove from cardio progress (match by date + activity name, case-insensitive)
     if (pd.cardio) {
       // Check entry type AND also check exercises for cardio exercises
-      const hasCardioData = entry.type === 'cardio' || (entry.exercises || []).some(e => _isCardioExercise(e.name));
+      const hasCardioData = entry.type === 'cardio' || (entry.exercises || []).some(e => _exIsCardio(e));
       if (hasCardioData) {
         pd.cardio = pd.cardio.filter(c => {
           const cName = (c.activity || c.exercise || '').toLowerCase();
@@ -7116,7 +7130,7 @@ function _buildOneWeek(workouts, monday, localDateStr) {
       if (exList.length > 0) {
         // Proportional split: categorise each exercise individually
         const runCount = runExercises.length;
-        const otherCardioCount = exList.filter(e => _isCardioExercise(e.name) && !_runRx.test(e.name || '')).length;
+        const otherCardioCount = exList.filter(e => _exIsCardio(e) && !_runRx.test(e.name || '')).length;
         const strCount = exList.length - runCount - otherCardioCount;
         const total = exList.length;
         running += durH * runCount / total;
@@ -7174,7 +7188,7 @@ function _buildOneWeek(workouts, monday, localDateStr) {
         }
       }
       (w.exercises || []).forEach(e => {
-        if (_isCardioExercise(e.name) || _isSledExercise(e.name)) {
+        if (_exIsCardio(e) || _isSledExercise(e.name)) {
           let dist = 0, timeSec = 0;
           const isSled = _isSledExercise(e.name);
           (e.sets || []).forEach(s => {
@@ -11880,6 +11894,45 @@ async function ciFlipCamera() {
   }
 }
 
+// Downscale + re-encode an image File to a JPEG under the server's size limit.
+// Gallery photos from phones are often 4–12 MB (and sometimes HEIC), which the
+// server rejects (>10 MB or unsupported type). The camera path already produces
+// a small canvas JPEG; this routes gallery picks through the SAME kind of
+// pipeline so both behave identically. Falls back to the original file if the
+// image can't be decoded (e.g. HEIC on a browser that can't render it), so the
+// server can still respond with a meaningful error.
+function _ciProcessImage(file) {
+  return new Promise(resolve => {
+    // Non-images or tiny already-small JPEGs don't need processing.
+    if (!file || !/^image\//i.test(file.type || '')) { resolve(file); return; }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = function() {
+      try {
+        const maxEdge = 1600;
+        let { width, height } = img;
+        if (width > maxEdge || height > maxEdge) {
+          if (width >= height) { height = Math.round(height * maxEdge / width); width = maxEdge; }
+          else { width = Math.round(width * maxEdge / height); height = maxEdge; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(url);
+        canvas.toBlob(blob => {
+          if (!blob) { resolve(file); return; }
+          resolve(new File([blob], (file.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }));
+        }, 'image/jpeg', 0.85);
+      } catch (e) {
+        URL.revokeObjectURL(url);
+        resolve(file); // fall back to original on any canvas error
+      }
+    };
+    img.onerror = function() { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 function ciHandlePhotoSelect(input, pose) {
   const file = input.files[0];
   if (!file) return;
@@ -11905,10 +11958,11 @@ function ciHandlePhotoSelect(input, pose) {
   };
   reader.readAsDataURL(file);
 
-  // Upload to server
+  // Compress/resize (same pipeline for camera + gallery) then upload to server
   const cid = loggedInUser ? loggedInUser.clientId : 1;
+  _ciProcessImage(file).then(uploadFile => {
   const formData = new FormData();
-  formData.append('photo', file);
+  formData.append('photo', uploadFile);
   formData.append('clientId', cid);
   formData.append('pose', pose);
 
@@ -11926,7 +11980,8 @@ function ciHandlePhotoSelect(input, pose) {
       } else {
         console.error('Photo upload failed:', data.error);
         slot.classList.remove('has-photo');
-        slot.innerHTML = `<span style="color:var(--warning);font-size:11px;">Upload failed</span><span style="font-size:12px;margin-top:4px;">${pose}</span>`;
+        const _msg = (data && data.error) ? data.error : 'Upload failed';
+        slot.innerHTML = `<span style="color:var(--warning);font-size:11px;text-align:center;padding:0 4px;">${_msg}</span><span style="font-size:12px;margin-top:4px;">${pose}</span>`;
         // Re-attach inputs for retry
         const ri1 = document.createElement('input');
         ri1.type = 'file'; ri1.id = 'ciPhoto' + cap + 'Camera'; ri1.accept = 'image/*';
@@ -11945,6 +12000,7 @@ function ciHandlePhotoSelect(input, pose) {
       const overlay = slot.querySelector('.photo-uploading');
       if (overlay) overlay.textContent = 'Failed — tap to retry';
     });
+  });
 }
 
 function submitCheckin() {
