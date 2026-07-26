@@ -2669,13 +2669,29 @@
     </div>
 
     <!-- PT: Messages -->
+    <style>
+      /* Desktop: let the existing two-pane layout fill the viewport height —
+         list scrolls left, thread scrolls centre, composer stays pinned.
+         Pure layout refinement; no workflow change. */
+      .pt-msg-grid{display:grid;grid-template-columns:280px 1fr;gap:20px;height:calc(100vh - 150px);min-height:420px;}
+      .pt-msg-grid > .card{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
+      #ptMsgList{flex:1;min-height:0;overflow-y:auto;}
+      #ptMsgThread{flex:1;min-height:0;overflow-y:auto;}
+      .pt-msg-composer{flex-shrink:0;}
+      @media(max-width:768px){
+        .pt-msg-grid{grid-template-columns:1fr;height:auto;min-height:0;}
+        .pt-msg-grid > .card{height:auto;overflow:visible;}
+        #ptMsgList{max-height:40vh;}
+        #ptMsgThread{max-height:52vh;}
+      }
+    </style>
     <div class="page" id="ptMessages">
       <div class="page-header"><h1>Messages</h1><p>Client communications</p></div>
-      <div style="display:grid;grid-template-columns:280px 1fr;gap:20px;">
-        <div class="card" style="padding:12px;"><div style="font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dim);padding:8px 10px;">Conversations</div><div id="ptMsgList"></div></div>
+      <div class="pt-msg-grid">
+        <div class="card" style="padding:12px;"><div style="font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dim);padding:8px 10px;flex-shrink:0;">Conversations</div><div id="ptMsgList"></div></div>
         <div class="card">
-          <div id="ptMsgThread" style="min-height:300px;max-height:450px;overflow-y:auto;"><p style="color:var(--text-muted);text-align:center;padding:60px 0;">Select a conversation</p></div>
-          <div style="margin-top:12px;border-top:1px solid var(--slate-border);padding-top:12px;">
+          <div id="ptMsgThread"><p style="color:var(--text-muted);text-align:center;padding:60px 0;">Select a conversation</p></div>
+          <div class="pt-msg-composer" style="margin-top:12px;border-top:1px solid var(--slate-border);padding-top:12px;">
             <div style="display:flex;gap:8px;margin-bottom:8px;">
               <input type="file" id="chatPhotoInput_pt" accept="image/*" style="display:none" onchange="chatSendMedia(this,'photo','pt')">
               <input type="file" id="chatVideoInput_pt" accept="video/*" style="display:none" onchange="chatSendMedia(this,'video','pt')">
@@ -2698,19 +2714,27 @@
     </div>
 
     <!-- PT: Nutrition -->
+    <style>
+      /* Desktop: master-detail — athlete list (selector) left, editor right.
+         Surfaces who has / needs a plan at a glance. Same workflow as the
+         dropdown (which is preserved, hidden, as the value source). */
+      .pt-nut-grid{display:grid;grid-template-columns:260px 1fr;gap:20px;align-items:start;}
+      .pt-nut-list-head{font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--text-dim);padding:8px 10px;}
+      .nut-client-row{display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;transition:background .15s;}
+      .nut-client-row:hover{background:var(--slate-hover);}
+      .nut-client-row.active{background:var(--slate-hover);border-left:2px solid var(--ember);}
+      @media(max-width:768px){ .pt-nut-grid{grid-template-columns:1fr;} .pt-nut-list{max-height:210px;overflow-y:auto;} }
+    </style>
     <div class="page" id="ptNutrition">
       <div class="page-header"><h1>Nutrition</h1><p>Assign macros and nutrition guidance to clients</p></div>
-      <div class="card" style="margin-bottom:16px;">
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-          <div style="flex:1;min-width:200px;">
-            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;display:block;margin-bottom:4px;">Select Client</label>
-            <select id="nutClientSelect" onchange="loadNutritionClient()" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--slate-border);background:var(--slate-card);color:var(--text-bright);font-size:14px;">
-              <option value="">Choose a client...</option>
-            </select>
-          </div>
+      <select id="nutClientSelect" onchange="loadNutritionClient()" style="display:none;"><option value="">Choose a client...</option></select>
+      <div class="pt-nut-grid">
+        <div class="card" style="padding:10px;">
+          <div class="pt-nut-list-head">Athletes</div>
+          <div id="nutClientList" class="pt-nut-list"></div>
         </div>
+        <div id="ptNutritionBody"></div>
       </div>
-      <div id="ptNutritionBody"></div>
     </div>
 
     <!-- PT: Exercise Library -->
@@ -2719,6 +2743,14 @@
     </div>
 
     <!-- PT: Wellbeing Reports -->
+    <style>
+      /* Desktop: lay the check-in cards out as a scannable tile grid so the
+         whole squad's wellbeing is visible at a glance, high-stress flagged.
+         Same cards — container layout only. */
+      #ptWellbeingList{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;align-items:start;}
+      #ptWellbeingList > .card{margin-bottom:0;}
+      @media(max-width:640px){ #ptWellbeingList{grid-template-columns:1fr;} }
+    </style>
     <div class="page" id="ptWellbeing">
       <div class="page-header"><h1>Wellbeing Reports</h1><p>Client check-in summaries</p></div>
       <div id="ptWellbeingList"></div>
@@ -8864,7 +8896,7 @@ function renderPTWellbeing() {
   const el = document.getElementById('ptWellbeingList'); el.innerHTML = '';
   const moodLabels = {1:'Struggling',2:'Low',3:'Neutral',4:'Good',5:'Great'};
   if (!WELLBEING_DATA.length) {
-    el.innerHTML = `<div style="text-align:center;padding:56px 20px;color:var(--text-dim);">
+    el.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:56px 20px;color:var(--text-dim);">
       <div style="font-size:32px;margin-bottom:12px;">🌱</div>
       <div style="font-size:15px;font-weight:600;color:var(--text-body);margin-bottom:6px;">No wellbeing check-ins yet</div>
       <div style="font-size:13px;max-width:440px;margin:0 auto;">When your athletes submit their wellbeing check-ins (mood, energy, sleep, soreness and stress), their latest responses will appear here — with high-stress entries flagged for your attention.</div>
@@ -12736,13 +12768,44 @@ function _nutritionEmptyState() {
 function renderPTNutrition() {
   const sel = document.getElementById('nutClientSelect');
   if (!sel) return;
+  // Hidden <select> stays the value source loadNutritionClient() reads.
   sel.innerHTML = '<option value="">Choose a client...</option>' +
     CLIENTS.filter(c => c.status !== 'inactive').map(c =>
       `<option value="${c.id}">${c.name}</option>`
     ).join('');
+  renderNutClientList();
   // Show a guiding empty state until an athlete is chosen.
   const body = document.getElementById('ptNutritionBody');
   if (body && !sel.value) body.innerHTML = _nutritionEmptyState();
+}
+
+// A client "has a plan" once macros have been saved (calories computed).
+function _nutHasPlan(cid) { const n = CLIENT_NUTRITION[cid]; return !!(n && n.calories > 0); }
+
+// Athlete list = the Nutrition selector, surfacing plan status at a glance.
+function renderNutClientList() {
+  const el = document.getElementById('nutClientList');
+  if (!el) return;
+  const activeId = parseInt(document.getElementById('nutClientSelect')?.value) || 0;
+  const rows = CLIENTS.filter(c => c.status !== 'inactive');
+  if (!rows.length) { el.innerHTML = '<div style="padding:10px;color:var(--text-dim);font-size:12px;">No athletes yet.</div>'; return; }
+  el.innerHTML = rows.map(c => {
+    const status = _nutHasPlan(c.id)
+      ? '<span style="color:var(--sage-text);">Plan set</span>'
+      : '<span style="color:var(--text-dim);">No plan yet</span>';
+    return `<div class="nut-client-row ${c.id===activeId?'active':''}" onclick="selectNutClient(${c.id})">
+      <div class="client-avatar" style="width:30px;height:30px;border-radius:8px;font-size:11px;background:${c.bg};color:${c.colour};flex-shrink:0;">${c.initials}</div>
+      <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;color:var(--text-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</div><div style="font-size:11px;">${status}</div></div>
+    </div>`;
+  }).join('');
+}
+
+// Select an athlete from the list — drives the existing loader via the hidden select.
+function selectNutClient(id) {
+  const sel = document.getElementById('nutClientSelect');
+  if (sel) sel.value = String(id);
+  loadNutritionClient();
+  renderNutClientList();
 }
 
 function loadNutritionClient() {
@@ -13249,6 +13312,8 @@ function saveClientNutrition(cid) {
     addClientNotification(cid, 'nutrition', 'Coach Adam updated your nutrition plan');
     _sendPushToClient(cid, 'Nutrition Updated', 'Coach Adam updated your nutrition plan', 'nutrition');
   }
+  // Keep the athlete list's "Plan set" status current after saving.
+  if (typeof renderNutClientList === 'function') renderNutClientList();
 
   scheduleSave();
   alert('Nutrition plan saved and assigned to ' + (client ? client.name : 'client') + '.');
