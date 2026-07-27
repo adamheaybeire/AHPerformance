@@ -2426,7 +2426,7 @@
         <div class="detail-avatar" id="detailAvatar"></div>
         <div class="detail-info"><h2 id="detailName"></h2><p id="detailMeta"></p></div>
         <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
-          <button class="btn btn-sm btn-secondary" onclick="showPTPage('ptMessages')">Message</button>
+          <button class="btn btn-sm btn-secondary" onclick="if(currentDetailClient) openClientConversation(currentDetailClient.id)">Message</button>
           <button class="btn btn-sm btn-ember" onclick="if(currentDetailClient) goToProgrammeBuilder(currentDetailClient.id)">Edit Programme</button>
           <button class="btn btn-sm" style="background:none;border:1px solid var(--danger);color:var(--danger);font-size:11px;" onclick="removeClient()">Remove Athlete</button>
         </div>
@@ -7687,7 +7687,10 @@ function initPTApp() {
     const bgColours = ['var(--ember-soft)','var(--sage-soft)','var(--ocean-soft)','rgba(155,142,196,0.1)'];
     const fgColours = ['var(--ember)','var(--sage-text)','var(--ocean)','#9B8EC4'];
     const ci = i % bgColours.length;
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;${i < recentActivity.length-1 ? 'border-bottom:1px solid var(--slate-border);':''}"><div style="width:28px;height:28px;border-radius:8px;background:${bgColours[ci]};color:${fgColours[ci]};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'Space Grotesk';">${initials}</div><div style="flex:1;font-size:12px;"><strong>${n.client || 'System'}</strong> ${n.message || ''}</div><span style="font-size:10px;color:var(--text-dim);">${n.time}</span></div>`;
+    // Let the coach jump straight to the athlete an activity item refers to
+    // (consistent with the attention panel). Only when it resolves to a client.
+    const clickable = n.clientId && CLIENTS.some(c => c.id === n.clientId);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;${i < recentActivity.length-1 ? 'border-bottom:1px solid var(--slate-border);':''}${clickable ? 'cursor:pointer;' : ''}"${clickable ? ` onclick="openClientDetail(${n.clientId})"` : ''}><div style="width:28px;height:28px;border-radius:8px;background:${bgColours[ci]};color:${fgColours[ci]};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:'Space Grotesk';">${initials}</div><div style="flex:1;font-size:12px;"><strong>${n.client || 'System'}</strong> ${n.message || ''}</div><span style="font-size:10px;color:var(--text-dim);">${n.time}</span></div>`;
   }).join('') : '<p style="color:var(--text-dim);font-size:13px;padding:12px 0;">No recent activity yet.</p>';
 
   renderDashClientList();
@@ -7879,7 +7882,7 @@ function buildClientRow(c) {
     <div class="client-meta">${c.lastActivity}</div>
     <div class="client-meta">${c.nextCheckin}</div>
     <div class="client-compliance" style="color:${complianceColour(c.compliance)};">${c.compliance}%</div>
-    <div class="client-actions"><div class="action-btn" onclick="event.stopPropagation();showPTPage('ptMessages');">${ic('messages','currentColor',14)}</div><div class="action-btn" onclick="event.stopPropagation();openClientDetail(${c.id});">${ic('eye','currentColor',14)}</div></div>
+    <div class="client-actions"><div class="action-btn" title="Message ${c.name}" onclick="event.stopPropagation();openClientConversation(${c.id});">${ic('messages','currentColor',14)}</div><div class="action-btn" title="Open profile" onclick="event.stopPropagation();openClientDetail(${c.id});">${ic('eye','currentColor',14)}</div></div>
   </div>`;
 }
 
@@ -8969,6 +8972,27 @@ function startNewPTConversation() {
   renderPTMessages();
   openPTConversation(0);
   scheduleSave();
+}
+
+// Open a specific athlete's message thread from anywhere (roster row, profile).
+// Removes the "navigate to Messages then find them again" step for the most
+// repeated coaching action. Creates the conversation if one doesn't exist yet,
+// reusing the same shape as startNewPTConversation — no new workflow.
+function openClientConversation(clientId) {
+  const client = CLIENTS.find(c => c.id === clientId);
+  showPTPage('ptMessages');
+  if (!client) return;
+  let idx = PT_CONVERSATIONS.findIndex(cv => cv.clientId === clientId || cv.name === client.name);
+  if (idx === -1) {
+    const initials = (client.initials || client.name.split(' ').map(w=>w[0]).join('')).toUpperCase();
+    const bgOptions = ['var(--ocean-soft)','var(--sage-soft)','var(--ember-soft)','rgba(155,142,196,0.12)'];
+    const colOptions = ['var(--ocean)','var(--sage-text)','var(--ember)','#9B8EC4'];
+    const ci = PT_CONVERSATIONS.length % bgOptions.length;
+    PT_CONVERSATIONS.unshift({ clientId, name: client.name, initials, bg: bgOptions[ci], colour: colOptions[ci], preview: '', time: 'Now', unread: false, messages: [] });
+    idx = 0;
+    scheduleSave();
+  }
+  openPTConversation(idx);
 }
 
 function openPTConversation(idx) {
