@@ -2758,13 +2758,10 @@
 
     <!-- PT: Analytics -->
     <div class="page" id="ptReports">
-      <div class="page-header"><h1>Analytics</h1><p>Business and client performance metrics</p></div>
-      <div class="kpi-row">
-        <div class="kpi" style="border-top:3px solid var(--sage);"><div class="kpi-label">Client Retention</div><div class="kpi-value text-sage">94%</div><div class="kpi-sub">3-month rolling</div></div>
-        <div class="kpi" style="border-top:3px solid var(--ember);"><div class="kpi-label">Avg Compliance</div><div class="kpi-value text-ember">89%</div><div class="kpi-sub">All active clients</div></div>
-        <div class="kpi" style="border-top:3px solid var(--ocean);"><div class="kpi-label">Monthly Revenue</div><div class="kpi-value text-ocean">£2,400</div><div class="kpi-sub">8 active × £300</div></div>
-        <div class="kpi"><div class="kpi-label">Avg Duration</div><div class="kpi-value">5.2<span style="font-size:12px;color:var(--text-dim);">mo</span></div><div class="kpi-sub">▲ from 4.1 last quarter</div></div>
-      </div>
+      <div class="page-header"><h1>Analytics</h1><p>Client performance metrics</p></div>
+      <!-- Computed from live data by renderPTAnalytics(). Metrics with no
+           data source (retention, revenue) were removed rather than faked. -->
+      <div class="kpi-row" id="ptAnalyticsKPIs"></div>
       <div class="card card-sage"><h3>Compliance by Athlete</h3><div class="chart-container"><canvas id="ptComplianceChart"></canvas></div></div>
     </div>
 
@@ -5161,26 +5158,56 @@ function discardWorkout() {
   document.getElementById('workoutLogger').classList.remove('active');
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  COMPLIANCE — SINGLE SOURCE OF TRUTH
+//  Definition: sessions completed in the last 7 days ÷ sessions programmed
+//  for the athlete's CURRENT week, capped at 100%.
+//  A client's programme object is keyed directly by week number
+//  ({ "14": {label, sessions}, "15": {...}, _assignedAt }). It has never had
+//  a `.weeks` property — reading one silently failed and fell through to a
+//  fixed denominator of 4 for every athlete regardless of their real
+//  programme, inflating compliance for anyone training more than 4x/week.
+// ═══════════════════════════════════════════════════════════════
+function _programmedSessionsPerWeek(clientId) {
+  const pw = (typeof CLIENT_PROGRAMMES !== 'undefined' && CLIENT_PROGRAMMES) ? CLIENT_PROGRAMMES[clientId] : null;
+  if (!pw) return 0;
+  // Current shape: top-level keys are week numbers ('_'-prefixed keys are metadata)
+  const weekKeys = Object.keys(pw).filter(k => !String(k).startsWith('_')).map(Number).filter(n => !isNaN(n)).sort((a,b) => a-b);
+  const latest = weekKeys.pop();
+  if (latest !== undefined && pw[latest] && Array.isArray(pw[latest].sessions)) return pw[latest].sessions.length;
+  // Legacy guard: tolerate any older record that nested weeks under `.weeks`
+  if (pw.weeks) {
+    const lk = Object.keys(pw.weeks).map(Number).filter(n => !isNaN(n)).sort((a,b) => a-b).pop();
+    if (lk !== undefined && pw.weeks[lk]) return (pw.weeks[lk].sessions || []).length;
+  }
+  return 0;
+}
+
+function _computeCompliance(clientId) {
+  const workouts = WORKOUT_LOG[clientId] || [];
+  let totalProgrammeSessions = _programmedSessionsPerWeek(clientId);
+  if (!totalProgrammeSessions) totalProgrammeSessions = 4; // no programme assigned — nominal week
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const thisWeek = workouts.filter(w => w.date && new Date(w.date) >= weekAgo).length;
+  return Math.min(100, Math.round((thisWeek / totalProgrammeSessions) * 100));
+}
+
 function _updateClientCompliance(clientId) {
   const client = CLIENTS.find(c => c.id === clientId);
   if (!client) return;
   const workouts = WORKOUT_LOG[clientId] || [];
-  // Get programme sessions count for the current week
-  const pw = CLIENT_PROGRAMMES && CLIENT_PROGRAMMES[clientId] ? CLIENT_PROGRAMMES[clientId] : null;
-  let totalProgrammeSessions = 0;
-  if (pw && pw.weeks) {
-    const latestWeekKey = Object.keys(pw.weeks).map(Number).filter(n => !isNaN(n)).sort((a,b) => a-b).pop();
-    if (latestWeekKey !== undefined && pw.weeks[latestWeekKey]) {
-      totalProgrammeSessions = (pw.weeks[latestWeekKey].sessions || []).length;
-    }
-  }
-  if (!totalProgrammeSessions) totalProgrammeSessions = 4; // default assumption
-  // Count workouts in last 7 days
-  const now = new Date();
-  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const thisWeek = workouts.filter(w => w.date && new Date(w.date) >= weekAgo).length;
-  client.compliance = Math.min(100, Math.round((thisWeek / totalProgrammeSessions) * 100));
+  client.compliance = _computeCompliance(clientId);
   client.lastActivity = workouts.length ? workouts[0].date : client.lastActivity;
+}
+
+// Compliance is DERIVED data, not stored truth. It was previously only
+// recalculated when an athlete logged a session, so an athlete who stopped
+// training kept their last-known score indefinitely. Recompute for every
+// athlete when the coach opens the app so the figure reflects the present.
+// Compliance only — deliberately does not touch lastActivity.
+function refreshAllCompliance() {
+  if (typeof CLIENTS === 'undefined' || !Array.isArray(CLIENTS)) return;
+  CLIENTS.forEach(c => { if (c && typeof c.id !== 'undefined') c.compliance = _computeCompliance(c.id); });
 }
 
 function _isCardioExercise(name) {
@@ -7653,6 +7680,10 @@ function sendClientMsg() {
 function initPTApp() {
   document.getElementById('ptDateLine').textContent = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
+  // Recompute derived compliance BEFORE anything that reads it (attention
+  // alerts, KPIs, roster colours) so the coach never sees a stale figure.
+  refreshAllCompliance();
+
   // Notifications
   renderPTNotifications();
   document.getElementById('ptNotifBellIcon').innerHTML = ic('bell','var(--text-body)',20);
@@ -9047,9 +9078,34 @@ function sendPTMessage() {
 }
 
 function renderPTAnalytics() {
-  // Dynamic from real client data
-  const compData = CLIENTS.map(c => c.compliance || 0);
-  const compLabels = CLIENTS.map(c => c.initials || c.name.substring(0,2));
+  // Compliance is derived — make sure it's current before reporting on it.
+  if (typeof refreshAllCompliance === 'function') refreshAllCompliance();
+  const active = CLIENTS.filter(c => c.status !== 'inactive');
+
+  // ── KPIs — computed from live data only ──
+  // Source of truth: Avg Compliance = mean of each active athlete's
+  // _computeCompliance() (last 7 days ÷ programmed sessions this week).
+  // Avg Time Coached = mean months since client.joined.
+  // "Client Retention" and "Monthly Revenue" were removed: the application
+  // stores no retention history and no pricing/fee data, so any figure would
+  // be fabricated.
+  const avgCompliance = active.length
+    ? Math.round(active.reduce((s,c) => s + (c.compliance || 0), 0) / active.length) : 0;
+  const now = Date.now();
+  const tenures = active.map(c => {
+    const d = new Date(c.joined);
+    return isNaN(d.getTime()) ? null : (now - d.getTime()) / (1000*60*60*24*30.44);
+  }).filter(v => v !== null && v >= 0);
+  const avgTenure = tenures.length ? (tenures.reduce((a,b) => a+b, 0) / tenures.length) : null;
+
+  const kpis = document.getElementById('ptAnalyticsKPIs');
+  if (kpis) kpis.innerHTML = `
+    <div class="kpi" style="border-top:3px solid var(--ember);"><div class="kpi-label">Avg Compliance</div><div class="kpi-value" style="color:${complianceColour(avgCompliance)};">${avgCompliance}%</div><div class="kpi-sub">${active.length} active athlete${active.length===1?'':'s'} · last 7 days</div></div>
+    <div class="kpi" style="border-top:3px solid var(--ocean);"><div class="kpi-label">Avg Time Coached</div><div class="kpi-value text-ocean">${avgTenure !== null ? avgTenure.toFixed(1) : '—'}<span style="font-size:12px;color:var(--text-dim);">mo</span></div><div class="kpi-sub">${tenures.length} athlete${tenures.length===1?'':'s'} with a join date</div></div>`;
+
+  // ── Compliance by athlete — same population as the KPI above ──
+  const compData = active.map(c => c.compliance || 0);
+  const compLabels = active.map(c => c.initials || c.name.substring(0,2));
   if (compData.length) {
     renderChart('ptComplianceChart', compLabels, compData, 'Compliance (%)', '#8BB07E', 'bar');
   }
