@@ -765,6 +765,20 @@
   .update-banner .update-msg{flex:1;}
   .update-banner .update-btn{background:#fff;color:var(--ocean);border:none;border-radius:20px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:12px;font-family:var(--font);}
   .update-banner .update-btn:active{opacity:.8;}
+
+  /* ── Food Diary: primary action bar ──
+     Grouped, subtly raised block that sits above the food list so the
+     actions read as "what I can do" and the list below as "what I have". */
+  .fd-action-bar{background:var(--slate-card);border:1px solid var(--slate-border);border-radius:12px;padding:10px 10px 12px;margin-bottom:18px;}
+  .fd-action-bar-label{font-size:10px;font-weight:600;letter-spacing:0.7px;text-transform:uppercase;color:var(--text-muted);margin:2px 2px 8px;}
+  .fd-action-bar-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+  .fd-action-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:64px;padding:9px 4px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:9px;color:var(--text-body);font-family:var(--font);font-size:11px;font-weight:600;line-height:1.2;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;}
+  .fd-action-btn span{display:block;}
+  .fd-action-btn:hover{border-color:var(--ocean);}
+  .fd-action-btn:active{background:var(--slate-card);}
+  @media (max-width:340px){
+    .fd-action-btn{font-size:10px;min-height:60px;}
+  }
 </style>
 </head>
 <body>
@@ -1283,25 +1297,32 @@
           <button onclick="fdStartBarcodeScan()" style="width:48px;height:48px;border-radius:10px;border:1px solid var(--slate-border);background:var(--slate-card);cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Scan barcode"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8612D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="2" height="16"/><rect x="6" y="4" width="1" height="16"/><rect x="9" y="4" width="2" height="16"/><rect x="14" y="4" width="1" height="16"/><rect x="17" y="4" width="3" height="16"/><rect x="22" y="4" width="1" height="16"/></svg></button>
         </div>
 
+        <!-- Primary actions: sit above the food list so they read as
+             "things I can do", not as part of the history below. -->
+        <div class="fd-action-bar">
+          <div class="fd-action-bar-label">Add Something New</div>
+          <div class="fd-action-bar-grid">
+            <button onclick="fdStartLabelScan()" class="fd-action-btn" type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ocean)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              <span>Scan Label</span>
+            </button>
+            <button onclick="fdShowManualEntry()" class="fd-action-btn" type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E8612D" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span>Custom Food</span>
+            </button>
+            <button onclick="fdShowRecipeList()" class="fd-action-btn" type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ocean)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              <span>My Recipes</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Tabs: Recents / Search Results -->
         <div id="fdSearchResults" style="display:none;"></div>
 
         <div id="fdRecentsList">
           <div style="font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Recent Foods</div>
           <div id="fdRecentsContent" style="display:flex;flex-direction:column;gap:6px;"></div>
-        </div>
-
-        <!-- Manual entry, scan label & recipe buttons -->
-        <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px;">
-          <button onclick="fdStartLabelScan()" class="btn" style="background:var(--slate-raised);color:var(--text-body);border:1px solid var(--slate-border);width:100%;padding:14px;border-radius:10px;font-size:14px;cursor:pointer;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ocean)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> &nbsp;Scan Nutrition Label
-          </button>
-          <button onclick="fdShowManualEntry()" class="btn" style="background:var(--slate-raised);color:var(--text-body);border:1px solid var(--slate-border);width:100%;padding:14px;border-radius:10px;font-size:14px;cursor:pointer;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8612D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> &nbsp;Add Custom Food
-          </button>
-          <button onclick="fdShowRecipeList()" class="btn" style="background:var(--slate-raised);color:var(--text-body);border:1px solid var(--slate-border);width:100%;padding:14px;border-radius:10px;font-size:14px;cursor:pointer;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ocean)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> &nbsp;My Recipes
-          </button>
         </div>
       </div>
     </div>
@@ -4963,13 +4984,11 @@ function startWorkoutSession(weekKey, sessionIdx) {
       const baseWeight = (ex.w && ex.w !== '—') ? parseFloat(ex.w) || '' : '';
       for (let s = 0; s < numSets; s++) {
         if (isCardio) {
-          const _prescReps = prescribed.reps || '';
-          // If prescribed reps look like a time value (contains ':'), put in weight (time column)
-          if (_prescReps.includes(':')) {
-            sets.push({ weight: _prescReps, reps: '', done: false });
-          } else {
-            sets.push({ weight: '', reps: _prescReps, done: false });
-          }
+          // For cardio sets the internal convention is weight=TIME, reps=DISTANCE.
+          // Route the coach's prescription to the correct column instead of
+          // defaulting everything to distance (see _classifyCardioPrescription).
+          const _presc = _classifyCardioPrescription(prescribed.reps, ex.sr);
+          sets.push({ weight: _presc.time, reps: _presc.distance, done: false });
         } else {
           sets.push({ weight: baseWeight, reps: prescribed.reps || '', done: false });
           // Add drop sets after each normal set if dropset is enabled
@@ -5067,6 +5086,48 @@ function parseSetRep(sr) {
   const m = sr.match(/(\d+)\s*[×x]\s*(\S+)/i);
   if (m) return { sets: parseInt(m[1]) || 3, reps: m[2] };
   return { sets: 3, reps: sr };
+}
+
+// Route a coach's cardio prescription to the correct athlete field.
+//
+// Why this exists: cardio sets store weight=TIME and reps=DISTANCE. The
+// pre-populate step previously sent every prescription to `reps`, so a
+// "30 min" run surfaced to the athlete under Distance. parseSetRep() also
+// strips the unit ("1 × 30 min" -> reps "30"), so we re-read the raw `sr`
+// string to recover it and decide which column the value belongs in.
+//
+// Ambiguous/unitless values keep their previous home (distance) so existing
+// prescriptions such as "3 × 400" behave exactly as they always have.
+const _CARDIO_TIME_UNITS = ['h','hr','hrs','hour','hours','min','mins','minute','minutes','s','sec','secs','second','seconds'];
+const _CARDIO_DIST_UNITS = ['km','k','mi','mile','miles','m','metre','metres','meter','meters','yd','yds','yard','yards'];
+
+function _classifyCardioPrescription(repsToken, rawSr) {
+  // Prefer the raw prescription string — it still carries the unit.
+  let val = (rawSr == null ? '' : String(rawSr)).trim();
+  const setsPrefix = val.match(/^\s*\d+\s*[×x]\s*(.+)$/i);
+  if (setsPrefix) val = setsPrefix[1].trim();
+  if (!val) val = (repsToken == null ? '' : String(repsToken)).trim();
+  if (!val) return { time: '', distance: '' };
+
+  // Already an explicit mm:ss time
+  if (val.includes(':')) return { time: val, distance: '' };
+
+  const m = val.match(/^(\d+(?:\.\d+)?)\s*([a-zA-Z]*)/);
+  if (!m) return { time: '', distance: val };
+  const num = parseFloat(m[1]);
+  const unit = (m[2] || '').toLowerCase();
+
+  if (_CARDIO_TIME_UNITS.indexOf(unit) !== -1 && isFinite(num)) {
+    let totalSec;
+    if (unit.charAt(0) === 'h') totalSec = Math.round(num * 3600);
+    else if (unit.charAt(0) === 'm') totalSec = Math.round(num * 60);
+    else totalSec = Math.round(num);
+    const mm = Math.floor(totalSec / 60);
+    const ss = totalSec % 60;
+    return { time: mm + ':' + String(ss).padStart(2, '0'), distance: '' };
+  }
+  // Distance units, and anything unrecognised, keep the legacy destination.
+  return { time: '', distance: val };
 }
 
 function updateWLTimer() {
@@ -6728,6 +6789,168 @@ function renderCPMeasHistory() {
   ).join('');
 }
 
+// ═══════════════════════════════════════
+//  PROGRESS PHOTOS — SHARED HELPERS
+// ═══════════════════════════════════════
+
+// Order check-ins for photo display by ASCENDING NUMERIC WEEK.
+//
+// Why this exists: ci.date is stored as a human-readable string ("Mon 5 Aug"),
+// not an ISO date. The previous comparator used date.localeCompare(), which
+// sorts by weekday name first ("Fri" < "Mon" < "Sat" < "Sun" < "Thu" < "Tue"),
+// producing an apparently random week order. ci.week is the authoritative
+// sequence value and is set at check-in time, so we sort on that.
+// Nothing is written back — this is presentation only.
+function _sortCheckinsByWeek(logs) {
+  return (logs || []).slice().sort((a, b) => {
+    const aw = Number(a && a.week), bw = Number(b && b.week);
+    const aOk = Number.isFinite(aw), bOk = Number.isFinite(bw);
+    if (aOk && bOk) { if (aw !== bw) return aw - bw; }
+    else if (aOk) return -1;
+    else if (bOk) return 1;
+    // Tiebreaker for legacy records with no/duplicate week: creation order
+    // encoded in the record id ("ci" + Date.now()). Never fabricated.
+    const at = parseInt(String(a && a.id || '').replace(/\D/g, ''), 10) || 0;
+    const bt = parseInt(String(b && b.id || '').replace(/\D/g, ''), 10) || 0;
+    return at - bt;
+  });
+}
+
+// ── Two-week photo comparison (client-side crossfade, no image processing) ──
+// Reads the SAME ci.photos data URLs the thumbnails use. Creates no new
+// storage, writes nothing, and never substitutes one pose/week for another.
+const _pcLogs = {};   // prefix -> sorted check-in array
+const _pcState = {};  // prefix -> { a, b, pose }
+const _PC_POSES = [['front','Front'], ['side','Side'], ['back','Back']];
+
+function _pcCompareHtml(prefix, sorted) {
+  if (!sorted || sorted.length < 2) return '';
+  const opts = (selIdx) => sorted.map((ci, i) =>
+    `<option value="${i}" ${i === selIdx ? 'selected' : ''}>Week ${ci.week != null ? ci.week : (i + 1)}</option>`
+  ).join('');
+  const aIdx = 0, bIdx = sorted.length - 1;
+  const selStyle = 'padding:8px 10px;font-size:13px;background:var(--slate-raised);border:1px solid var(--slate-border);border-radius:8px;color:var(--text-bright);font-family:var(--font);min-width:0;flex:1;';
+  return `
+  <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--slate-border);">
+    <h4 style="font-size:12px;letter-spacing:0.6px;text-transform:uppercase;color:var(--text-muted);margin:0 0 12px;font-weight:600;">Compare Two Weeks</h4>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+      <select id="${prefix}PcA" onchange="pcSet('${prefix}','a',this.value)" style="${selStyle}">${opts(aIdx)}</select>
+      <span style="color:var(--text-dim);font-size:13px;flex:0 0 auto;">&harr;</span>
+      <select id="${prefix}PcB" onchange="pcSet('${prefix}','b',this.value)" style="${selStyle}">${opts(bIdx)}</select>
+    </div>
+    <div id="${prefix}PcPoseTabs" style="display:flex;gap:6px;margin-bottom:12px;">
+      ${_PC_POSES.map(([k, lbl], i) => `<button type="button" class="btn btn-sm ${i === 0 ? 'btn-ocean' : 'btn-secondary'}" data-pose="${k}" onclick="pcSet('${prefix}','pose','${k}')" style="flex:1;">${lbl}</button>`).join('')}
+    </div>
+    <div id="${prefix}PcStage" style="position:relative;width:100%;max-width:340px;margin:0 auto;aspect-ratio:3/4;border-radius:12px;overflow:hidden;background:var(--slate-raised);">
+      <img id="${prefix}PcImgA" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;">
+      <img id="${prefix}PcImgB" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;opacity:0;">
+      <div id="${prefix}PcMsg" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:16px;font-size:12px;line-height:1.5;color:var(--text-dim);"></div>
+    </div>
+    <div id="${prefix}PcNote" style="text-align:center;font-size:11px;color:var(--warning);margin-top:8px;min-height:14px;"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+      <span id="${prefix}PcLabA" style="font-size:11px;color:var(--text-muted);flex:0 0 auto;font-weight:600;">Week —</span>
+      <input type="range" id="${prefix}PcRange" min="0" max="100" value="0" step="1" oninput="pcFade('${prefix}',this.value)" style="flex:1;min-width:0;accent-color:var(--ocean);cursor:pointer;">
+      <span id="${prefix}PcLabB" style="font-size:11px;color:var(--text-muted);flex:0 0 auto;font-weight:600;">Week —</span>
+    </div>
+    <div id="${prefix}PcReadout" style="text-align:center;font-size:11px;color:var(--ocean-text);margin-top:6px;font-weight:600;"></div>
+  </div>`;
+}
+
+function _pcInit(prefix, sorted) {
+  if (!sorted || sorted.length < 2) return;
+  _pcLogs[prefix] = sorted;
+  _pcState[prefix] = { a: 0, b: sorted.length - 1, pose: 'front' };
+  _pcRenderStage(prefix);
+}
+
+function pcSet(prefix, key, val) {
+  const st = _pcState[prefix];
+  if (!st) return;
+  if (key === 'pose') {
+    st.pose = val;
+    const tabs = document.getElementById(prefix + 'PcPoseTabs');
+    if (tabs) tabs.querySelectorAll('button').forEach(b => {
+      const on = b.getAttribute('data-pose') === val;
+      b.classList.toggle('btn-ocean', on);
+      b.classList.toggle('btn-secondary', !on);
+    });
+  } else {
+    st[key] = parseInt(val, 10) || 0;
+  }
+  _pcRenderStage(prefix);
+}
+
+function _pcRenderStage(prefix) {
+  const st = _pcState[prefix], logs = _pcLogs[prefix];
+  if (!st || !logs) return;
+  const ciA = logs[st.a], ciB = logs[st.b];
+  const poseLabel = (_PC_POSES.find(p => p[0] === st.pose) || ['', ''])[1];
+  const urlA = ciA && ciA.photos ? ciA.photos[st.pose] : null;
+  const urlB = ciB && ciB.photos ? ciB.photos[st.pose] : null;
+  const wkA = ciA && ciA.week != null ? ciA.week : '—';
+  const wkB = ciB && ciB.week != null ? ciB.week : '—';
+
+  const imgA = document.getElementById(prefix + 'PcImgA');
+  const imgB = document.getElementById(prefix + 'PcImgB');
+  const msg  = document.getElementById(prefix + 'PcMsg');
+  const note = document.getElementById(prefix + 'PcNote');
+  const range = document.getElementById(prefix + 'PcRange');
+  const labA = document.getElementById(prefix + 'PcLabA');
+  const labB = document.getElementById(prefix + 'PcLabB');
+  const readout = document.getElementById(prefix + 'PcReadout');
+  if (!imgA || !imgB || !msg || !range) return;
+
+  if (labA) labA.textContent = 'Week ' + wkA;
+  if (labB) labB.textContent = 'Week ' + wkB;
+
+  // Reset
+  imgA.style.display = 'none'; imgA.removeAttribute('src');
+  imgB.style.display = 'none'; imgB.removeAttribute('src'); imgB.style.opacity = '0';
+  msg.style.display = 'none'; msg.textContent = '';
+  if (note) note.textContent = '';
+  range.value = 0;
+  range.disabled = false;
+  range.style.opacity = '1';
+
+  // Never substitute a missing photo — state plainly what is unavailable.
+  if (!urlA && !urlB) {
+    msg.style.display = 'flex';
+    msg.textContent = (String(wkA) === String(wkB))
+      ? `No ${poseLabel} photo for Week ${wkA}.`
+      : `No ${poseLabel} photo for Week ${wkA} or Week ${wkB}.`;
+    range.disabled = true; range.style.opacity = '0.35';
+    if (readout) readout.textContent = '';
+    return;
+  }
+  if (!urlA || !urlB) {
+    const shown = urlA ? urlA : urlB;
+    const shownWk = urlA ? wkA : wkB;
+    const missingWk = urlA ? wkB : wkA;
+    imgA.src = shown; imgA.style.display = 'block'; imgA.alt = poseLabel + ' — Week ' + shownWk;
+    if (note) note.textContent = `No ${poseLabel} photo available for Week ${missingWk}.`;
+    range.disabled = true; range.style.opacity = '0.35';
+    if (readout) readout.textContent = `Showing Week ${shownWk} only`;
+    return;
+  }
+
+  imgA.src = urlA; imgA.style.display = 'block'; imgA.alt = poseLabel + ' — Week ' + wkA;
+  imgB.src = urlB; imgB.style.display = 'block'; imgB.alt = poseLabel + ' — Week ' + wkB;
+  pcFade(prefix, 0);
+}
+
+function pcFade(prefix, val) {
+  const imgB = document.getElementById(prefix + 'PcImgB');
+  const readout = document.getElementById(prefix + 'PcReadout');
+  const st = _pcState[prefix], logs = _pcLogs[prefix];
+  const pct = Math.max(0, Math.min(100, parseInt(val, 10) || 0));
+  if (imgB) imgB.style.opacity = String(pct / 100);
+  if (readout && st && logs) {
+    const wkA = logs[st.a] && logs[st.a].week != null ? logs[st.a].week : '—';
+    const wkB = logs[st.b] && logs[st.b].week != null ? logs[st.b].week : '—';
+    readout.textContent = pct === 0 ? `Week ${wkA}` : (pct === 100 ? `Week ${wkB}` : `Week ${wkA} ${100 - pct}% / Week ${wkB} ${pct}%`);
+  }
+}
+
 function renderCPPhotos() {
   const el = document.getElementById('cpPhotoTimeline');
   const cid = loggedInUser ? loggedInUser.clientId : 1;
@@ -6736,8 +6959,8 @@ function renderCPPhotos() {
     el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No progress photos yet. Photos will appear here after you upload them during check-ins.</p>';
     return;
   }
-  // Sort by date/week ascending so newest is last
-  const sorted = logs.slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  // Ascending numeric week order (see _sortCheckinsByWeek) so newest is last
+  const sorted = _sortCheckinsByWeek(logs);
   // Week filter buttons
   let html = '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">';
   sorted.forEach((ci, i) => {
@@ -6759,7 +6982,9 @@ function renderCPPhotos() {
     });
     html += '</div></div>';
   });
+  html += _pcCompareHtml('cp', sorted);
   el.innerHTML = html;
+  _pcInit('cp', sorted);
 }
 
 function showCPPhotoWeek(idx) {
@@ -8425,7 +8650,8 @@ function renderDetailPhotos(clientId) {
     el.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">No progress photos uploaded yet.</p>';
     return;
   }
-  const sorted = logs.slice().sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  // Ascending numeric week order (see _sortCheckinsByWeek)
+  const sorted = _sortCheckinsByWeek(logs);
   let html = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">';
   sorted.forEach((ci, i) => {
     html += `<button class="btn btn-sm btn-secondary ${i === sorted.length-1 ? 'btn-ocean' : ''}" onclick="showDTPhotoWeek(${i})" id="dtPhotoBtn${i}">Wk ${ci.week}</button>`;
@@ -8445,7 +8671,9 @@ function renderDetailPhotos(clientId) {
     });
     html += '</div></div>';
   });
+  html += _pcCompareHtml('dt', sorted);
   el.innerHTML = html;
+  _pcInit('dt', sorted);
 }
 
 function showDTPhotoWeek(idx) {
