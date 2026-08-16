@@ -587,6 +587,27 @@ def _merge_log_arrays(cur_arr, inc_arr):
     inc_len = len(inc_arr) if isinstance(inc_arr, list) else 0
     return cur_arr if inc_len < cur_len else inc_arr
 
+
+def _preserve_checkin_review(cur_arr, inc_arr):
+    """Coach review state is coach-owned and one-way.
+
+    An athlete device submitting a new check-in sends a LONGER checkinLog, so
+    the length guard above accepts its copy wholesale — including its possibly
+    stale copies of earlier check-ins, which reverts them to Pending Review.
+    Nothing in the app ever un-reviews a check-in, so a stored True is carried
+    forward by id. Mutates and returns inc_arr.
+    """
+    if not isinstance(cur_arr, list) or not isinstance(inc_arr, list):
+        return inc_arr
+    reviewed = {c.get('id') for c in cur_arr
+                if isinstance(c, dict) and c.get('id') and c.get('reviewed')}
+    if not reviewed:
+        return inc_arr
+    for c in inc_arr:
+        if isinstance(c, dict) and c.get('id') in reviewed and not c.get('reviewed'):
+            c['reviewed'] = True
+    return inc_arr
+
 # ── Conversation merging ──
 # Chat threads sync as part of the state blob. If a device saves a thread
 # copy that is even 30 seconds stale, wholesale replacement would UN-SEND
@@ -694,6 +715,8 @@ def _client_scoped_save(incoming, cid, email):
         master.setdefault(f, {})
         cur = master[f].get(cid_s, master[f].get(cid) if not isinstance(cid, str) else None)
         if isinstance(own, list) and isinstance(cur, list):
+            if f == 'checkinLog':
+                _preserve_checkin_review(cur, own)
             merged = _merge_log_arrays(cur, own)
             if merged is cur:
                 print(f'  SCOPED MERGE: kept existing {f}[{cid_s}] ({len(cur)} entries) over incoming ({len(own)})')
@@ -853,6 +876,8 @@ def save_state():
                 merged_field = dict(incoming_field)
                 for k, cur_arr in current_field.items():
                     inc_arr = merged_field.get(k)
+                    if field == 'checkinLog':
+                        _preserve_checkin_review(cur_arr, inc_arr)
                     cur_len = len(cur_arr) if isinstance(cur_arr, list) else 0
                     inc_len = len(inc_arr) if isinstance(inc_arr, list) else 0
                     if inc_len < cur_len:

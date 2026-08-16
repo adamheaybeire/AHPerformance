@@ -3163,6 +3163,19 @@ function _buildState() {
 // Never let an incoming array silently shrink a client's logged history —
 // if a stale device pushes fewer entries for a client than we already have,
 // keep the richer local copy for that client instead of wiping it.
+// Coach-owned review state must survive an athlete device sending a longer
+// check-in array (a new submission). The athlete's copy of an older check-in
+// can be stale, and wholesale acceptance of it silently un-reviews weeks the
+// coach has already dealt with. Review is one-way: nothing in the app ever
+// sets `reviewed` back to false, so carrying a true forward is safe.
+function _preserveCheckinReview(curArr, inArr) {
+  if (!Array.isArray(curArr) || !Array.isArray(inArr)) return inArr;
+  const reviewedIds = {};
+  curArr.forEach(ci => { if (ci && ci.id && ci.reviewed) reviewedIds[ci.id] = true; });
+  inArr.forEach(ci => { if (ci && ci.id && reviewedIds[ci.id] && !ci.reviewed) ci.reviewed = true; });
+  return inArr;
+}
+
 function _mergeLogDict(target, incoming, label, source) {
   if (!incoming) return;
   Object.keys(incoming).forEach(k => {
@@ -3172,9 +3185,10 @@ function _mergeLogDict(target, incoming, label, source) {
     if (Array.isArray(inVal) && Array.isArray(curVal)) {
       if (inVal.length > curVal.length) {
         // Incoming has more entries (new workouts added) — accept incoming
-        target[k] = inVal;
+        target[k] = (label === 'checkinLog') ? _preserveCheckinReview(curVal, inVal) : inVal;
       } else if (inVal.length === curVal.length && inVal.length > 0) {
         // Same length — element-wise merge: keep whichever version was edited more recently
+        if (label === 'checkinLog') _preserveCheckinReview(curVal, inVal);
         for (let i = 0; i < inVal.length; i++) {
           const inEl = inVal[i], curEl = curVal[i];
           if (inEl && curEl && typeof inEl === 'object' && typeof curEl === 'object') {
@@ -4873,6 +4887,72 @@ function closeWorkoutLogger() {
   if (!wlPaused) wlActive = false;
 }
 
+// Decide which of this week's programme sessions have actually been logged.
+//
+// Identity, not display name. A workout logged from the programme carries
+// _programmeWeek + _programmeSessionIdx, which survive a session rename and
+// stay distinct when two sessions share a name. Older logs (saved before
+// those fields existed) fall back to name/day matching, and every log is
+// consumed at most once so N identically-named sessions can never all light
+// up from a single logged workout.
+//
+// Returns an array of booleans, one per session, index-aligned with `sessions`.
+function _matchLoggedProgrammeSessions(sessions, weekLogs, weekKey, currentProgName) {
+  const list = sessions || [];
+  const logs = (weekLogs || []).slice();
+  const used = new Array(logs.length).fill(false);
+  const flags = new Array(list.length).fill(false);
+  const cp = (currentProgName || '').toLowerCase();
+  const lower = v => (v == null ? '' : String(v)).toLowerCase();
+  // A log only counts towards a session in the current programme week.
+  const sameProgramme = l => !cp || lower(l._programmeName) === cp;
+
+  const claim = (sIdx, test) => {
+    if (flags[sIdx]) return;
+    for (let j = 0; j < logs.length; j++) {
+      if (used[j]) continue;
+      if (!sameProgramme(logs[j])) continue;
+      if (test(logs[j])) { used[j] = true; flags[sIdx] = true; return; }
+    }
+  };
+
+  // Pass 1 — stable identity (week + session index). Rename-proof.
+  list.forEach((s, i) => claim(i, l =>
+    l._programmeSessionIdx !== undefined && l._programmeSessionIdx !== null &&
+    Number(l._programmeSessionIdx) === i &&
+    String(l._programmeWeek) === String(weekKey)
+  ));
+
+  // Pass 2 — legacy logs: same name AND same day.
+  list.forEach((s, i) => claim(i, l =>
+    lower(l.day) === lower(s.day) &&
+    (lower(l.sessionName) === lower(s.name) || lower(l._programmeSessionName) === lower(s.name))
+  ));
+
+  // Pass 3 — legacy logs: same name, any day (day may be blank on old records).
+  list.forEach((s, i) => claim(i, l =>
+    lower(l.sessionName) === lower(s.name) || lower(l._programmeSessionName) === lower(s.name)
+  ));
+
+  // Pass 4 — legacy logs after a rename: same day and same type, but only when
+  // that pairing is unambiguous (exactly one unmatched session and exactly one
+  // unclaimed log of that type on that day). Never guesses.
+  list.forEach((s, i) => {
+    if (flags[i]) return;
+    const sameSlot = k => lower(list[k].day) === lower(s.day) && (list[k].type || 'strength') === (s.type || 'strength');
+    const rivals = list.filter((_, k) => !flags[k] && sameSlot(k)).length;
+    if (rivals !== 1) return;
+    const candidates = [];
+    for (let j = 0; j < logs.length; j++) {
+      if (used[j] || !sameProgramme(logs[j])) continue;
+      if (lower(logs[j].day) === lower(s.day) && (logs[j].type || 'strength') === (s.type || 'strength')) candidates.push(j);
+    }
+    if (candidates.length === 1) { used[candidates[0]] = true; flags[i] = true; }
+  });
+
+  return flags;
+}
+
 function renderWLSessionPicker(showResume) {
   const body = document.getElementById('wlBody');
   let html = '';
@@ -4910,6 +4990,7 @@ function renderWLSessionPicker(showResume) {
   const _wkSunStr = _wkSun.toISOString().slice(0,10);
   const _currentProgName = (week.label || '').toLowerCase();
   const weekLogs = cid && WORKOUT_LOG[cid] ? WORKOUT_LOG[cid].filter(w => w.date >= _wkMonStr && w.date <= _wkSunStr) : [];
+  const _loggedFlags = _matchLoggedProgrammeSessions(sessions, weekLogs, latestKey, week.label || '');
 
   html += `<div style="margin-bottom:12px;"><h3 style="color:var(--text-bright);font-size:15px;margin-bottom:2px;">${week.label || 'Current Week'}</h3><p style="font-size:11px;color:var(--text-dim);">Tap a session to start</p></div>`;
   html += '<div class="wl-session-pick">';
@@ -4918,15 +4999,7 @@ function renderWLSessionPicker(showResume) {
     const typeClass = isCardio ? 'cardio' : 'strength';
     const exCount = s.exercises ? s.exercises.length : 0;
     const desc = isCardio ? (s.desc || 'Cardio session') : `${exCount} exercise${exCount !== 1 ? 's' : ''}`;
-    const sNameLower = (s.name || '').toLowerCase();
-    const logged = weekLogs.some(l => {
-      // Only match logs from the CURRENT programme (ignore old programme's logs even if same session name)
-      const lProgLabel = (l._programmeName || '').toLowerCase();
-      if (_currentProgName && lProgLabel !== _currentProgName) return false;
-      const lName = (l.sessionName || '').toLowerCase();
-      const lProgName = (l._programmeSessionName || '').toLowerCase();
-      return lName === sNameLower || lProgName === sNameLower;
-    });
+    const logged = _loggedFlags[i];
     html += `<div class="wl-session-card ${typeClass}" onclick="startWorkoutSession(${latestKey}, ${i})" ${logged ? 'style="opacity:0.5;"' : ''}>
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div><h3>${s.day} — ${s.name}</h3><p>${desc}</p></div>
@@ -5100,6 +5173,10 @@ function parseSetRep(sr) {
 // prescriptions such as "3 × 400" behave exactly as they always have.
 const _CARDIO_TIME_UNITS = ['h','hr','hrs','hour','hours','min','mins','minute','minutes','s','sec','secs','second','seconds'];
 const _CARDIO_DIST_UNITS = ['km','k','mi','mile','miles','m','metre','metres','meter','meters','yd','yds','yard','yards'];
+// Calories share the second (non-time) slot with distance — the exercise
+// decides how that slot is labelled. Stripping the unit keeps "20cal" from
+// being shown to the athlete inside a Calories field.
+const _CARDIO_CAL_UNITS = ['cal','cals','kcal','kcals','calorie','calories'];
 
 function _classifyCardioPrescription(repsToken, rawSr) {
   // Prefer the raw prescription string — it still carries the unit.
@@ -5125,6 +5202,9 @@ function _classifyCardioPrescription(repsToken, rawSr) {
     const mm = Math.floor(totalSec / 60);
     const ss = totalSec % 60;
     return { time: mm + ':' + String(ss).padStart(2, '0'), distance: '' };
+  }
+  if (_CARDIO_CAL_UNITS.indexOf(unit) !== -1 && isFinite(num)) {
+    return { time: '', distance: String(num) };
   }
   // Distance units, and anything unrecognised, keep the legacy destination.
   return { time: '', distance: val };
@@ -5333,6 +5413,51 @@ function _isSledExercise(name) {
   return n.includes('sled push') || n.includes('sled pull');
 }
 
+// Fan-bike family: the meaningful target is CALORIES, not distance. Same
+// exercise-specific treatment the sled already gets — the second input slot
+// carries calories instead of a distance, and no distance total is claimed.
+function _isCalorieCardioExercise(name) {
+  if (!name) return false;
+  const n = name.toLowerCase();
+  if (['crunch','ab air','air bike crunch','bicycle crunch','ab bike'].some(k => n.includes(k))) return false;
+  return n.includes('assault bike') || n.includes('air bike') || n.includes('airbike') ||
+         n.includes('echo bike') || n.includes('fan bike');
+}
+// ── One canonical distance convention ────────────────────────────────
+// Cardio sets store a bare number in the distance slot with no unit
+// attached, so the unit has to be recovered. The rule used across the app
+// (and unchanged here) is: an explicit unit wins; otherwise a value over
+// 100 is metres and anything else is kilometres — 400 means 400 m, 5 means
+// 5 km. Everything that AGGREGATES distance now converts to km first, so
+// metre-based and km-based sessions can never be added together raw.
+function _cardioDistanceToKm(value, unit) {
+  const num = parseFloat(value);
+  if (!isFinite(num) || num === 0) return 0;
+  const u = String(unit == null ? '' : unit).toLowerCase().trim();
+  if (u === 'km' || u === 'k') return num;
+  if (u === 'm' || u === 'metre' || u === 'metres' || u === 'meter' || u === 'meters') return num / 1000;
+  if (u === 'mi' || u === 'mile' || u === 'miles') return num * 1.60934;
+  if (u === 'cal' || u === 'cals' || u === 'kcal') return 0; // not a distance at all
+  return num > 100 ? num / 1000 : num;   // no unit — fall back to the size heuristic
+}
+
+// Unit label for a single logged cardio set. Distance sets were previously
+// labelled "km" unconditionally, so a 400 m rep read as "400 km".
+function _cardioSetUnit(exName, value) {
+  if (_isCalorieCardioExercise(exName)) return 'cal';
+  if (_isSledExercise(exName)) return 'm';
+  const n = parseFloat(value);
+  if (!isFinite(n)) return '';
+  return n > 100 ? 'm' : 'km';
+}
+
+// Format a km total for display: sub-kilometre totals read better in metres.
+function _formatKm(km) {
+  if (!km) return '—';
+  if (km < 1) return Math.round(km * 1000) + ' m';
+  return (Math.round(km * 100) / 100) + ' km';
+}
+
 function _wlGetPreviousExData(exerciseName) {
   const cid = loggedInUser ? loggedInUser.clientId : null;
   if (!cid || !exerciseName) return null;
@@ -5470,16 +5595,21 @@ function renderWLActiveSession() {
       });
       html += `<button class="wl-add-set" onclick="wlAddSet(${i})">+ Add Set</button>`;
     } else if (isCardioEx) {
-      // Cardio: multi-set Time + Distance rows with Add Set
-      html += `<div class="wl-set-row header wl-cardio-header"><span>Set</span><span>Time</span><span>Distance</span><span></span></div>`;
+      // Cardio: multi-set Time + Distance rows with Add Set.
+      // Fan bikes are prescribed and logged in CALORIES — same two slots,
+      // second slot relabelled, so nothing about storage or save changes.
+      const isCalEx = _isCalorieCardioExercise(ex.n);
+      const metricHeader = isCalEx ? 'Calories' : 'Distance';
+      const metricPlaceholder = isCalEx ? 'cal' : 'km / m';
+      html += `<div class="wl-set-row header wl-cardio-header"><span>Set</span><span>Time</span><span>${metricHeader}</span><span></span></div>`;
       sets.forEach((set, si) => {
-        // For cardio: weight=time, reps=distance. Show pre-filled values even before set is done
+        // For cardio: weight=time, reps=distance (or calories). Show pre-filled values even before set is done
         const distVal = (set.reps !== '' && set.reps !== undefined && set.reps !== null) ? set.reps : '';
         const timeVal = (set.weight !== '' && set.weight !== undefined && set.weight !== null) ? set.weight : '';
         html += `<div class="wl-set-row wl-cardio-row" id="wlSet${i}_${si}">
           <div class="wl-set-num ${set.done ? 'done' : ''}">${si + 1}</div>
           <input type="text" class="wl-set-input" inputmode="numeric" placeholder="mm:ss" value="${timeVal}" onblur="wlFormatTimeInput(this)" onchange="wlUpdateSet(${i},${si},'weight',this.value)">
-          <input type="text" class="wl-set-input" inputmode="decimal" placeholder="km / m" value="${distVal}" onchange="wlUpdateSet(${i},${si},'reps',this.value)">
+          <input type="text" class="wl-set-input" inputmode="decimal" placeholder="${metricPlaceholder}" value="${distVal}" onchange="wlUpdateSet(${i},${si},'reps',this.value)">
           <button class="wl-check-btn ${set.done ? 'checked' : ''}" onclick="wlToggleSet(${i},${si})">\u2713</button>
           ${sets.length > 1 ? `<button class="wl-remove-set-btn" onclick="wlRemoveSet(${i},${si})" title="Remove set">&times;</button>` : ''}
         </div>`;
@@ -5543,32 +5673,58 @@ function wlFormatTimeInput(el) {
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+// Which rung of the drop ladder a row sits on: 0 = the working set,
+// 1 = first drop, 2 = second drop… Prefers the _dropNum stamped at
+// pre-populate time; falls back to counting position for rows that
+// predate it (e.g. a paused session restored from an older build).
+function _wlDropTier(sets, idx) {
+  const s = sets[idx];
+  if (!s || !s.isDrop) return 0;
+  if (s._dropNum !== undefined && s._dropNum !== null) return Number(s._dropNum);
+  let tier = 0;
+  for (let k = idx; k >= 0 && sets[k] && sets[k].isDrop; k--) tier++;
+  return tier;
+}
+
+// Copy a weight forward to the SAME rung of later sets only.
+// A working set fills later working sets; drop 1 fills later drop 1s;
+// drop 2 fills later drop 2s. Drop 1 must never fill drop 2 — they are
+// independent loads, not the same field repeated.
+// Returns the indices that were changed so the caller can sync the DOM.
+function _wlPropagateWeight(allSets, setIdx, value, oldValue, onlyEmpty) {
+  const changed = [];
+  if (!allSets || !allSets[setIdx] || !value) return changed;
+  const tier = _wlDropTier(allSets, setIdx);
+  for (let s = setIdx + 1; s < allSets.length; s++) {
+    if (_wlDropTier(allSets, s) !== tier) continue; // different rung — leave alone
+    if (allSets[s].done) continue;
+    const curW = allSets[s].weight;
+    const isEmpty = curW === '' || curW === null || curW === undefined;
+    const wasAutoFilled = !onlyEmpty && oldValue !== '' && oldValue !== null && oldValue !== undefined && String(curW) === String(oldValue);
+    if (isEmpty || wasAutoFilled) {
+      allSets[s].weight = value;
+      changed.push(s);
+    }
+  }
+  return changed;
+}
+
 function wlUpdateSet(exIdx, setIdx, field, value) {
   if (!wlSetData[exIdx] || !wlSetData[exIdx][setIdx]) return;
   const oldValue = wlSetData[exIdx][setIdx][field];
   wlSetData[exIdx][setIdx][field] = value;
   // Auto-populate weight to subsequent sets when weight changes on ANY set
   // Updates sets that are either empty OR still have the old value (auto-filled, not manually changed)
-  // Only propagate between same-type sets (normal→normal, not normal→drop)
+  // Only propagates within the same rung — see _wlPropagateWeight.
   if (field === 'weight' && value) {
     const allSets = wlSetData[exIdx];
-    const isDropSet = !!allSets[setIdx].isDrop;
-    for (let s = setIdx + 1; s < allSets.length; s++) {
-      if (!!allSets[s].isDrop !== isDropSet) continue; // skip different set types
-      if (!allSets[s].done) {
-        const curW = allSets[s].weight;
-        const isEmpty = !curW || curW === '';
-        const wasAutoFilled = oldValue && String(curW) === String(oldValue);
-        if (isEmpty || wasAutoFilled) {
-          allSets[s].weight = value;
-          const row = document.getElementById(`wlSet${exIdx}_${s}`);
-          if (row) {
-            const inp = row.querySelectorAll('.wl-set-input')[0];
-            if (inp) { inp.value = value; inp.placeholder = value; }
-          }
-        }
+    _wlPropagateWeight(allSets, setIdx, value, oldValue, false).forEach(s => {
+      const row = document.getElementById(`wlSet${exIdx}_${s}`);
+      if (row) {
+        const inp = row.querySelectorAll('.wl-set-input')[0];
+        if (inp) { inp.value = value; inp.placeholder = value; }
       }
-    }
+    });
   }
 }
 
@@ -5593,19 +5749,10 @@ function wlToggleSet(exIdx, setIdx) {
     if (inputs[1]) set.reps = inputs[1].value || set.reps;
   }
   set.done = !set.done;
-  // Auto-populate weight: when any set is checked, copy weight to all subsequent unfilled sets of same type
+  // Auto-populate weight: when any set is checked, copy weight to subsequent
+  // unfilled sets on the SAME rung (working set / drop 1 / drop 2 …).
   if (set.done && set.weight) {
-    const allSets = wlSetData[exIdx] || [];
-    const isDropSet = !!set.isDrop;
-    for (let s = setIdx + 1; s < allSets.length; s++) {
-      if (!!allSets[s].isDrop !== isDropSet) continue;
-      if (!allSets[s].done) {
-        const curW = allSets[s].weight;
-        if (!curW || curW === '') {
-          allSets[s].weight = set.weight;
-        }
-      }
-    }
+    _wlPropagateWeight(wlSetData[exIdx] || [], setIdx, set.weight, undefined, true);
   }
   renderWLActiveSession();
   // Highlight next set — scroll to and focus the next incomplete set
@@ -6027,6 +6174,10 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
     sessionName: wlCurrentSession.name,
     _programmeSessionName: wlCurrentSession.name,
     _programmeName: wlCurrentSession._programmeName || '',
+    // Stable link back to the scheduled session — survives a rename and keeps
+    // identically-named sessions apart. Absent for unscheduled workouts.
+    _programmeWeek: wlCurrentSession._weekKey !== undefined ? wlCurrentSession._weekKey : null,
+    _programmeSessionIdx: wlCurrentSession._sessionIdx !== undefined ? wlCurrentSession._sessionIdx : null,
     day: wlCurrentSession.day || '',
     type: _resolvedType,
     duration: finalDuration,
@@ -6095,7 +6246,10 @@ function saveWorkoutLog(duration, totalSets, totalVolume) {
           }
         }
       });
-      const distUnit = isSled ? 'm' : (totalDist > 100 ? 'm' : 'km');
+      // Fan bikes record calories in the second slot — tag the unit so nothing
+      // downstream reads 20 cal as 20 km. No new field: `unit` already exists.
+      const isCalEx = _isCalorieCardioExercise(ex.name);
+      const distUnit = isCalEx ? 'cal' : (isSled ? 'm' : (totalDist > 100 ? 'm' : 'km'));
       const timeMins = Math.floor(totalTimeSec/60);
       const timeSecs = totalTimeSec % 60;
       const timeStr = totalTimeSec > 0 ? `${timeMins}:${String(timeSecs).padStart(2,'0')}` : '';
@@ -7287,6 +7441,7 @@ function saveHistoryEdit(idx) {
             }
           });
           cardioEntry.distance = totalDist > 0 ? Math.round(totalDist * 100) / 100 : null;
+          if (_isCalorieCardioExercise(ex.name)) cardioEntry.unit = 'cal';
           const timeMins = Math.floor(totalTimeSec/60);
           const timeSecs = totalTimeSec % 60;
           cardioEntry.time = totalTimeSec > 0 ? timeMins + ':' + String(timeSecs).padStart(2,'0') : null;
@@ -7445,17 +7600,22 @@ function _buildOneWeek(workouts, monday, localDateStr) {
         else if (unit === 'm') km /= 1000;
         dayRunKm += km;
       }
-      // Exercise-level distance from structured cardio sets
+      // Exercise-level distance from structured cardio sets.
+      // The stored value is usually a bare number ("800"), so the unit has to
+      // come from _cardioDistanceToKm — reading only the literal text meant
+      // "800" (metres) was counted as 800 km.
       runExercises.forEach(e => {
+        if (_isCalorieCardioExercise(e.name)) return;   // calories are not distance
         (e.sets || []).forEach(s => {
           const distStr = String(s.reps || s.weight || '');
           const numMatch = distStr.match(/([\d.]+)/);
           if (numMatch) {
-            let km = parseFloat(numMatch[1]);
             const lower = distStr.toLowerCase();
-            if (lower.includes('mi')) km *= 1.60934;
-            else if (lower.includes('m') && !lower.includes('km')) km /= 1000;
-            dayRunKm += km;
+            let unit = '';
+            if (lower.includes('mi')) unit = 'mi';
+            else if (lower.includes('km')) unit = 'km';
+            else if (lower.includes('m')) unit = 'm';
+            dayRunKm += _cardioDistanceToKm(numMatch[1], unit);
           }
         });
       });
@@ -7479,13 +7639,20 @@ function _buildOneWeek(workouts, monday, localDateStr) {
           else timeSec = (p[0]||0)*60 + (p[1]||0);
         }
         if (hasDist || timeSec > 0) {
-          cardioSessions.push({ name: w.sessionName || 'Cardio', distance: w.distance || 0, unit: w.distUnit || 'km', timeSec });
+          cardioSessions.push({
+            name: w.sessionName || 'Cardio',
+            metric: 'distance',
+            km: _cardioDistanceToKm(w.distance || 0, w.distUnit || 'km'),
+            calories: 0,
+            timeSec
+          });
         }
       }
       (w.exercises || []).forEach(e => {
         if (_exIsCardio(e) || _isSledExercise(e.name)) {
           let dist = 0, timeSec = 0;
           const isSled = _isSledExercise(e.name);
+          const isCal = _isCalorieCardioExercise(e.name);
           (e.sets || []).forEach(s => {
             dist += parseFloat(s.reps) || 0;
             if (!isSled) {
@@ -7495,8 +7662,15 @@ function _buildOneWeek(workouts, monday, localDateStr) {
             }
           });
           if (dist > 0 || timeSec > 0) {
-            const unit = isSled ? 'm' : (dist > 100 ? 'm' : 'km');
-            cardioSessions.push({ name: e.name, distance: dist, unit, timeSec });
+            // Normalise to km at the point of capture so the weekly rollup can
+            // never add a metres figure to a kilometres figure.
+            cardioSessions.push({
+              name: e.name,
+              metric: isCal ? 'calories' : 'distance',
+              km: isCal ? 0 : _cardioDistanceToKm(dist, isSled ? 'm' : ''),
+              calories: isCal ? dist : 0,
+              timeSec
+            });
           }
         }
       });
@@ -7551,31 +7725,42 @@ function renderCPWeeklySummary() {
   _renderCardioBreakdown(days, 'cpWkCardioBreakdown', 'cpWkCardioList');
 }
 
-function _renderCardioBreakdown(days, containerId, listId) {
-  const allCardio = days.flatMap(d => d.cardioSessions || []);
-  const cardioByName = {};
-  allCardio.forEach(c => {
-    if (!cardioByName[c.name]) cardioByName[c.name] = { distance: 0, unit: c.unit, timeSec: 0, count: 0 };
-    cardioByName[c.name].distance += c.distance;
-    cardioByName[c.name].timeSec += c.timeSec;
-    cardioByName[c.name].count++;
+// Roll the week's cardio up per exercise. Distances arrive already normalised
+// to km (see _cardioDistanceToKm) and calorie machines are totalled in cal, so
+// nothing is summed across units.
+function _aggregateCardioBreakdown(allCardio) {
+  const byName = {};
+  const order = [];
+  (allCardio || []).forEach(c => {
+    if (!byName[c.name]) { byName[c.name] = { name: c.name, metric: c.metric || 'distance', km: 0, calories: 0, timeSec: 0, count: 0 }; order.push(c.name); }
+    const row = byName[c.name];
+    if (c.metric === 'calories') row.metric = 'calories';
+    row.km += c.km || 0;
+    row.calories += c.calories || 0;
+    row.timeSec += c.timeSec || 0;
+    row.count++;
   });
+  return order.map(n => byName[n]);
+}
+
+function _renderCardioBreakdown(days, containerId, listId) {
+  const rows = _aggregateCardioBreakdown(days.flatMap(d => d.cardioSessions || []));
   const container = document.getElementById(containerId);
   const list = document.getElementById(listId);
   if (!container || !list) return;
-  const names = Object.keys(cardioByName);
-  if (!names.length) { container.style.display = 'none'; return; }
+  if (!rows.length) { container.style.display = 'none'; return; }
   container.style.display = '';
-  list.innerHTML = names.map(name => {
-    const c = cardioByName[name];
-    const dist = c.distance > 0 ? `${c.distance % 1 === 0 ? c.distance : (Math.round(c.distance*100)/100).toFixed(1)} ${c.unit}` : '—';
+  list.innerHTML = rows.map(c => {
+    const isCal = c.metric === 'calories';
+    const metricLabel = isCal ? 'Calories' : 'Distance';
+    const metricVal = isCal ? (c.calories > 0 ? Math.round(c.calories) + ' cal' : '—') : _formatKm(c.km);
     const mins = Math.floor(c.timeSec/60);
     const secs = c.timeSec % 60;
     const time = c.timeSec > 0 ? `${mins}:${String(secs).padStart(2,'0')}` : '—';
     return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--slate-raised);border-radius:10px;margin-bottom:6px;">
-      <div><div style="font-size:13px;font-weight:500;color:var(--text-heading);">${name}</div><div style="font-size:11px;color:var(--text-dim);">${c.count} session${c.count>1?'s':''}</div></div>
+      <div><div style="font-size:13px;font-weight:500;color:var(--text-heading);">${c.name}</div><div style="font-size:11px;color:var(--text-dim);">${c.count} session${c.count>1?'s':''}</div></div>
       <div style="display:flex;gap:16px;text-align:right;">
-        <div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Distance</div><div style="font-size:14px;font-weight:600;color:var(--ocean);font-family:'Space Grotesk',sans-serif;">${dist}</div></div>
+        <div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">${metricLabel}</div><div style="font-size:14px;font-weight:600;color:var(--ocean);font-family:'Space Grotesk',sans-serif;">${metricVal}</div></div>
         <div><div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">Time</div><div style="font-size:14px;font-weight:600;color:var(--sage-text);font-family:'Space Grotesk',sans-serif;">${time}</div></div>
       </div>
     </div>`;
@@ -8415,7 +8600,7 @@ function openClientDetail(id) {
           ${w.exercises && w.exercises.length ? w.exercises.map(ex => {
             const isCardioEx = ex.isCardio || _isCardioExercise(ex.name);
             return `<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid var(--slate-border);"><span style="font-size:12px;font-weight:600;color:var(--text-bright);min-width:130px;">${ex.name}</span><span style="font-size:11px;color:var(--text-muted);">${ex.sets.map(s => {
-              if (isCardioEx) return s.weight + ' × ' + s.reps + (s.reps ? ' km' : '');
+              if (isCardioEx) return s.weight + ' × ' + s.reps + (s.reps ? ' ' + _cardioSetUnit(ex.name, s.reps) : '');
               return s.isDrop ? '<span style="color:#e74c3c;font-size:9px;">DROP</span> '+s.weight+'kg × '+s.reps : s.weight+'kg × '+s.reps;
             }).join(' → ')}</span></div>`;
           }).join('') : ''}
@@ -12048,7 +12233,7 @@ function renderCompletedSessions() {
         ${w.exercises && w.exercises.length ? `<div style="margin-bottom:10px;">${w.exercises.map(ex => {
           const isCardioEx = ex.isCardio || _isCardioExercise(ex.name);
           return `<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid var(--slate-border);"><span style="font-size:12px;font-weight:600;color:var(--text-bright);min-width:130px;">${ex.name}</span><span style="font-size:11px;color:var(--text-muted);">${ex.sets.map(s => {
-            if (isCardioEx) return s.weight + ' × ' + s.reps + (s.reps ? ' km' : '');
+            if (isCardioEx) return s.weight + ' × ' + s.reps + (s.reps ? ' ' + _cardioSetUnit(ex.name, s.reps) : '');
             return s.isDrop ? '<span style="color:#e74c3c;font-size:9px;">DROP</span> '+s.weight+'kg × '+s.reps : s.weight+'kg × '+s.reps;
           }).join(' → ')}</span></div>`;
         }).join('')}</div>` : ''}
@@ -15363,6 +15548,10 @@ function markCheckinReviewed(ciId) {
   const ci = logs.find(x => x.id === ciId);
   if (ci) {
     ci.reviewed = true;
+    ci._lastEdit = Date.now();
+    // Persist it. Without this the flag lived only in this tab's memory and
+    // the next load/sync reinstated "Pending Review".
+    scheduleSave();
     renderDetailCheckins(currentDetailClient.id);
     // Trigger notification to client + queue email
     const c = currentDetailClient;
